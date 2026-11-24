@@ -43,8 +43,10 @@ def combine_parts(seed, manifest, archive):
 
 def unpack(archive, destination, expected_count):
     count = 0
+    decoder_program = 'xz' if archive.suffix == '.xz' else 'zstd'
     with subprocess.Popen(
-        ['zstd', '-q', '--decompress', '--stdout', str(archive)], stdout=subprocess.PIPE
+        [decoder_program, '-q', '--decompress', '--stdout', str(archive)],
+        stdout=subprocess.PIPE
     ) as decoder:
         try:
             with tarfile.open(fileobj=decoder.stdout, mode='r|') as members:

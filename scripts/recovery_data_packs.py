@@ -1,4 +1,4 @@
-"""Pack the large data directories into independently reusable zstd archives."""
+"""Pack the large data directories into independently reusable lossless archives."""
 
 import argparse
 import hashlib
@@ -12,7 +12,8 @@ from pathlib import Path
 
 from scripts.restore_recovery_seed import DATASETS, unpack
 
-FORMAT = 'zstd-tar-by-dataset'
+LEGACY_FORMAT = 'zstd-tar-by-dataset'
+FORMAT = 'tar-by-dataset'
 SHA256 = re.compile(r'[a-f0-9]{64}')
 DATE_FILE = re.compile(r'\d{4}-\d{2}-\d{2}\.json')
 ADDRESS = re.compile(r'0x([a-f0-9]+)')
@@ -66,29 +67,48 @@ def collect(root):
     return groups
 
 
-def archive_entries(entries, archive):
-    with archive.open('xb') as output:
-        with subprocess.Popen(['zstd', '-q', '-3', '--stdout'],
-                              stdin=subprocess.PIPE, stdout=output) as encoder:
-            with tarfile.open(fileobj=encoder.stdin, mode='w|', format=tarfile.PAX_FORMAT) as tar:
-                for path, name, size in entries:
-                    item = tarfile.TarInfo(name)
-                    item.size = size
-                    with path.open('rb') as contents:
-                        tar.addfile(item, contents)
-            encoder.stdin.close()
-            if encoder.wait():
-                raise ValueError('Could not compress data chunk')
-    if archive.stat().st_size > ARCHIVE_LIMIT:
-        raise ValueError('Compressed data chunk exceeds 128 MiB')
+def archive_entries(entries, staging):
+    raw = staging / 'current.tar'
+    with tarfile.open(raw, mode='w', format=tarfile.PAX_FORMAT) as tar:
+        for path, name, size in entries:
+            item = tarfile.TarInfo(name)
+            item.size = size
+            with path.open('rb') as contents:
+                tar.addfile(item, contents)
+    # Choose per chunk. Small JSON indexes and large runs of similar daily
+    # snapshots compress differently. Both encodings restore an ordinary tar.
+    commands = [
+        ('quick.zst', ['zstd', '-q', '-3', '-c']),
+        ('dense.zst', ['zstd', '-q', '--ultra', '-22', '--long=26', '--single-thread', '-c']),
+        ('dense.xz', ['xz', '-9e', '--threads=1', '-c']),
+    ]
+    with tempfile.TemporaryDirectory(dir=staging) as directory:
+        candidates = []
+        for filename, command in commands:
+            candidate = Path(directory) / filename
+            with candidate.open('xb') as compressed:
+                subprocess.run([*command, raw], stdout=compressed, check=True)
+            candidates.append(candidate)
+        best = min(candidates, key=lambda p: p.stat().st_size)
+        if best.stat().st_size > ARCHIVE_LIMIT:
+            raise ValueError('Compressed data chunk exceeds 128 MiB')
+        archive = staging / ('current.tar' + best.suffix)
+        best.replace(archive)
+    raw.unlink()
+    return archive
 
 
 def check_manifest(manifest):
-    if manifest.get('version') != 1 or manifest.get('format') != FORMAT:
+    version = manifest.get('version')
+    if (version, manifest.get('format')) not in ((1, LEGACY_FORMAT), (2, FORMAT)):
         raise ValueError('Unsupported data pack manifest')
     if not manifest['chunks'] or sum(item['files'] for item in manifest['chunks'].values()) != manifest['files']:
         raise ValueError('Manifest file count does not match its chunks')
     for item in manifest['chunks'].values():
+        if version == 1 and item.get('codec', 'zst') != 'zst':
+            raise ValueError('Invalid codec in legacy manifest')
+        if version == 2 and item.get('codec') not in ('zst', 'xz'):
+            raise ValueError('Invalid codec in data pack manifest')
         if (not SHA256.fullmatch(item['sha256']) or not SHA256.fullmatch(item['contentSha256'])
                 or not 0 < item['bytes'] <= ARCHIVE_LIMIT or item['files'] <= 0):
             raise ValueError('Invalid chunk record in manifest')
@@ -115,15 +135,15 @@ def pack(root, output, previous=None):
             content_hash = hashlib.sha256(json.dumps(signature, separators=(',', ':')).encode()).hexdigest()
             cached = previous_chunks.get(name)
             if cached and cached['contentSha256'] == content_hash and cached['files'] == len(entries):
-                chunks[name] = cached
+                chunks[name] = {**cached, 'codec': cached.get('codec', 'zst')}
                 continue
-            archive = staging / 'current.tar.zst'
-            archive_entries(entries, archive)
+            archive = archive_entries(entries, staging)
             stored_hash = file_digest(archive)
             chunks[name] = {'files': len(entries), 'contentSha256': content_hash,
-                            'sha256': stored_hash, 'bytes': archive.stat().st_size}
-            archive.replace(objects / f'{stored_hash}.tar.zst')
-        manifest = {'version': 1, 'format': FORMAT,
+                            'sha256': stored_hash, 'bytes': archive.stat().st_size,
+                            'codec': archive.suffix[1:]}
+            archive.replace(objects / f'{stored_hash}.tar{archive.suffix}')
+        manifest = {'version': 2, 'format': FORMAT,
                     'files': sum(len(entries) for entries in groups.values()), 'chunks': chunks}
         (staging / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
         staging.rename(output)
@@ -143,7 +163,7 @@ def restore(packed, output, *, datasets=None):
     with tempfile.TemporaryDirectory(dir=output.parent, prefix='.data-unpack-') as temporary:
         destination = Path(temporary) / 'stage'
         for item in chunks:
-            archive = packed / 'objects' / f"{item['sha256']}.tar.zst"
+            archive = packed / 'objects' / f"{item['sha256']}.tar.{item.get('codec', 'zst')}"
             if (archive.is_symlink() or archive.stat().st_size != item['bytes']
                     or file_digest(archive) != item['sha256']):
                 raise ValueError(f'Invalid archive checksum or size: {archive.name}')
