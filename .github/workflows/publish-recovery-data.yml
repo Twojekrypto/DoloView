@@ -2,6 +2,8 @@ name: Publish DoloView recovery data
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
 
 concurrency:
   group: recovery-data-pages
