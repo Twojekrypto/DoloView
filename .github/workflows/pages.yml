@@ -1,0 +1,183 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Update DOLO Flows Data
+      - Audit DOLO CEX Labels
+      - Update DOLO Liquidity
+      - Update oDOLO Data
+      - Update oDOLO Flows
+      - Update veDOLO Data
+      - Update veDOLO Flows
+      - Update TVL Data
+      - Update Supply Health
+      - Update WLFI Markets
+      - Update Supply History
+      - Update Rewards Programs
+      - Update Cross-chain Reward Claim Events
+      - Audit Dolomite Revenue Onchain
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+env:
+  LP_DATA_STORAGE: ${{ vars.LP_DATA_STORAGE || 'git' }}
+  LP_R2_READY_DIGEST: ${{ vars.LP_R2_READY_DIGEST }}
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+        env:
+          GIT_CONFIG_COUNT: 1
+          GIT_CONFIG_KEY_0: init.defaultBranch
+          GIT_CONFIG_VALUE_0: master
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Check LP storage mode
+        run: python3 scripts/data_artifact_store.py check-mode
+
+      - name: Set up optional LP storage Python
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install optional LP storage dependencies
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        run: pip install -r requirements-storage.txt
+
+      - name: Restore gated current LP Pages artifact
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        env:
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: python3 scripts/data_artifact_store.py prepare --purpose current
+
+      - name: Validate generated EARN assets
+        run: python3 build_earn_bundle.py --check
+
+      - name: Audit representative EARN markets
+        run: python3 build_earn_representative_audit.py --check
+
+      - name: Validate shared Flow table UX
+        run: node --test tests/wallet-flow-ux.test.js tests/dolo-flow-*.test.js
+
+      - name: Refresh short-cadence snapshots before packaging
+        run: |
+          python3 -m pip install requests
+          python3 -m unittest discover -s tests -p 'test_refresh_pages_snapshots.py'
+          python3 scripts/refresh_pages_snapshots.py
+
+      - name: Build static site
+        run: |
+          python3 export_dolo_cex_labels.py
+          node --check dolo-confirmed-cex.js
+          rm -rf _site
+          mkdir -p _site
+          rsync -a \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '_site/' \
+            --exclude 'node_modules/' \
+            --exclude '.lp-restore-*' \
+            ./ _site/
+          touch _site/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      actions: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url || steps.deployment_retry2.outputs.page_url }}
+    steps:
+      # GitHub's deployment API intermittently returns 503; deploy-pages does
+      # not retry on its own, so retry up to two more times with a backoff.
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: --no-deprecation
+
+      - name: Wait before deploy retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (retry 1)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+        env:
+          NODE_OPTIONS: --no-deprecation
+
+      - name: Wait before second deploy retry
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        run: sleep 60
+
+      - name: Deploy to GitHub Pages (retry 2)
+        id: deployment_retry2
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        env:
+          NODE_OPTIONS: --no-deprecation
+
+      - name: Checkout smoke scripts
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          sparse-checkout: |
+            scripts/smoke_live_pages.py
+            scripts/check_dashboard_freshness.py
+            config/dashboard_freshness.json
+          sparse-checkout-cone-mode: false
+
+      - name: Smoke test live Pages
+        run: python3 scripts/smoke_live_pages.py "${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url || steps.deployment_retry2.outputs.page_url }}"
+
+      - name: Backstop dashboard freshness cadence
+        if: ${{ success() }}
+        # Nested publications may not emit a further workflow_run. Reuse the
+        # metadata-only gate: 15-minute minimum, active/race checks, one POST.
+        # An optional dispatch outage must not invalidate a verified deployment.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/check_dashboard_freshness.py --config config/dashboard_freshness.json --ensure-check-due
+

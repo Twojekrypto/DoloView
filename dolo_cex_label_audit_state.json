@@ -1,0 +1,4370 @@
+{
+  "debank": {
+    "addresses": {
+      "0x000f9764a2c9345df184d19a2cb935a0857af000": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x004f41e302a22ce76ff1eee9c5a3fcd120895c3a": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0051cc1d8bbf0b3373b02e22ea5a2fe483266cea": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0091c05a50ef584f09c5c8b813a207198643788a": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0111d8fc65e80e93fb4b89eaf03269eefa4224b1": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x018cf6688add5c1369cd962eb1f8b79c99f667e7": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x01b738f80ffc56c75769601292106fb2f8315e2d": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x01d9280ec36b2c784729358f7cb3d1eaf23ca4f6": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x020d167117a6209a13f555e5461bf663edabb151": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x02175cebda9217d4146d1772a68f6e2a32a953ab": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x026f6f9374c8440e67a3ce97a3406963ac940813": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x027d3e2d5fa4f710aae2afa95bc4f3d2b9b9fc95": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x029f38392077834e23adf32c15b3d890a17c8e22": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0303e4fe3d5a3d4f225e7690f038786648657b2b": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0304492c94d8dafab67756c7b7aaf94e2c9ca709": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x031264bc787e4bef2b4c17c6866a29aefe1a6c16": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x03631c388fb01e0d929627b614eeb501c0ef9dce": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x037741ef196087b26abfb173b64d05df23fadc72": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x03975b9f5168a204e3ac177f050e632acb156f58": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x03bd18f9869670219e3b76846cb28e69ce36920b": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x03f5b83125c83ac57780bc9c54e9cb991da55495": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0442dd88a482833fe2ca98a6b66526aa640321f3": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0457e994ff39c05e2292077a0efa32865231bc76": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x04c7b4e2db71b2abffe4f2131cf2754533cf32da": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0550bed1c94afbd468aa739852632d7e9b4c2f86": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0559a40c957e288f3fbd49deafe6ee96453b2079": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x055cc97da4373e26a52a9c59dd1e9a9aeedc28a4": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0586c5b0ee0012765607878a9de37fa8a205571d": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x05cb186ab8ec85378a2cbf8a858568a8fb216b07": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x05cfc8d3ca36bc774963c3999efd8a1e38f5b40b": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x05e6a9d718002668fe56e54b407f0b606def0403": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0601dd1852e178258e4eb64ac843619956995381": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0640b34aa370c2b4ac73184726a4a2aef8b52829": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x06acdcd3c5c54201a322b6f87ba4dd7869a73bd9": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "lastError": "debank_profile_not_loaded",
+        "outcome": "error"
+      },
+      "0x06f8859d5d5fb395ba9efdc55879c9ff3a92db8c": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x075acbc4b31208f4d3462f5de10650c5d77f0ebe": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x07ea5e2cabae9a8e5915aa1c22fffa3e2d4a630d": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x08460687ad8abf415f9b14ef0d9d09fab429d9a0": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x084caf1bf60e49aec07ec4148a3f1f0f57fd11eb": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x088f1e1ae4e63fac93e75c3d0210f65beafc3334": {
+        "lastAttemptAt": "2026-10-01T13:59:37.528983+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x08eb090b106a3d4bf7870a23b613168bf5306864": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x091636b42573b706d62a54e3d18e3295d13ceb84": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x091f33b9d43d6935eb81fa4a4e3d6072f7ab523b": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x09da2d53c9d7e569e428b7f4a5c82c7cd855a7d4": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0a2d64ec4d8da8a7fba2adbcba59c01ffda691f9": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0a367f918340d47d36b21c93e9a2b6853cc9d6f0": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0a67bb4110da098832c2bbdbffc433af87414802": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0a76ce3ffa3a674298fcdb23b8858691a96bae03": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0ad7273bedb154002eb3f8bec0153f0420eecd0d": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0ada4ac3e9fb9189e4df815e007a369cff42739c": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0b60c1ee6d01c3d5704eeae6c12552c7a63beead": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0b9008cded3924349daa88581f422d643819aa1e": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0b9f8a3be4f35e9aaa9724e3016515ac225ad0f5": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0ba95f8b0d96ae5c7f69b5d02ea97c122d575c98": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0c9f38049aa942cba7d084280adfee1279cbecc9": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0cef320d0c5793ade37964e2661a033771e53cd5": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0d1399ae735d33cbad41d15406048a2604643f3b": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0daa942bc544a6abd02c6e0342c6b34d95bfef7f": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0de046423099cfd8c2fe02c7e1155b018cdc9992": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0dec1f70748304ad7d2209d71417e2db6bf0d001": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0e6c677d8a38bf7133fa79d961d800171c26bb45": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0ed25a16525184a10606abdc2e5702a10cb5ad41": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f2e9bf6f3c4b78d0c04e0493986047a07c5ec9e": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f591a998db63e17e5e9c88cf0b2e7603cdd3eb0": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f633e91730bbe66ded4aae4d91cb3ff6afb71d5": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f886fedf7b498c00ec50555844f16a091a9bddd": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f9c5cdd05ed3a5610fe75d6349a2b079c2a7c6d": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0f9f949a30b97c42ace87aae6f24ee2607003e37": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x0fb352f987cb824e05249466f02e1e3283f7e20c": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0fb6bac552b7a29a21b4e595b1ef5c371cda4f9d": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x0fd90b9d61af052c4328bc2fa9a1529627af0a7d": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x10113724b97fa779f408a77396c7c1813024adb6": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x101a5ee4d20eb5f3256020d074c5d17c329e533c": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x103f188c3c2163cb4d3ccf0eafa7bcff7bb05fa9": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x10a80e4cf9c7a6f9da6c2a17a37c20928632821d": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x10bfee19a33c1bfe9c546eb39aa1dd6375e2d447": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x111116053f09d34a7eae8102887004445176ca11": {
+        "lastAttemptAt": "2026-09-17T12:10:29.410232+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11111605ef067242653c980b8f6f1ffe50305afe": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1177925f5421c3d1d1a2eafde407f6f320a496a5": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11a0440a6192df1159c961f0fd442a1ff0457fc9": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11b3a30e55ce3947644652acb4d478da9954b448": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11b8898df9f680e2cfdd2c531e301fc8f5e9f825": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11c54b90373d97aca87ef30b5d16c7d7cde40530": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x11ec133ec18d2a7ecc48898c84e4395b961f1359": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x120051a72966950b8ce12eb5496b5d1eeec1541b": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x128b5aec9a39149935c0de26e7c97b0e3f19b0fc": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "lastError": "debank_profile_not_loaded",
+        "outcome": "error"
+      },
+      "0x12a9f62287ebea8e7a54fd7a24750ea79e55e02c": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x13109c418425cb39d96adbbc340b6e43c5dba126": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1350149385d5fdadbfa5527f830d4065f77df2d5": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x13777db44878c1d6b6246a58756edb453460f5d6": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x14173af98e6ee57ba96f73b7d8cfb5eabb7226cb": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x147b786d6cd893e0d48595ecbb7ca0411c67f8c1": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x14975679e5f87c25fa2c54958e735a79b5b93043": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x149e280cc6597a461eab7db69c66a5c09a04caa5": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x14c32a94d825b0fbfc1a7024282f6bcaaa3082d1": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x15117ac421e2d7fafb19d4679a1c2f227ce09b19": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1535d29d8e7cc5962976c927e4d193ee77c4a010": {
+        "lastAttemptAt": "2026-09-25T12:22:39.754953+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x15762db764826c219f1385c028e7e043a27e1891": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x15a884c3858fdf00552eedc08e93f0b5113e1b08": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x15fd31aa65dac313aa3883543e8ad66db12df08d": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1635ddddd921d8cee7ed8ca697dc492f552750b2": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x16cec6d6dff00bd1f5999e799628812458dcd9bd": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x16fa0438604ef727bf1db68a3468a1e512f27ac2": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x17658355648c7701fdd1fb41167b86da2c688255": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x177b808923caa2e8f38c54f11c72381bbc34134e": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1790f011d32158ab39569129b9d984b69288c4d6": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x17a5a3f477221885bfc04d28dd196ab88b71e389": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x17c41659cbd3c2e18ac15d8278c937464da45f8f": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x17ec67e48259341cf5254da5eb263b9cb0e5909c": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x180063d47eaf38c8d808a0d9a47c14beed99e9cb": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x18415c6771c42de0f3d03ac8dd9bffba7ad26c46": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x185542374ce5fc8bf8f215f5fc681370704fd124": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x186b4e576e34974c776ab8048970aefd9c71468e": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1899431f99fe3a9ff8b9c3c5c4faef7d1d413e3f": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x18aaf7c02dc7a6daf283ffdddc8ef8583074fd6c": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x18afa21b4752837327711593f8cb19241d311205": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x192e7f104fbc5ba9a41379bbff3ccd15eced6535": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1955fb36e0f92b2518584b3ad31e59c2e8c7fcf7": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x199737907e02dda6970677eec41fedaddec3c539": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x19ac8532faf05892d03fd85290b5f13980b3dc98": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1a4d78f329bb647ccc16e26a521506b9e1e9c925": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1a7a51444567a3388cb6b515a03c2d91863b0e57": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1aafacc008099845d6c35df8c5925c8e659c4400": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1b1b3b03c20bce2f4777b505058277513bc8cc21": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1c2506a6e32706a238f0613a863564b77690864c": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1cb75dafbd36095dba8612b7f963d77a092f2c79": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1cef0c7ecfd48c21da71c7b9cf74b2836d5b0416": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1d0ab48d0a8c8b8a145350faf8a52495d1dd375d": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1d425d5c3fe77f5f91f5582f2a98d4a94cb0549b": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1d8dc11e0735a103266300726ececcb49f879e7d": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1dff2177883032d9fc4907ed960511a8f27942c3": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1e527e81047bbbea5e62a7bd112e45d2e646310e": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1e5d299776be8114fa991a37b77ee09bbae45735": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1e89e3f66596cb65fb907fb2aa6e2c316b52129b": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1e92c9eadeba93ce0ea799947744c39e9b67bee6": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1e94919b63513d7c77e2c8c92ec63937d4eebf67": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1ecb78cce1a0d9a3714c8e845b8b4b21d128ce23": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1ef6446f9d693382abb92775a3c0e8b575988f50": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1fafb618033fb07d3a99704a47451971976cb586": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1fb8cc7ce14fbe38808640d6bd5e7bac4eaf5f0b": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x1ff6314bca464427bc6d92c19b4eb34a2b41af5e": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2000fa88e0ad73ac5c2c1290e04b081f4cf51676": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x20293652c2975e3b21b367901d55913b0f292a20": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x20457a590ba06dcb327393fe55ace63895ddf16b": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2074cd9a4eda63c9523b02f3f5ecfc7a2e90c2c6": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x20deb7705e0f0527c29854bec7e80f1b16794a11": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x20fb1f28b09bad5af92649499f3de7f0ec5361b0": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x211c93fc588fff61e513668ede591b480edeab49": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x22097685051c9a3d000b8765cd826f4c3da957cb": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x22222257783f4ae46c637466a538b1691871013e": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x224f590a8b58f83bd2673348d6ac75a7b27f9b54": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x229eabdaebd158b998d2f50280b4c9e0853f08ae": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x234a3727d4de428254dadaaee2ad31ff11a5d938": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2361c0741585073e186174d33ecb9a6eff9d362a": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x23a2ef14709d9621bd97446de9ba085a4626195d": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x23a42d50d3e99ad9a19d40972b8c2e57fb072de4": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x23d4c50cdfab26400523c3ddc42dc22573c7920b": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x23feecb6a1040366216cdf55f599fff775ab7393": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x24430178444b275687f2093c351868bb39761e92": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x245edeb54a2a1b1f4ea3fc453d3e54c3dc116e0e": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x24a6a6b5bcbc9c118f5aa1ed3f692099fb19d6a6": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x24ee5ff0f0ad7e6470cf340a86334bccca89609c": {
+        "lastAttemptAt": "2026-09-21T13:27:10.749814+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x256b2652d5038b2f4d2a6b00818c9a7d04f0c970": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x25953c127efd1e15f4d2be82b753d49b12d626d7": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x25b3a43b39fea4ac294e79237f19631baf600c8a": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x25d53e1fe43e686cc669fb4e992891e63588434c": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x26097f8c89aa9313a96ad8a851eb8e1c062a12d3": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2612cbf4e1f55b99f820b385ffa90fb447014e04": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x26209d9f0dc3ac0129c3fb1badabfeb9ee728c66": {
+        "lastAttemptAt": "2026-09-25T12:22:39.754953+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x26de224cbe06fd4321ce5747a176cbbd24773beb": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x271f95877f0de03e3718e7e440524d30f4cce47c": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x276f49d212dcafad6d9012a7438a58266f5715e6": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2770a0e55503682cc3a5c2bd6188001bd6f2ea7b": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x277597e29c2df9ac1363f5af835b10acd0e9b5f2": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2788bab78d279517126f7f7d5de02fae502a9a23": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x278d858f05b94576c1e6f73285886876ff6ef8d2": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x279ccbc7b08ad829de8e2d564ffcfe13e6260c9c": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x27ad186bb115a2b41fb64553efd4ba5a74b83b08": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x27ebd1c6989094e15163d9bdf027f51c76555790": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x281b68691f2785e068e7965cd468a5db2ed34656": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2829532830899a2d921364a62fe80e3269e924d2": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x28689952da1672720d266e902c6eb194313270bc": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x28949b5c3be4f52e229ca5f76016a6ccbfc665c0": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x28bf6006d87de7f44445905aa4f5cb8c0d8cba02": {
+        "lastAttemptAt": "2026-09-13T12:21:51.106364+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x28da3dde285d8f1f87b2d858f89961bb8b9af180": {
+        "lastAttemptAt": "2026-10-01T13:59:37.528983+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x29170a4ca3b8f16aa7be54db0fb8c4bcd30b0788": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x293f6ec9005628c4900639fd2c27d1be0becad4f": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x29420db52aa14f02557d08e2cee2d3fe3e80cbea": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x295079abd257e7b5d0c72223c2b21c60cf67b0ac": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2a23d0650db1c536e71aeb63ecd3daa0b52e66e1": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2a5a9915dad089fd3145e49ecde9a8b19298aa6b": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2a8b2a87fc98deb66702dc152dcc0203f95f3454": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2aec1d661d2198c276c655f064824153d248c7dd": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2b1f83b30c1a85e6f93723cbd5d4145f27fdb489": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2b7b6bedfae21b0cb46b73633192f6577b733026": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2c03c8c8f5162fc8803f7de7b3336b3c065d0fdb": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2c09e2377f651d19b081517bdf6dbca486af172f": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2c3b646c68b0ada19f3080c2dca385f32c3d3c5e": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2c762a0248e386d993361760fc7e9d34bc933a23": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2c985e633feb72e48d17ebf6fe9bea99ee0a800e": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2cb5b4a0edbbced297e2b7650f11a1075898f736": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2cffed5d56eb6a17662756ca0fdf350e732c9818": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d2bc06e9523fe92291529db8855195ae9c176c3": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d32cfa03c7d6614f4d545db3e78dc878f113879": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d58efbb923f0da0254c124f508aa20c7757dba1": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d6c5505c933b7ceb6714848019ae7675701164e": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d71a782e9b77725f0b6675077167c9459fd5aaf": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d7ae554c6871daaa336c5667da5532922218269": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d83d947e46d1baba92db00f40eadc4bb2a32966": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d8873c5270c64c66e831e1e359f88f9e81a91fd": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2d8ea9bcf57a8456085947ab4752f3f9104fc7db": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2deb0299d67be4192ef6953bb02366aaa37f888e": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2df0d8e34286c34af43f930f6d89976291914155": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2e0b0d80d401cbdac7564510a4f0e30b025f8aa2": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2e146da611af6f05d4e205510b8fa0e5323fad41": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2e271bd52116f53b187274cc2dfcff2271c89346": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2e8fba7125cfad75b8bc750832b06acae9729b16": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2ebde4cc1e1105128f4d415a019be317e5066d32": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x2f41ea375785bfbcc6e7accb5e921dc8334fbb76": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x301bec70ee01756dc3bfb5522866371bc01eeb68": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x30402f800c8fe01d845b54ad3de13f00b64dedde": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x305833cadd13a6d7febc6619304a6943a9a1ed22": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x3156a93aeaa65b9ec84d4e92431845b91ee4a5e5": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3195cd07f1da70c60d583da7f597e7043a990949": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x31a0075e79d58bc4650044f4b421ddd5446bad9a": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x31a2ee8b5e84b969ecf70d637016ae3b74cdfdda": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x31e2d118d58f5feb2ac7cf495a23bce475b79876": {
+        "lastAttemptAt": "2026-09-19T11:39:26.845637+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x31f00e615f4080f82d72daba2e10e46ce965f95c": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x32a5f4c786a8f79ae9ef46ff8a923cea8778f96d": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x32cd32b45277bf025c1df7bb4388e6a412b77fe5": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x33192eaf21be9df5442c45f26a9cf8601b45310e": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x333d0d85cf0331d292e81f874312c5a5da930a33": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x335a299f58ebbeec7caaeac5fe12bfb12bbad3a7": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x335e2e7f4c04b034c2d048b1a1dbadc0ed04e91d": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x337f47aed3c96a689680e6ab26c019b9919d0087": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x33ba18d5b6a353aec2788a8c68810d87c1653ef9": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3414ec2d1c63008e1cda0e2155b7334c446a0025": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3425c4e435ff775a8ebf3970ebfdbd1aee6efbb7": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x34985e502bebc84dba883ad295fbe9a8ae90649d": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x34c1ec621bcd79ee19fddcbd654095b16c1bb77a": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x34c6e704d2f602ccc4163d9faf01f0806f9fd4a2": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x34deae829a2346d6b9efaf1b8b9f3ba7716e4d9c": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3516c27da61d1c3358599da2e85d1075bc84b488": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x354a7d54e1ba84ef711de4aa6084bf8974180366": {
+        "lastAttemptAt": "2026-10-02T13:19:52.829717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x358ee17c36b51e3c6870ac2aee6fa24c4c479a10": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3596573f62afa24300efcf0308ffb12fafab56ad": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "lastError": "debank_timeout",
+        "outcome": "error"
+      },
+      "0x35ceed4e84c3ae522dfc84e10a49d0cc754f3c2f": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x35ea34834b3d53069d74353f9976b4348227e005": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x360006fbc28958f5289c3d3f872eb9bcc3468bad": {
+        "lastAttemptAt": "2026-10-01T13:59:37.528983+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x360f4fe80f9ec1967aedbce995dbef56779a68ef": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x36f4e1803f6ff34562db567f347dea00dec87246": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3797917fc3435fdf6f813efe56055921c588a2f0": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x37a38fb190345c147b7c33afb9b564d8c351c289": {
+        "lastAttemptAt": "2026-09-12T09:17:55.349280+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x37d0371d17e5e587b236504515a4baabc08da619": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x37e5157ccf88ae3a9e62b8eb857d34621e370d32": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x38285671612d6f0ef7c3483f500d39fa71d66a1c": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x387e884fff39a6629a6ff6b0a4c5a95d13a88500": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x38e6308f3e133d90cbd8ca2a30e97a7fb12ca2ae": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x38ef0fafe442de4a1348b84f3a2ff19741b3c200": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x38fc9e8c73ea02f3a7de1da0760e71277f1e5e24": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x39032520c46c965f0995dafaf2a26c1c12546690": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3936fe0cfb6b53adbf0078193737ad7e695b3c58": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3945d2f8c51ce403317a0db611bde74c01f61cc9": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x39509adbe618d2b56a3d050bcaa66d9082421da0": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x399f2700ce8ba81d10fe43c1d077365dc41017d4": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x39bd5841440d17158bacdccd6e75cd908d49e807": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x39be44cddd5e3f3d1edc66fd8c2b0d5ed355b64b": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x39c4210ed2286d56e979e8ad1fa64c12c2713904": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3b4022f63c4e2dcbaa9af016aac932cb303623df": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3b4b196ed0c8d8f0bfa344038d5e4d98e87f9bcf": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3b6471eea85583a3a22a3a66af7548ed5a469ed7": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3baaaa9bd6e4d3f729459bf26cfc346234801de9": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3bccf821c867a87620252ef92f2797ac94c02982": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3cb6c8d96ae6314a2747f9df0234a2e0949b50c7": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3cbf175ba7c1f5fbc16a52ce15b09fed60dd483c": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3d5dc8d8ef62348e8e2e1abe4aa6d1153b48f232": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3d63c340fa1735637e962e3b0b7d0f7cf1f722a1": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3d7ea3358b5f346f768e586659bac54e2b36ef5c": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3dcff756276454cf150e5f7bc9679085742f61bf": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3e07be15370d8b12d80a159a7ef14b9e51869497": {
+        "lastAttemptAt": "2026-09-27T12:34:05.909412+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3e0a3ed870a13f70b80022b8fdcfe526deebc019": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3e5041d44c9ad13f661bcb49bf37e44eca973c5d": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3e89350acb8abd75eb0f626c35023934c8b1e1cc": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3e9ba86f0ec034457eb9e0061ae13d29d8a40b12": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3eb83f624e49eff85ad5e506f624ff1571ccef8c": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x3f1cbd66c60ed5517d076051173936a2d6eeffcd": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x40127a34a92ab1f32467d6e438410893589db4b2": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x40a24ea5b6a248f3a138e6bfe3366e78d1cc71cb": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x40e2b0640276beb9a0cac707196f7c6b38746a5f": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x416a3427414b6c98adab70f48a2a904d1cf3f446": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x41bc7d0687e6cea57fa26da78379dfdc5627c56d": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x422ca1c2f154b802a674ab2411821fd264ee5f54": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x429814368c0be105eb08d883d43eba8544bcdbf3": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x42a178633240601d3485e1f51d8b62ea58c9b5ae": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x43d184f3d9ce27d0cb306512707c467877b0e7fd": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x444e5af2090a69c4151d6bcdcb15c7c660b28dee": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4472d1271a3310b5d5782840b27ed30d75ca5b62": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x4488e963a5a451ad25250b71628222a68536ad60": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x451bdeb8abe918d24eb0cf7de5e7a556e248c99f": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4589ac7bc932b8c8e4ea001d44d40d5e4858b808": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x45f3fc38441b1aa7b60f8aad8954582b17c9503c": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x46388e4d378d4adea739bfdbd9af623504b96f46": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4672fd874a2f7b3187e315abfe07a15fe481919b": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x46c38155354791da32e8ca26fad5d84ff1bde945": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x473f13c81fc12c10c27ec08294a9d2b921827d96": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x477d057ee378168d33d62eca943c0247e8b04139": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x47a61abc16aadbaea15c3bb6d790eba816b7ecb0": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x47bfa7161b9caa0b3fc4ad3969265b00f18c2cea": {
+        "lastAttemptAt": "2026-09-24T12:18:45.490120+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x4839f289cc94bebf9cfe9f8920c11ddeaae65ee4": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x48bed3e371ac7acc511bbab4054e3cda7ec0e15d": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x48ca09ee2ade7924807812ae980e2683631fa216": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4947b8804e2d484f97c1e11ce565509641986848": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x494e7adb618dbb9f640f1c7d65518af426336f1f": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x496608153fe92ec8cda182a517940f6e94112916": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4979f3e313e15609dc6ebcaf84b0a3d763de5df7": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x49c1f3a6ade6f46d8d6c90db28ac89e500b559c4": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x49c225a7bc965b86f5b728c79701538d3f797834": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4a35f693246ba66f800b2ac3c0bc2796912d6a9f": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4a470942dd7a44c6574666f8bda47ce33c19a601": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4a9026e6332b3dcb52e3d4d3ccbdfa3eeb73c23f": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4ae7883525b37aec2b9b0d162bee344b4966dc60": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4b17d596cf620f53bb1cea1142af90674dd164dc": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4b441cd7c5085d0c255eff3db7ec3417cca1a1a0": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4b534be21fc653d9cab7714469b780ffeeed9464": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "lastError": "debank_timeout",
+        "outcome": "error"
+      },
+      "0x4b5f834ede79c52bd33d952c719a0b641a0310ea": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4ba3875a15664dfb807253c2c304a00329a813f3": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4bde58b4aa8feb155963d359d22a1755f4f4a11b": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4bfe9121dceb52f33187a0415e18828abf272a19": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4c4bc518b1050740f16ef0605ce682968c7b191a": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4c891bc797add31fe514f34818cc637e743177d5": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4ca8ad3a20848ac6f5dbb14cc02fce8c037d11da": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4cacae8b3d39df0756089655d84767b24dcb5856": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4cd65d4075c3b090538462f90b48011f20b385ee": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4cedf88d4fdefa1e460bbed10bdfef105c62fd68": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4cf5bfa000528afc43fb571bb214fd1f25925786": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4cf9a296a2bd92fae2d1f3f465fe2355760b9c6f": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "lastError": "debank_timeout",
+        "outcome": "error"
+      },
+      "0x4d098c6f21d2c52015ab906d99287b8821cfb0cb": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4d2e9548dfc847b6ed21f253ac71b669e67994ed": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4d50cfc5f94f373930531fe229ec8f6e0662c74e": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4d7a15dc073fa6ffd1c142ccde64f6f676166a73": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x4dedc2be2e387ff21d7feeb0428729b564acfc7f": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e29bb7703bd7041e65f1da266ac34eb3fca02b4": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e31db940abdf5581a2cdbc6576f8c10564bac76": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e368d8099514061459d709b33d449bd89d1f021": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e5bc1cd2c421ecfef65395b3237f90a97178c55": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e5e7d47f0fdad58d56ff0cc852375dd4668e8e9": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4e6220547a3328412c0534c25cc2009665428218": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4f13a536e8f04ddd1e52e79c4103f0cb7faa1216": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4f3440a1a1c26b02dd8dad1e48810c8d6f2dba6e": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x4f95c4c6414ec668fc96a545447427d4e09535fa": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x50202e6e376d796b5bcbe890c1d5ff1f400abc02": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5064f71a8f090f465d0f31d35407d40d8ecc0415": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x50a852203b68861968786fa057b0716860775b3a": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x513f228a8b08f8dd778813f3bac4cab558453a75": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x51b85c18b8a94081cd5af25cb3c4bce5750a0b19": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x51ddafa2f24636dc87f77a842ad7946456e6d426": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x51f58996e145aa95c3e772ecbb2012871dc41a83": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x52945e762a7fdc152ba25b54c293cd2537742bcc": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x52dbcd1aa90dfcc12dc3ceb6b1480f0af60ba083": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x52e50e4de84d9f1f957e1e6d1e595da54ece1f57": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x53ea590ccd1e7ce887aa040a1407cc19ed878e42": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54380eb375ccaa30167f2f697627c984818dcf4c": {
+        "lastAttemptAt": "2026-09-25T12:22:39.754953+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x54566691c1a6c228fbecedc5518ca3017a83efe1": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54b11e3639e17323a6009e5b521ed88345f8824e": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54b338e6cfd605dad2264b96b0a730fb2bdca9e4": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54b97e6c743fa789a17961f8101b312d303e8b3a": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54f8a6a355f4c4929e55524afa8671a3cfc960f3": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x54f9510af77f50f0c177c6ce87043a1f62f657bb": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x552be2cd9190c8a3e65dc93be5f88d37ada17a76": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x55423582c0903793f8a5b332c750e499047410ff": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x55600db3c76d21d2fa12ad51e12a122d9b377f55": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x557ac2b348e7416033f81f90c366f63778df67ee": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5643b003eeb558cbc146c7167b726dda0ca27309": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x56ffd3e344c9ae7818bfe833e5d387b133e8d72f": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x57124eb24f603a1005ab919a702c969156985e75": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x57931d0b169328de8edfaee5bc6325011740268f": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x57b308858727651f6d754019489c7e0dee0cb6d1": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x57eedd068709e8b58e440e8910f30aec750fb0d2": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x57f99c9f17088fa8e0125991650dbb8505ea4c88": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x58634fe1508e4fc47ac2978447410591f9832dd7": {
+        "lastAttemptAt": "2026-09-27T12:34:05.909412+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x58ae6a82b0e52607013b28bfb106358d6499dea4": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x58b3fc3ea4381a68466e455a425aee7dfd777cd0": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x59229efd5206968301ed67d5b08e1c39e0179897": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x59c26d4ae5b89a5b5844011fee22dd41c0a50cfa": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5a1e5b56aa33c056ed7bb93b88b1774a456f6694": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5a41e99ae84ec29513007dd4d0709f9ad3eccc07": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5a52e96bacdabb82fd05763e25335261b270efcb": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x5a6c74c991129aee4431df7d259856b7a3ed5652": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x5ab28b78fa13d1a8f97929824a71bcb540c90aa7": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5afdd71ec312eda36663f72032f269bd9c950cb4": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5b26755fe7dad4e265efac1c7964979a8767acff": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5b977ce6ae6de2947d32ebd3ec1ee7f57e30a82f": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5bc8cdf07ef449b4a0d680bbaf08f07872633076": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5bd2843c229165d36ed9fa8558c4fac9d2fcd449": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5c1edb9562a9e7e28600ada6c222d7fc8581a2ed": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5c50de17fddc3dc36fecdef49cbf945c1820cdad": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5cbf8c43b11a3b120d2cc2955f9b638303e0d22f": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5d03ccf218f114184c7e1b39f13a38885e039255": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5d7d1bca7dfcf5be26b077ba297ee513f2b0d37f": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5e17eb43fc3379f063cb568f4209ca17354035c4": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5e42031946bfabaef3b3839f035066f11a9ce33e": {
+        "lastAttemptAt": "2026-09-07T13:07:54.782546+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5e4fe86c4f6fb2203fbfb77fd6ec3cb300b639aa": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5e7c417b4c503c206af938a2cbec8ddf005fc3b4": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5e88e6b7440b05a04dd04e0af9cc29d36ce411c6": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5edf3310e7c81fabb034e7130f78c74c0d4809a7": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5f1c5951c5b1cc112ba9e89b9467edca33063453": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x5f4710aac569b2e69dab4690500ccfb8dd8c5796": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x60111a6f283dfbda157f570696dee8d0b9fe7849": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6047627ff65b83055fb7816a98b69a44fdeef868": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x605865841c50c3c6d3eb2bd5d9a3821e1a80034f": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x612169fda8ae6da853060b84c3151faf6aacb8b8": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x616b7de7560aa30d7ee6d361660309167a4c5139": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x616bdf249a81e1ba568962747eb2f66846981fae": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x61859c56fde601ff6dd2bbf77357c545a3907606": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x61c952811875b6d879ba8776f83e914a21f3d30d": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x61cd1eb8434aabdd38a0abd62dc8665e958e41d1": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6257287777c8abed5d5073d360f21a42818f63b2": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x62a73f7e2e56a69ddb68257c2a91df7b25c00eac": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x62dfa6eba6a34e55c454894dd9b3e688f88cb09b": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6301e49ad3e7f0b87d41f583ea80a425ca7a65ef": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6371024c5ffdaefef716adce3cac52ac6181cd9d": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6398d63af7adf801f0891aa335bd0cd1588a54d2": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x639db332a224e903494198b8d0e747320836c41a": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x63ace767e4d60ce4e3f0c83bfce1f365116324d9": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x642f2a31c862924e7717bc56df937c923b55fd7b": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x645c062ebed4cad438d003b04950a9004021776b": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6474195f597dfc71856273f244620becde5e3af3": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x648349e02c549986c8ef2b75514d73040d581acc": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x64e46b8e416cb8b7eb0800a6b3cfcb8259b2691b": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6522d32a494772f8d04ea60a99f27d30e6d177ee": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6528d8d33cd5c87756418c67aed05f5fa33c1525": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x65305620ea4e7b3af5928247639525ba2a171043": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x653dde882091ac53f37d7c85a2bdf1d9928ad663": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x657ff924a069048012a2c52287c0ab55e752f6b5": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x658bee60de84cbb1248b302a1171dae8ad912e89": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x65a8f07bd9a8598e1b5b6c0a88f4779dbc077675": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x65cc9f6030a0c9d3f4142fc7ce4de22105694c93": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x661c4220751bbca6bd19cb0f902f60e476b7cc8d": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x66322a0f0ef69afb3f9d41b4f6ea657592578330": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x666a741e710935923a2b6b59c59571e71c102999": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x666fedd4cdd4e890a5ad20e7b60975409435a64a": {
+        "lastAttemptAt": "2026-09-29T13:28:26.965883+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x670e862b82cbca8a9ecf5cbe28ddd85f93c7e2d0": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6773cfcc056a4ac695cca73134d2ee7fc1482567": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x67beb3dd509b88b706dc5a9f03f50006410b088b": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x684ca620a83a3dc69eac6c0f81646965ec381828": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x687564e683c3ba284eed4d214ef36e657cef0ec5": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x68a4aa623b34d5320c0643ec77eb86fc7cd9a6ea": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x68dabe79b4cb57502a8771ca7ddca75050012852": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x68f1dd9950618d55739f6e05e011a4bc7605f44f": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6906d4ac9236849a755d16b38945cdc44dc01d07": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x690c3eebf6ee237f00fc96f9766282f096c191cc": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6990e7e90ab50c12111f99b84183d3fe298bb3e4": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x69ea9c11b1397fba3e934b77a972e88b46243791": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6a982f19caf0fbf58b0cc9163d9ef1f1519f1192": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6a9a9e7df3006172db0620b15a884249229f72fd": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6ae0a07df4cd5956b82e636f07804f57ab7f9996": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6ae33f63ba69b3d58e6b5be4dcfd43abaa7c8ee5": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6b09747b73abc9cecd452b45c09d6a7b306475a0": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6b2581c1e6a05bc647720186b71e2772ffdce041": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6b3fd562f3e87c2c7d9dcb25e791676f31558389": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6b9a15027675369485a030053605a5f40c7b063e": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6bc3e7b5010f588cfe347473c610b9a5d363e140": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6bd5b4ce070bffbb8fa9d138df171aaef724f8ee": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6be231ca94c8d7dcedb9be218efefdf161e937e2": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6c44e89672b54bdda8ee7578b005bc34620529fa": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6c46f3f23ed4a070da8d7c1af302d09394efb79f": {
+        "lastAttemptAt": "2026-09-29T13:28:26.965883+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6c4ba9e75e0e7fe6a737de89dfdc518aa17cccc7": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6c6b81083498cfa033b8ac20e36e4a98abe44f30": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6c9529f95769d2609178e217c3ae19e5ca3a9076": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6cb90ab6c7de4028af86f15ae97c4df2b954f84c": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6cf07f69af70d879076e5a4ac3d6affc5cbf45a8": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6d704dfc21a15fc78fcd0a7c06e89188a99ff060": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x6eb9fec1aa0e3053b3aba0cc320a87f724e284af": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x6eec8b8c15cbdb20c75956551d16abdcbc041637": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x6f5a8a35fb10eecef9128f407a0fe67b898556cf": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7005b45de07e1b70dcd38ee3a708cfd88a6c7f8e": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x702d6def95d59e31eba8420372821c2e49f2d607": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x70c69520eb6595d102bfd8aed8fc58428489c4e4": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x70c72011aab46646ed3c2d5993ea8bb2a851625e": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x70dfe8d1baadfbe1521766f436fa9e26c47a992c": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x70fb402e73fefb025f93e70ead8cfa0ec8e092ba": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x713564da6a54d6d105eea56baf2708ed062e20c2": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x71619d71474f8d0aaa9c18a757be7617686b499b": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7165cac1c7f5e78810789d287c433722ea84d3a7": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7254df797df910b18a19107e0957378e31347db0": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7317ba07e41efae6daa8856558740bd86cd9c870": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7336bc7430cabaa56339e8521b06ee9c3382e68c": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x73d8bd54f7cf5fab43fe4ef40a62d390644946db": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x73e38bf184a10516b3939064a9947cc9ba217ab0": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7429c0a21db7c7ccd39ead8a975319f4b2ba92ea": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x747e32191dd2c64e0e3320a7f40cc298fe50b52d": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x748541e9be44cc198bbc0d918327e5c20e67ecfb": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x748a8277bdc7103769efe82bbce2f4f40a34ce6a": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x74d4138b742560802d8e10325f72d1b4e0b20882": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x74dcce073d708e695f4ec5eb6aec958aa4d16f44": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x74de84f818bb4a215102bfe8e264f08b7d5cc8b6": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x74e94b5e829246c82cfbabba9bc46ff38cffaefd": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7501f3387b6ea5c4bcf983a990e9757baaba792b": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x75319dcf2f347b4f7c6f9040a50b4253f7e46681": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "lastError": "debank_profile_not_loaded",
+        "outcome": "error"
+      },
+      "0x7536ffb51f80738247a1d5c86d2bdee55a49db05": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x753cb104cdd6b30cb339c6b8fe1262bc0a2808e3": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x754780076615453e83a6bf67558643ca0a2912dd": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x755beba1145f26201f686fbcdc246e75ad76a2fc": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x756f62303d0bfade926b06104f17b2009f667e56": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x75e408adf13b712d04e1d1f86806b407ea3ffc6c": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7650b7cf5a642fc082694796dcba6d40dcbc06ff": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x767f6dcea7e1d520a3b7ac251b30178a79eb2ab0": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x76c618d12112076d9e4fa9136dd0ca8bd816ea7e": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x774789e0d37ff3014754838da4e6b516bb166ade": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x774c33fe8caff668658d697566d036a80f9450b7": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7833341fff5bbbac5a0bd0ca28d6d9fa7d094601": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7848cffc24f11c83f4b1b67c4859e6d72150b13b": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x78554064cad244f41d14984852d10380613ed076": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7860660e1852d0eaaa9cf86f3038b6b78639229a": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x786491d2dbdda2335e368048753dfdbe88c322f3": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x78b52b660a5b506662df07bf296d6c5f6bc68603": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7919635d4b726d386ba8adaed76a36b7d0ef37ba": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x7947fe08de60be3899fa25878e95346db32ecb0c": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x79a97fe190784e9f3b42e20967ce5ef3a806933a": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x79b6a621f74b47269a543f17c6b24254cf90c2c3": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x79ec651e503f243c4d5bc1d11c55d57f60cf1349": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7ab67f76826fcc7db3fee6e92b153a7251948595": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7ad5ac4b60d475bde637de2981ee2607a5f5ec14": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7af4c092ebc0521eb7a7f0fb7a2583e2c6ab440f": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7b1d11818c42c0b37306e7d8bb8879fd323a81b1": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7b2cd9480d0f7d657a305e57c3cb8f41831fb074": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7b7e8a74b836fd0126cb435fd05d04a8f853213d": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7bac56dcbada2909c8155b580f0db6e1d7cc4da7": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7be9458effde2d52f96d135d3627f6fb906bbf00": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7bfee91193d9df2ac0bfe90191d40f23c773c060": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7c086007f8e899b90f0b65d63911d3b3288144c1": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7c39d57b97c7e3ed305484f5513ccfc2089cde90": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7c6902a6d508c57cccc470ec3468f052fc5df60e": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7c876bdaa5c038e19f633714f622f6def949b102": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7c9b8c6f682618103ce226e1109bb80e8624257e": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7d2d64c7fa6c3fc4c6c5179ce986c92224240609": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7d4a03303a92a267488d7407debb69857803f3a1": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7deac793fdb95d279e9168de23590973f33ab579": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x7deaf0f131f4b6625d9a6c2bd4fb342710abbab1": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7e0947a2079723c5875398acb5ecdbf71306e811": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7e3d42cf88b70f8ff5920642140d66caf8634865": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7e6eee9ac5f1cc61ec65aaf1087731559b559bb8": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7e8e348f33c332ee6527f0f43f3b569cb0279aa5": {
+        "lastAttemptAt": "2026-09-28T14:36:35.153314+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7e9b152d77e3b800a7a15d236d3996d1522666e5": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7f5f2105ca187fb3990b8da12f7aa13a927220dd": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x7fb15ce26ab114302f0fc003350534fbc8b65ec9": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x80899f961925693806570384cd35683ab5adf549": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x80aa16488f1a0c1c164ffc1cf574e8e7b262676f": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x80f094c3ac6d87b98858f662ab79d2661d0d4a82": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8160a188566244013eb5ba19ae98cbcb1d8d4cbe": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8170832e879064441f5beeab731c1ccd5facdca9": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8175fbbadebb294fe4e8175e180943a86008b06b": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x817dafcee58beef498fe640dbe0fac09929920aa": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x819263761900318a1fdf8bd7a138e89090676fec": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x81a3f6ec56e96b58299d181243a760e3ab24c320": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x81b35fecb97c2fd5330fb4dada1ff65cd2d78d22": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x81dc6f15ee72f6e6d49cb6ca44c0bf8e63770027": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x81ea04c179b82d31662994a68b2582ad9d860f88": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8284dd79d44e7d7bac9c285ab1ff8e072183b5c1": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x82a365858b4a82eed80e5473c6f698f93b48617f": {
+        "lastAttemptAt": "2026-09-28T14:36:35.153314+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x82ce9c2019ccc27eb0fe3d6e0a42492678c284a7": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x83560d47550bb1d52e4da82560971fe03e52526a": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8357be6e47f2ecbad1dddcc7eaa8774763ba5ed9": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x83f4e25d2c434127974420eb45c0828352797ebe": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x84555742814118b3e77823324bc2fa2d6cf23819": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x84e890223d1ef4e9102f54d15ead3cde6a9a756f": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x853c21353c2afc97e1d093a4d12261a3a2c3a73b": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x856aea35eb8690d95aed1bf0a4e75f9d6fa86531": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x857d9e9aadf406c579f9cf38741b327b0077bfdd": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x85c15fd449a8092967646b6b1ba85b70585b41c1": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x864de5bbaf4b8c808e94a8385b95b0855d170137": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x867b93ecb8ebfc900a0412661476d469361e0004": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x86c84b90f90d16129252b50aecc4a5542e3514fb": {
+        "lastAttemptAt": "2026-09-29T13:28:26.965883+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x87b1d2d41b14b4d1ed3ddb6e7a1319f4271fc994": {
+        "lastAttemptAt": "2026-09-25T12:22:39.754953+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x87db27ac8459ab6602f7a6155b48f6b184065da0": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8906cca12b5dd5e2ea5bf2dafc9dfec4e3096f88": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x899f6416ecc30cb5fa9f0df96138a384c5631fef": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x89aa172ffffb92f7d1660150162b079a4e037f24": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x89b537d4e0de035303dc1bdae18394f7a6c15c36": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x89da581fd9f223019873869cc14e0c83df2960fc": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x89ec941f01eec9c8d2e1e924cc807ca4a1233617": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8a0f8581e8f2e4b4626352553d382a848aed5efd": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8a275c429857051a45ee32cc190eba9b7acf79bf": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8a2fa09530f858d2b064d5539aa755e8b901033a": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8a5221f95c8af2d249bc1a7f075b31336ee5032f": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8ae95f884f1743d88b1f409cb980e98cc8ec2a9c": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8b65363a01510490fba03cea97b14c73b7ee8f75": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8b6e13f5f7ba2daaa32da94d15157284911cc5a6": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8bb88a3eafd6ba0b6cce254c0c447c4cf5860afe": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8c39b7cb82b9d791adcc9387098944b635c17b32": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8cb5e212e6a3b70229ac1edb56fe5e6db199dde4": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8cd70e62ac304356b1a8d37643669c0694e0c836": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8d9171170edf038ed1203120bebc1cfd86daab8c": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8d9354a52929f9f76a38e11f7c624f46946ad288": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8daa84868317da7233caf20abef1aedf193e9450": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8ded4bd8d0ecb7a95123d427d4c52f34a1ae7a24": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8ded713600ef76e30db4dd249c22566c494fe773": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8df62f07c60d79ca09684283782e6818e83ddbe3": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8e49f27740cba1e6d5799d8562cdf580c66d666e": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8f2a2904e982bfd4d1a94f66e3a44402501ad4b5": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8f5587324245a872665fd7e851b232958cf50b62": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8f90008577d6b6be3972558143ec4163199b7aa3": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x8f9f9aec77d00c98bb8f131fb0c5f14132ec76e7": {
+        "lastAttemptAt": "2026-09-06T16:48:47.702057+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x907a4d3444b50fe23dc1330f487af932ed6ace72": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x908e8e8084d660f8f9054aa8ad1b31380d04b08f": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x90ace3d33667477343a112e06654370acfde1cc6": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x91672a5506e1f4d31243d0058d1227a0dde88df1": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x916b1f14ee6d1b5a948e50a575873865c965aa12": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x916b7621ea6e2dea1f14f8b11e2df633ae4e983b": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9194e9f5fd23f8a3c1b8de4d995c3048da167905": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x91b68488d4cfe0a2fbf8c2300770f7b1a9224edf": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x91dc81114dfb563c5faeaee5366c40fb47ec03ea": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x91e0d146484f691df906a92944b0090d403ae434": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x922bfc386b3d3191eb82ab44323986790cd1224c": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x925e7e91089677df6cea8ce0da896f87da54a5bf": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x926bf90196781cf2161535d48af542889cac4d2e": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x927b8b31882370620e897624061918a27b0e8d99": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x92eb28aaf86332a6d8f0d9ebeed93b0be6fceb60": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9357c6729b310f140dbc90c0ea3e9b5a1675bdc9": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x937e39ff9e65b0c9d62f35bbc301d9f8b3e38575": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x93a1af63d2ee3577f2d987e740232c71c3635bca": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x93b996f91e60502af0c9a4d7d94a8668257d4800": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x93f5af632ce523286e033f0510e9b3c9710f4489": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x942f2d75e01fa5eaf9e127b22326c12311ac5bc1": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x945d895281bec1b78b63abe4e14714de7e36f285": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x9487e1aa2622ec9b256346a6c73fab5122570bd1": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x94f865f8fb034ca520d469eab7bf6bdea96ef9d8": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x95252af531ee435cb67231115ca8dcae10fc166d": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x95e93d21b310fd1bbd337723fb4e4a4a97201450": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x95fd36aed40aeacaf159cd036399bd8f3e05f110": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x963c4acd8ab2a09422fdaea930055ed95303fad2": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x96a2ba5780a466270b4895ab420a3505844a57af": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x96fb674c02b261e7e169b2f769b0552eec7c0e9f": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x970256a45681a36c4f21e5c9ce100dbe464a0b2f": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x97561a6d3924bcc68f805fb888fdc9af68a48b01": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x97d59a4cd39fec0756e067979b17207212ecd999": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x97ddb4eae240cc7d1c19b391aab705ab4de1accd": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x97ee4ed562c7ed22f4ff7dc3fc4a24b5f0b9627e": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x98033efb9125333f4f6353bcc5e2d0ae06b436a2": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x98c3d3183c4b8a650614ad179a1a98be0a8d6b8e": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x98c3f133242092861e5ababb0f093be60b0e9c32": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x996d7b599ccf1360b630f79ac227489f1c655761": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x99abd5393a23c99288df2f4ad7d52a3e4acc161f": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9a50a078d80f36e38edfae85affa2b8ab458e2c9": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9a64a1025e8f9bf47af2463ffd11e0ab86bff7e5": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9b472e7340a17f8943aae42b6c38505ae99d30ce": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9b5697a4c360a3f5f5cfc22a4b7bdf8d3d52a4e2": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9b5aaf516d4eb6a24ed8c1bd7c813601d436c3cb": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9b8c6046143a6a8d6eb7afe32c26d042ef133603": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9be9fb5d3c3fb2676b1e3d4529ae44c32231c972": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9c0d1f4a029c46265831d120dee9cdc72f0ab3c3": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9c16d28801ffb380e62b93a3faec42ea8d9f568b": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9c98750e9fbb7426a6027a1603db02cdc8cd8185": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9ce6e6b60c894d1df9bc3d9d6cc969b79fb176b7": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9cf5dec27768855d478152128851ebde74f6a3ed": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9cf69960f896f8e39efa28e9524270a22094e6c4": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9d5ee6c07842ca8022414b9ca7e7148b1613be05": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9e0bf7fd04960e337298175b0ab1b1d5efc69b78": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9e6ad2be112760e7dd4879212b5480ff7b8c05f4": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9e778b71e4f64d067bf3b15fb004b10a6842c4a9": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9e9a8511bf786ad8951e946a2d358e9e12532176": {
+        "lastAttemptAt": "2026-10-02T13:19:52.829717+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x9ecaa6c42430f46bc382384f7f0613266cc0e04c": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9ede2e79ef822fd9928e5293f63e43b39270073f": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9ee95ce164401843717614cc317f423f022d254d": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9f2fa8543a0458c5e33c83693f5889237a8fec60": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0x9fc6f91f7b84731769775b6383af0e2e229a26a2": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9fea619071805497ad3406f5ca729f19b17db155": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0x9fece7066a91fdd416cd2ad262d1ce1f461ae8e3": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa058f9d15551edab64fff26203e53b5b40c0f55c": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa06134b0edc9e426305d8f3c5fd0f13524df003c": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa07d83334758af046dbcee6991e341c0e061d121": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa08942d09244c0a050decc2f823850515b2c8f82": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa092429a6f2c5a9b553f7a816d5c5661d199be06": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa0b540a12e5d3bc3af9b4780fa0b85d3cc2dc8d4": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xa13c84c45ed0c99a4f4783e956432d4d7d4116e4": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa18ce9b63ac6cb0b30ed3fc97522688e432afae5": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa197b1d0ac0649e75a35c238620df5510ae057b8": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa1a708f5d7d3f56716f9aad2fc36c1b83082463d": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa20d590d2b4e41bfac9e55ca15c951b6c827e286": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa23cd837acf9f1ec83c37e8ceacc785789a26677": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa24205b4403648322784b7b88f93481adc04b32b": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa2a275d828079ced68bf2c2202f2218a372c5f5e": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa3222357a0eccf60c73606170be6c99adecb59b3": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa37dd7c67c5c985aa56f7cf362b29d83c3f36816": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa3aef439e6b69125cdbfd946ab1d8a9d012e1c46": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa45e48e40fe382f995aac6fc91f7538cfcbfd55b": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa4854a30a62c0c5a62ccee9582a2efacba5d41b1": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa5a32eed9079269e576ea0c04f0327be7407f937": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa5af702e28608796e6d87858a1c95ea454a02081": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa5dd28e677a935734fda73b9fe028261057a111d": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa64046947fa1a6ef2fcf830979086bf54d97e9ac": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa6948d871c8b83151b6f7eea3ab075ac737df291": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa6e3475e2d4a9937b61be131407598ed188b54f3": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7140e1a13eefc450b93a51338bc9bdcada4fd6b": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa72bb16ad19c43ae87e58f4bab695c8b9d0864ac": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7522b8c92907f22cab113486b26125fb5caa191": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa76cb920580cd4f77222956eb869b0188b57451d": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7770eb7f1ae6719a0d7abf96505ed5d07e61111": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7b635c8b9c3c5dc3bf627d1be337aeb8e23ffda": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7dd46753b6520b753d74ec3e3148d36b42ac91f": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7ea8f110dcf8841d5b92071ec2733d655b297ab": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa7f2a4a373de72d7da6683494952007a531a5681": {
+        "lastAttemptAt": "2026-09-18T11:54:58.091376+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa81276d526df34a870a3b22ac28115645ced2609": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa82878bc1c11265b676cd03bb6d4edbdd5a5301c": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa8a7d1479661a2400b876561e20c632c50d825fe": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xa8aa9112bdc1401204e1be167b0617b6202a1914": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa8b4c7f8b3d91b324f815252da74884e68fb4c4c": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa91960d518c5be307b228f54e8609720137699c6": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xa95db7b23042fadf12e557b96f9bb9a8f36e6adc": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xa9f0e403d200574c756f9021620b57319212b0ef": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaa9642ca5524ceadf3b77e88058f9da7569d79e2": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaab0b975adc5317d4693d72574c00e1ad7180385": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xab16b1d1081f3aa93cd822a313331f7c0409c628": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xab4d0bb9d3b3b4aebedc25070e5a1d767e3fc5f9": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xab7c0efe4016d26808a30bc5fcdc176550fb4d72": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xabe44baf180ac426565503bbc3ecf71a0459456e": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xac1cde7af38d3abfd8b2c89213dccbaad63d86d4": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xacf082c16a22de1fcce88315e77ae889d803ef88": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xad30a962a03bc7134cc1545bea7318c8e472ff97": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xad33183f70c4cf450d57c362eebf99a1e398c805": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xad85129253e8a6c7c2f0fb290d397fc4d0a1fe73": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xada68f03fc71f3844b4785507eb6f2cfdb122022": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xadab032947a947120dc76cd3d33457ef2ad5ed62": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xadc184bd85370fae2fb3eaf5cf187f35fd235163": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xadc2d9b0c12921a9288afac4926ededdcca70a3b": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xadcb235641d2759f06b009cfac4832c44c0b357a": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaddc26a3854feabfd20d6bf658254088d83a425a": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xadeed59f446cb0a141837e8f7c22710d759cba65": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xae15e2ec2a623227e25fd73de4c856d6947f94ad": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "lastError": "debank_timeout",
+        "outcome": "error"
+      },
+      "0xae526511563fd30f4905873952e9172e258c2427": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaea86ac3a1639d8e3734861d3ffbe75a27124f5b": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaeb3d485d091b244e51dfc74beedd63752c8922c": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaed4828dc185b918a86ffd4e21fba837b6a38c4b": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xaf0eb1645bf38b86c4d73962d33f5e34399c3895": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xafa802686a10c055a7fd28d12f55ca63e6f03872": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xafa843c9f36eb43f115deab1b3ad6eefc451bf9f": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb00c048b5183e70070aff9f9ad9178baf6608fbe": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb015a951a66722690140d07bfde429d5b334b8cd": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb03f2b1c2eaa1c750d61e0f316d5beb4c9a160a9": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb0730882e292bd042fdbb3d31f8b51102a1965ae": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb0747c983bfa8ac88248e952e2978afa1ca6fe40": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb0a53bcd7469435a0178674b3fc64d01adc34c57": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb0d59b7a768b94803d569196f9d8a3e1acaad8ec": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb11e8b33b0b4dd7329d06ba550ebe193ec35ce23": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb1787927c45b134cd980edaa0444d4bae723fa36": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb180647d5ad76abeb6be0d363f6e182bd8df46d1": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xb186638adcba7379fafd033531974d8fd8d0aa6a": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb1974d93dba58efc5ffe9a6b896d03b78013b499": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb1b410bb308b77928c2b8d543f48bceb90cb1a1c": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb1f05c103cdd519e9f9785cda23c03635a598be4": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb2036f3d63b971c1b2ed2a1cc9688423ab20a500": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb2639d815a4e7c48cf5f136b894170b9a4bbcfc4": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb26b4a4bba425ac28224cfdd45b4bd00c886cc33": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb48e83626402a0c8fd876c92c9c9f2e66644fd0b": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb490d2a5d857c0357a8c2ac23c30ba0e6e02f909": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb4af6e0eada9797c77f23ec2557bcaab24d7f93e": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb4cbb34013f0ac8df3637a78e33bd789a20b5045": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb4de00aa8f1d5240dd2e3072bf72997b447d64b2": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb5ab290e152290b6bd5bdb04e23236d3f9d4aaec": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb5b8ef26cda3ab4a50a372da93596c546b25b7f8": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb5e02fb3e56292c0db62ff7185c3c1cb97a3d56c": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb5f4af1a4b5021ae10207e1c2e119ce8249b3007": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb61ecff680a79aa165f8fabdb62b89bc8d71ef96": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb65a57d5fdc62d3799a9622d783e0974142df818": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb6be1231c7402f2adb2f7f6888ab991ef8583bd3": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb6d10cbd6da170e8e0f8da014741051a417c6af1": {
+        "lastAttemptAt": "2026-09-30T13:08:08.894080+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb6f1d510a8e18a9ba14cec92791c026f8f3b9072": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb6f5de39742eeca134a2b4cda5ad4f43617e8f65": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb701f530a3d106e73dd0ee657b7073583ceaa295": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb71414050666dfc109b5bbbb4099d569c518378e": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb72b6bf7846af4042cf3401e1be9551d806e8f8f": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb7d63d4dae962aecad2a10aa4659bf5951e3b578": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb80d90fcf2ed0e4febe02d2a209109bf1f62df95": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb84174ce1b56ac70bf812ad50b23559cedb0da1d": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb8bcdf828556ee92cdd350bdcd8673af1a2d3476": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb8d0819354b7527abc058fe68a695989ae6cd3d6": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb8f937b7bcfe9da01ad616544f149324a9a40a5f": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xb964d571279d0990083c58bf5af10dcc09589cfe": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xba0c9896d8ee282f8cd0a93bd318582550e72608": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xba2cd159f750fb47453f3ad3c71e4cc4e06bb854": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xba6f1405a592f610ff9199d9b65d052b0af6f1e0": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbabcc964619cf5c8a57f2b989a35cd887e8ce739": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbad1ce461bafa8074e64af2cee9e4bdcbfad86b1": {
+        "lastAttemptAt": "2026-09-27T12:34:05.909412+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbae88c80d8b362bbd09a39b60dd5eb15b3ed36b0": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbb069ff80a6169387e3f75adfa30cb1833d50b15": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbb31047c4e36b2690aa7e13c1ab8bf19fe4dc76c": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbb7f13bb2e444f5574589f2ad649da85446e3348": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbbad9db57fb29bab81e34fce689e494c6c9dbbad": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbc806385660e69e18987b785ec7279c3393c322f": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbc8819c1821bc52b5d30d2dd52f0cb6110510005": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbc96747893184048797822923c13e014805eb416": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbcfc5defb163c2576143b7d1a53f921c45100f9d": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbd28045c69b9201977057ea4d31d306f8ee30f61": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbd5a9ffe2a7bc371db601efff0befb25eea17c39": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbdce6e36ff4abf0ee285a04331978e7c9ca2d49f": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbddd19674f27db6b00fd3fe1cae76325fc8d5667": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbdef2b2051e2ae113297ee8301e011fd71a83738": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbdf9962e62fb4eaeb41dc6e9b60b023ee0d89e84": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbe8394bdcf9fdd028e165e87525fc0329580c161": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbea0c909e82edbd97b5e65fa3635bb37b433a577": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbeadbb21d100fe7ad90df83c17a0c85f2ad555fa": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbec3ef697f58795b33dcbd6e6eb8c9992560c815": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbec69dfce4c1fa8b7843fee1ca85788d84a86b06": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbedfb54088461888a8b472448109c962b0521940": {
+        "lastAttemptAt": "2026-09-20T11:54:46.966680+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbee31ad549ce9061e17e41cbed840e837d45a944": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbee3211ab312a8d065c4fef0247448e17a8da000": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbeeb9c168ab8bd17e342abb0770c90855ed13221": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbf495fdfd3e2d29cc23923baa4b6bf1780227e65": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbf4d53415ff7c3d2fcaefc54ebf672fda9225bc9": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbf9a634827206db63b8255c8bfc1fd9d6c885318": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbfd28a7f19ca462046bf2775e27512baa108d26a": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xbfe4c0281526a7ed1677e55c6cbdf8c88d145ccc": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc018b9a9a1e881c0be9078c580e7b10041e33230": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc0a0e27ecf8ef7583e21c4a544d21c3200a7ee6a": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc0bb26dce66f9befd500eb75842506025956d584": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc0c519e966d735923f42fa2588bf95673865a485": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc1232a72489419558c98fb186da69e152dd761f6": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc12de812ae612b6d514b52d529f97f6acb524c8e": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc1aa62828e660ac1ed28d1b7cf915797657360d9": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc224b02f9daf86b5fadc7bc3575238150e420321": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc254e06f6fc5fed78f8e7f58cc16644448e06bb8": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc26b932eaa1b70d8860a96e09577c7c7da53b0b6": {
+        "lastAttemptAt": "2026-10-01T13:59:37.528983+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc27ef68176e5a97b298ad2fcee5ceed93c4aa529": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc2edf07f6823506a386e82aa595a2b5ebb9bdce6": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc3801d4e317259f78f6f7869502d2853e1dc642f": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc3c606f0d97743935349f3dc2e3b47d4e8b47afb": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc3f7a9a041d8d07e8fa0ec841412618ec0a669d5": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc46fcd651bd6ac11255886feabdcebd58b870c86": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc47c4c896afe31e0c37ecdb54df7836313b6504c": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc491b33fb44b580e7e4bfbeb2c790a25e662ab95": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc4dfb1f1c1f5d0dfac0de8cf0eac0c6ed8265c65": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc4ebb911a74731420b6cd6ed22e751005f47f482": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc53cbd850add9d2b214cde017fde5907c848d86c": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc594665a9adcfbd3eb3359d876f705da60845712": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc59da79bffad781946bb62c6b2bd96e1bcf9f86a": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc60527ed4f8bec9344e114eafff5b82d0638fc97": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc66f2bf012061173afd4643e0a312bfeb0680699": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc681630dacc10b0eccca1738ceaa4e87bff0f28e": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc699ed7a9354ebbcc89529f88b67802e6f35a337": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc6d3594e3605eec43ecb479f552f7d21e28c38de": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc6fe7b7fbc7ef114284896a6631251cf54a8c304": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc7bde7d1077de99ae74e9f71067c15b101423c93": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc7e29f8925c25240e2aaec2c1bf79b8d15d0f304": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc90e9461e24697a3e06cd14e0678ff1a18832583": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc9838745c254bd67e29cb96d1b29addf81e7aba6": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc99464bfe830328abd637a662032b89aa5511282": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc9e41be5164c3744b582f69448b250d9346494a0": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xc9f99ef6d60f83fa54c6be0610f8a136c6d02b5e": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca02e6c2f0633e15977951fed564f818f853887d": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca0c10d351889fb967995f99474fce00127f45f7": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca1b483eae4c7f929c8a9b66d5022d2b42724e2d": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca2c21e224cda96fc43cc88abd422d364743cadb": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca74f404e0c7bfa35b13b511097df966d5a65597": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xca9a401c195911921614c6ec90449a48d521177f": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcb6b9e48b34915f2cee251117dd959f4ec303cc3": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcb98c1e66b7ac455621e3539fa6d0fb94b08d19e": {
+        "lastAttemptAt": "2026-09-26T11:54:07.563812+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcbc50b94b840ca35b2d2171dfa83c0611897eab0": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcc7b9a1d36e23e00292688eccf5b26f7ea2fb9da": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xccb4a946008b5bd2f838549a3ad040e5fc282613": {
+        "lastAttemptAt": "2026-09-13T12:21:51.106364+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xccf13bd21b72a6c6a343d57c2fbecabed5d76563": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcd51af304e6a0b7b3ecd8c43c4067fe3ee8bb3c6": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcdcfeb8b0d14b795c980017289852c63a2c3d27b": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xce069f944c6f7c6bd76f7db83408755968426f1c": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xce1d42630810817179399d0a6b92f99b503d97f7": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xce2dae844a2f473cb10e72ea5b5cd82ce1c86c76": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcec81920b3a79789290cc03943f4263cafc6386f": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcf02ca435adb8800ab8f402575ddb83e27d23c17": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcf1a7c6aa07ad210ebd7959408ae4a559357c64d": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcf28fd788d3b98ea644e37176831693d0a479989": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcfa64df19ab052a0de179a8b56f9cba133190d28": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xcffef0a2e9feee42fed0489fdd0d1ee5eed62cd8": {
+        "lastAttemptAt": "2026-10-31T13:13:38.762338+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xd02bb053d506e31f91285fa9dc7c9e58179c17ee": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd08ac16c29480b4495cc15f5e3055357ac9b0b88": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xd0a9f73f78c4b7dd03d045efe5dbd00e1381b51e": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd0ec028a3d21533fdd200838f39c85b03679285d": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd100b6645eb05bd88ff6491cb9f1c2688948b838": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd1b62563b6393b4e08288bb7cd73b59ffe99a807": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd1f7979323aec7fb3d9bcd2ff886e3d092ccec6d": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd200b08284ee18067733fe03a7c1a2507b2d0c13": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd248d2f09bfbe04e67fc7fea08828d6ad6d95b6d": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd2d7d2f3cb7e9e39e183918e67df06dcbd330532": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd35afcfdc4915c664d0dc83a3094bae916479caf": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd395be2fb3c1348ab1369f4cf1d1094aae202323": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd3f41cb0f4c3abda85845d00f10c6b11740509f8": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd496af1004c44340132a787c6b18e68d355208a9": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd4a2bb3554095d76eb12c34e61e898e4ceae775e": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xd545216f53f4f2fdae396e86e60211b162658d93": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd555e51eb066ac0b0f6d1b1166144e787b553fbe": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd561309a13de5129e98215e8ac10bf9dcea44ad4": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd58dcd4594087c2758717a59f44a5ac09db65105": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd5c342acbeedef81ab8e6072323bfda76172d05f": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd5e9d97c085750b4d4f4a0fabecef123f593c663": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd64d2ef11bd9aec714ad7b9bd9a203a8c0271d46": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd685bd3c432a7de2dcda506965b4c75bcf2684f4": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd6f631c796a56a5d448dd88a01f15058c4a0be52": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd6fd705ee0b31a9300d3e2154bcce777270cbb6f": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd7478265088717c38d7157533a69eb1733a695c4": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd78e054ad7ed57f7bc72ac22a455a36fcef695f9": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd80f8446329410f7634f14646a6372cbdaadecdb": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd829096d7fd23b26cfa48db9ebfceb0c4c0b8754": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd82a806f841ee1ee07b75162b064ac08940fb0b1": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd862cdcfeb856c32b3c4f7563f4811d8ddfd42e2": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd89c6af772cd98c5e446233dec3e952f8a080410": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd8fa396257ca6614c9976b695c68c8c6a428a8b4": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd93bdecbed0ba6dfd32edc5b8610591f2533202c": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd95dc82da062969c1a89fe9788151333944f04fa": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd97107064b8c7520aae6c6e6ca75bb2aa73b670d": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd9bb2516fb08b3cc731b4fb8fadd520d21b22fb7": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xd9f800485580fc56051803948a1294fe0bcdf61a": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xda33e6230ecb4872d7f073cfc704b8279e18fab3": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xda827ace633b4e993775e8bbae873ca0c90888cf": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdaa8238d4967988ed06ae0b021575d56c60ea193": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdb2b9e298cdde5819b64ae82a4b4fcdcce0a1ffa": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdb45506aae579597944c03c7b504c9d2bde307b2": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdb8d9a4fc8368dba0a527cf7c7c6d795c3e40971": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdbc7254b00d0ca6fb82fd6da013d43942e8fea63": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdbcd0df4e22f668f74d0f4ac08a544d7cce27ec2": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdc95617e118dd4f61f0fcaac9e3944f4d7be9f31": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdcc2675bbe4d931de00da054c62eb9fcff2175a9": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdd04f596569b09bb967ab9f20cdc1b7bc7495afd": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xdd1c7202503dc9460d0aae45c1202d4a1ba060f5": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdd257ed16c9cc029e3ab5e5f17c4b86695110746": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdd54949d3779bd8af402ca46cc77d99fb44cd942": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdd7bbc7d409e23e36b7eedc306216f436c9f3979": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdd824635e10545eea64de4e95e6ca3acdbb59d28": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xddf2163205e63c5b17c81647be1b73f918535d38": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xde054f5b456de4e1c7795d58bc7d4e069052f9fa": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xde1c31ef18a36e44125c641063544ed5d44bfe78": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xde588a6f38c92d0b2dcea7ea4daa720415a7321a": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xde58a963801e1ea49f54b45cd15fe6742bb9fa5a": {
+        "lastAttemptAt": "2026-11-17T16:35:50.842162+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xde5b11ca0b46720327128992b51b1dbb64fda44a": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdeba0e5653f6966b5411e57e44109eb5834927da": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdee517bfc5db0122e56ffdd605286f87b81b83de": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdf3100ac6c20c4a9443ece6c639c4ee91d592062": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xdf6e86dc5382cdf47b6b05912af6f252e58a9267": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdf85582a8ab1138d674bb5f301ff6b228e02257c": {
+        "lastAttemptAt": "2026-11-11T14:51:09.848119+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdf884665b297dfa94478366f7af1ba725c92bcfa": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdf8a9f065bea0214ddce88a0d6afaf6a42a2f279": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdf936185be874b64ecf21cf45f55fb8b31642435": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdfb5ab629e29afdd1cd2604fb6926d0ce5013f41": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xdfd0d90beeeeace6cd24e63cf1289197a1f908a5": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe04d20c7ba3b8b13ff595e45ae8f3e192e7a5247": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe08753f2caf86cfa29ce24b1ca765f6f3a25a68d": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe0bbafe134ac36a5a32b0cafe813961fb0ff9afc": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe0e4e9d414e67d607ff0ed05ddea31432598662a": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe11eb0bc4b34dea57dcb0b74019ba05b28b6f91c": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe171a4be3ff220912f278da25f3ee0e5a8731bb9": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe18574afe358fae6f802b1fe57fd691e48a03ddf": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe18a138b1684836a2c3c7096cc37e6627504db28": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe1a42a7090a6a6ddd0904ca386da2669967879f5": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe1ad30971b83c17e2a24c0334cb45f808abebc87": {
+        "lastAttemptAt": "2026-11-07T13:41:04.115717+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe2321c8324c1da7b3ba790627d0e4ee444188a23": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe2448b614e8ea1c0b36ceb1ce402dda714b06986": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe24e931db32a8e48d60353d3bc92c1060d8a9444": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe28cae2451fea7c5170e770087f5fa7b7d8ed871": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe2b33ec9e8b1c1aaa88dac9a0408890f769a7888": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe2c72dcf60ec2892fd3002561b730b8b6c750eed": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe30d56cb1ecab94b1361bbba4537f09f0371117a": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe337c67ee9077e31aab205b25e8593b0e1c00cc4": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xe3a738d9ae0db0d372b05af92643d763a4776025": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe40d548eb4fa4d9188fd21723f2fd377456c0876": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe41698520e4817b55c1841859a36847d50f0c82f": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe447f21d36a70215cd0123aa3eb4905a90506c4b": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe48e1eee34fb519165a80d51265a7474d90bed31": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe48ebd633200108085ab7413d38af7ac894bcb65": {
+        "lastAttemptAt": "2026-10-21T12:33:48.624241+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xe4ad8e78b644e3093572dbd9af0eae4aa36e471d": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe5086690a7199559dc0e58087a3fddfd5d0dcafe": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe50afa06998a6fa9f0080ccb45955b0bac3fcb75": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe524d29daf6d7cdeaaaf07fa1aa7732a45f330b3": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe563b1ce19ae9119c28f544953f49f79f211df4e": {
+        "lastAttemptAt": "2026-10-19T14:08:47.378571+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe57e450cbf396e74091668d7327541327639f320": {
+        "lastAttemptAt": "2026-10-01T13:59:37.528983+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe581bf9c1bb020e8bf437adf1cd931507c721702": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe5bf3a4642b48b17178ae378ea57671bfeceb0bd": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe602a5616b952f19325815a8e0b879925d006935": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe642f3ebec72df2e6d95221cfff427e12a64c9d0": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe644d6d1abdc2cc14cb35fb4c81380fffd0ca347": {
+        "lastAttemptAt": "2026-10-17T11:19:19.800219+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe68133ea80c50b23229293935e1819879c20cca3": {
+        "lastAttemptAt": "2026-09-27T12:34:05.909412+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe690446e1bda4ecb2c0f393bbb807d2424d0cab2": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe6a204f973e95f9c2bff9fc9fa0dde89cb9e97db": {
+        "lastAttemptAt": "2026-09-29T13:28:26.965883+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xe6a369732f1bcbfa27a09aecbc1ef360507c920e": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe6b91f9f313dd02d67705b4e8df872d91f1fb2cf": {
+        "lastAttemptAt": "2026-10-04T13:00:26.422562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe6c6390eed34b62c0e364b540e3b31f139b7aaaa": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe7fead6aea2d55248acdefeca39fc808581786ad": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe8b198912d072cd6ecffc5f43acc9b1755a5e83c": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe8fc2013e0b39a95f2fc5d696ab91535d72a8e80": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe9128b848219b21285dd7a3f57ac7f852fb31333": {
+        "lastAttemptAt": "2026-09-13T12:21:51.106364+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xe91b373212f8ae32925cbcf39ab3a7b0763c27c9": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xea0ac5669cf713a15873481d571ad1eb0cb5403f": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xea1249e65fa2eac105fd953fc2b72dba978f8c97": {
+        "lastAttemptAt": "2026-11-18T16:06:04.223667+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xea5a0514cc0b7ad227ac77bd86a68774696b5ca8": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xea65df16ae7dd8742df1d5b6a229dee1179ce9c8": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xea6912f7e80ff0e126a5f0662a3a77f44ff96dfa": {
+        "lastAttemptAt": "2026-09-29T13:28:26.965883+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeab6f7316f886cea45baf75ed14e79ad4fc0af59": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeac299a8c0425b5284c24781c1793b7c3ced176d": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeac82a730487d188a10b341fe5ee816a4631af7a": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeb16d7b30b901f515674a3d057f600d44449b87d": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeb2b89f1dea00d1120b39189f2a1e3744b647bb4": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeb3c8443183da126d51f39b2e393ceebcf93c3a9": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeb46b5f7b68368aa4be497e2cb5565d8511400c7": {
+        "lastAttemptAt": "2026-10-09T13:56:05.734894+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeb6c5d720fdbd12d6731dd602da50fb53574dad4": {
+        "lastAttemptAt": "2026-10-26T13:42:25.256598+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xebdf3b5e96a092469d5424b091acdd14fd407781": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xec20af2d23f1cdd72ba8a46d1fff7802c649efc1": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xed5a9be4991e812eecbc73caf2bae261098900ec": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771": {
+        "lastAttemptAt": "2026-11-23T18:53:08.430000+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xedf35bab51865e6a14cc52c1ccc82376fdf2c08f": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xedf5c12258ac60ac1748d181aec52fe92adf6629": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee1ccd005c95973267e02858768b3aff45384a90": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee4c44c7c07de2291163918b672c1658e18a0173": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee5ff7d52af2576b27ff9037d993c4f60431af59": {
+        "lastAttemptAt": "2026-10-18T11:52:17.207890+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee72a1227c08d94178a99b6b280bda8cdde35511": {
+        "lastAttemptAt": "2026-10-30T13:42:15.644562+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee9573aec5f581cc0116a98a5d96c61935cfd4ac": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xee9a0bbd2ce67fc008fe3f7f6a86f2c6da5f7a65": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xeea20a3e8074568a6bbf7dc0063292d9d6672ce0": {
+        "lastAttemptAt": "2026-10-29T13:51:04.682438+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xef16747e8333f3a78cb77bf92607b72e110d5b3b": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xef2bc65e40ce2c34ebc089d2dd55590933ffc412": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xef370ec5f4f0102f8ad6718631dbd3e0430d1bb3": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xef3c99d0ec4ff0fe2ef133b5027a575e7f49224e": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xef7c493edd4c491e284cb9b049b16df0e7f4ebc0": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xefb3019fd920ffd54331a8ca53776d296938782c": {
+        "lastAttemptAt": "2026-10-24T11:45:52.638853+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xefc44f760fc39b5cbaf3a17b5a3296caddf89044": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xefce38f31ebeb9637e85d3487595261fdf6ebeeb": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf018b923bebdef7a8124371b322d7e29a08c3198": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf05841913bb18e8f3930dd45ca33b79b18b3922f": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf05987ece4a968127518105d623744d2f9e59dec": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf0a04b079dcf7b9d92682123ba2e2180109cb650": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf0d0ce85774e902a0831bd5c07d9a4bcf12c71e1": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf0f82004a6088c8bd4c02ed4adc2bd220a5d2e21": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xf11b97e33fd6e05d0410165844d641c0a4b3c46e": {
+        "lastAttemptAt": "2026-11-16T16:34:22.579062+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf1301cfd123c94127882e05a11a6af03cec46cd2": {
+        "lastAttemptAt": "2026-10-07T14:06:21.870325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf148615f98ab7a4248bac9703daf76b467c36a21": {
+        "lastAttemptAt": "2026-10-28T13:37:46.278044+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf1e2733ff2005d5c49c2836cdb0abee54d0c0277": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf26345663a18e30d68a3e16a263089ddf834d1dc": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf29a32073c35f228144f3d4b787d76f47ed3771f": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf2c5ca723ea792eceed36ce83cc8eba52861937b": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf304b6d5dd29a7e684669d4f5f7ca0bd8424cb47": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf330cf5bfc9d60ddac0236723d95dd426120060e": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xf3532f7efd9f7d9da8d6c345aecabd60e0d8ceaa": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xf3d52d36eb60b829a4c95bd5be76e180d1f843de": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf3e9fdd1ae54e5ad88ee540855f83cf3918f4385": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf4149f4624f0f350e50f069c5d7a4f25adc2cc0e": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf440139a62b2b939699c5b3e09f88e40464ab9bc": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf50a24ca7de04b8ff88648b5df74b3ded23e3031": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf51d3f15a851d118b5d7da808ee76cc1afbe633c": {
+        "lastAttemptAt": "2026-11-15T14:25:43.562702+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf5d41f782dd0aa7e37a65e21c759a6c12847716e": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf5daac53ef265bf98c252fa16fe1c912ca8438f8": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf5fcd3a63abc766ac5ada296b4a4e860dbf9ebb0": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf66a4fe24a7e5f3f572be7703ff3856266188848": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf73484a987ed44b6926996c1c6cdd460807246bf": {
+        "lastAttemptAt": "2026-10-06T13:48:38.684539+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf74fae00465977f90092cccff39d849dc6febc56": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf7a9571d23aba33bd200707ac98e21790f023fcd": {
+        "lastAttemptAt": "2026-11-03T14:46:56.724088+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf7b5fd0390442a768f7115c17fc23ae619b3645b": {
+        "lastAttemptAt": "2026-09-23T12:19:34.824841+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf7cb79d787e0fe2b20e5cf7ed06986712d8008a9": {
+        "lastAttemptAt": "2026-11-19T16:11:12.917070+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf7f1f47ec265f64cc5f569ff87da572a5ab51fa6": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf8d3360cc21a829c3cfc73c64cd51a6f8ee4ffd5": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "confirmed_cex"
+      },
+      "0xf8ddafa195177e7e7879e1c6f36808c504ff5321": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf8f091dc2895cde91a0aafff108fb230dc14fbbc": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf9ae8f51987a08d0e8ed1bf15377177235203ae6": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf9b6a1eb0190bf76274b0876957ee9f4f508af41": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xf9c67ce44a27200e9ff2b1f9c9b071bd8efe8372": {
+        "lastAttemptAt": "2026-10-16T12:04:13.261108+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfa0009083c0725c09b23b6916ee6bf6f897ac6b5": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfa3510444022759f879c579d99b5c662a2b7f675": {
+        "lastAttemptAt": "2026-10-05T15:25:23.049423+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfae2158c16de4207682eaa25698d3683bcafa12c": {
+        "lastAttemptAt": "2026-10-08T14:12:58.049197+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfafacf3af099d12193c37aff85b04fbae45158ba": {
+        "lastAttemptAt": "2026-10-12T16:16:43.358272+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfb2964c01c5ffe23223c9714f615a9275cfc6bda": {
+        "lastAttemptAt": "2026-11-02T16:41:45.959325+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfb44b521d6d5810a2ea947b64f1a377c791c1a0c": {
+        "lastAttemptAt": "2026-10-11T13:42:56.634595+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfb4cb868727d9622258bf2b26a8cfc95f6742669": {
+        "lastAttemptAt": "2026-11-10T15:24:32.349430+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfb74196eccf35a260dd5cfd300baa37ae058b6c0": {
+        "lastAttemptAt": "2026-11-13T15:02:16.033440+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfbce40d323306509d2f411abcc0d6ec298083c08": {
+        "lastAttemptAt": "2026-10-13T14:45:51.117823+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfbe71a0502b0e103c0f528f19f11e7f54077997f": {
+        "lastAttemptAt": "2026-10-15T12:18:32.570492+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc15e6c0ed28b7f73953afebb5be0886abf85900": {
+        "lastAttemptAt": "2026-10-27T12:47:33.588069+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc47da77d3dae0c9395516805e81cc7c689b21bd": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc55a427798b765d38dbbfc724b96d44f20fd42b": {
+        "lastAttemptAt": "2026-11-21T15:04:34.541495+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc63c771d297b4e6f8c38db3e7fa606ff4f2aeff": {
+        "lastAttemptAt": "2026-11-20T15:53:09.826173+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc8658a7fed9044e6185bba5127eec4d758375f9": {
+        "lastAttemptAt": "2026-10-22T12:35:07.317042+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfc89c020774524c9d03bd5de48fec149b10bdec3": {
+        "lastAttemptAt": "2026-11-04T14:56:29.341822+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfcaf845d905528160f79e0f8c54a0ac48800588d": {
+        "lastAttemptAt": "2026-10-10T13:12:55.205434+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfcb4aa1199f03f258e95ccb20040142a4ec0d44b": {
+        "lastAttemptAt": "2026-10-23T12:17:44.284831+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfce2e70abcef84cd2bf8e309d2062983de0d35dc": {
+        "lastAttemptAt": "2026-10-14T12:34:22.940908+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfd0b22f0e3ba9083135feb8e559538e878dd1b3f": {
+        "lastAttemptAt": "2026-11-06T14:45:18.380817+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfd14b9d77ce7adfe66b4d4cf14651f1e97ae66f0": {
+        "lastAttemptAt": "2026-10-20T12:22:43.770164+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfd88ad4849ba0f729d6ff4bc27ff948ab1ac3de7": {
+        "lastAttemptAt": "2026-11-14T13:55:10.156650+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfd996ffbbb18e81d920c595fabd9e20e98980dd2": {
+        "lastAttemptAt": "2026-10-25T12:07:13.632800+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfdb568cc260d089e25507f89b326730fc45e74b5": {
+        "lastAttemptAt": "2026-11-01T13:54:32.479750+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfdea1f79a25a1455ebf9709afc6e1f074d98c71f": {
+        "lastAttemptAt": "2026-11-08T13:59:01.045878+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfdff0b569f14af593d446e51b3e42f502124ac85": {
+        "lastAttemptAt": "2026-11-12T15:42:57.943480+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfe263102682933297cb65dc813e5193249769251": {
+        "lastAttemptAt": "2026-11-05T15:05:37.667602+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfe95b935eabda9fc47233223c057c590e95ce47b": {
+        "lastAttemptAt": "2026-11-09T16:58:08.903686+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfec7c9caf21cc61788262aa4d896bbeb3bf44b61": {
+        "lastAttemptAt": "2026-11-22T15:00:31.010893+00:00",
+        "outcome": "no_cex_badge"
+      },
+      "0xfed3cd4f3e576870c3f5e9204a38336b244bb439": {
+        "lastAttemptAt": "2026-10-03T12:11:33.952431+00:00",
+        "outcome": "no_cex_badge"
+      }
+    }
+  },
+  "schemaVersion": 1
+}

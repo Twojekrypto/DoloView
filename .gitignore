@@ -1,0 +1,54 @@
+# State files for incremental sync (persisted via GitHub Actions cache, not git)
+dolo_flows_state.json
+dolo_holders_state.json
+odolo_flows_state.json
+odolo_claim_events_state.json
+exercisers_cache.json
+reward_claim_events_state.json
+reward_claim_checkpoints/
+vedolo_flows_state.json
+vedolo_flows_run_status.json
+early_exits_cache.json
+early_exits_full.json
+# Local opt-in LP scan checkpoints; Actions stores these outside the checkout.
+.cache/dolo-lp-scanner/
+
+# Development scratch files
+scratch*.py
+patch*.py
+check_*.py
+!check_earn_subaccount_history_consistency.py
+test_*.js
+# Ignore only root-level scratch tests; real tests live in tests/ and are tracked
+/test_*.py
+check_js.html
+*.bak
+dolo_cex_label_audit.json
+
+# Dependencies
+node_modules/
+
+# OS artifacts
+.DS_Store
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Keep generated per-address verified EARN ledgers ignored by default.
+# Curated public caches are force-added explicitly by workflow when needed.
+data/earn-verified-ledger/
+
+# Generated EARN audit artifacts
+data/earn-audit-reruns/
+data/earn-live-reruns/
+data/earn-subaccount-history-events/
+data/earn-subaccount-history/
+test-results/
+
+# Local Claude settings
+.claude/settings.local.json
+vedolo_vote_power_history_state.json

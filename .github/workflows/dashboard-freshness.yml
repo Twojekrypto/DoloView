@@ -1,0 +1,69 @@
+name: Dashboard Freshness Guard
+
+on:
+  # Avoid the top-of-hour Actions burst while still checking every 15 minutes.
+  schedule:
+    - cron: '3,18,33,48 * * * *'
+  # Check after real publications too; scheduled Actions can arrive hours late.
+  workflow_run:
+    workflows: ['Deploy GitHub Pages', 'Update Cross-chain Reward Claim Events']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      allow_remediation:
+        description: 'Dispatch stale producers and Pages after the read-only checks'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: dashboard-freshness-guard
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  freshness:
+    # Pending Pages runs are intentionally coalesced. Their cancellation did
+    # not publish data and must not trigger another repair/deploy feedback loop.
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion != 'cancelled' && github.event.workflow_run.conclusion != 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      PYTHONUNBUFFERED: '1'
+      LP_DATA_STORAGE: ${{ vars.LP_DATA_STORAGE || 'git' }}
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+          sparse-checkout: |
+            config/dashboard_freshness.json
+            scripts/check_dashboard_freshness.py
+            tests/test_dashboard_freshness*.py
+            .github/workflows/update-earn-merkl-rewards.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Test freshness and bounded repair policies
+        run: python3 -m unittest discover -s tests -p 'test_dashboard_freshness*.py'
+
+      - name: Check public and raw artifact freshness
+        run: |
+          set -euo pipefail
+          args=(--config config/dashboard_freshness.json --fail-on-stale)
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.allow_remediation }}" != "true" ]]; then
+            args+=(--no-remediation)
+          fi
+          python3 scripts/check_dashboard_freshness.py "${args[@]}"

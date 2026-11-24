@@ -1,0 +1,327 @@
+name: Update Supply History
+
+on:
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      chains:
+        description: 'Comma-separated chains to refresh'
+        required: false
+        default: ''
+      token_limit:
+        description: 'Top tokens per chain; 0 means every selectable token'
+        required: false
+        default: '0'
+      tokens:
+        description: 'Comma-separated token addresses to force include'
+        required: false
+        default: ''
+      max_pages:
+        description: 'Max 1000-row pages per entity before skipping an oversized market'
+        required: false
+        default: '600'
+      active_usd_threshold:
+        description: 'Fail if a skipped token has supplyLiquidityUSD above this value'
+        required: false
+        default: '0'
+      activity_token_limit:
+        description: 'Top tokens per chain for static Supply Activity when explicit-only is false; 0 means every selectable token'
+        required: false
+        default: '0'
+      activity_symbols:
+        description: 'Comma-separated symbols to force include in static Supply Activity'
+        required: false
+        default: ''
+      activity_token_config:
+        description: 'JSON config with chain-specific token addresses for static Supply Activity'
+        required: false
+        default: 'config/supply_activity_static_tokens.json'
+      activity_explicit_only:
+        description: 'Build only explicitly configured Supply Activity tokens'
+        required: false
+        default: 'true'
+      activity_recent_enabled:
+        description: 'Build 30D Supply Activity cache for every selected token'
+        required: false
+        default: 'true'
+      activity_recent_token_limit:
+        description: 'Top tokens per chain for 30D Supply Activity cache; 0 means every selectable token'
+        required: false
+        default: '0'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-supply-history
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Test supply transport retries
+        run: python3 -m unittest discover -s tests -p 'test_supply_transport.py'
+
+      - name: Generate static supply history
+        run: |
+          CHAINS="${{ github.event.inputs.chains }}"
+          TOKEN_LIMIT="${{ github.event.inputs.token_limit }}"
+          TOKENS="${{ github.event.inputs.tokens }}"
+          MAX_PAGES="${{ github.event.inputs.max_pages }}"
+          ACTIVE_USD_THRESHOLD="${{ github.event.inputs.active_usd_threshold }}"
+          ACTIVITY_TOKEN_LIMIT="${{ github.event.inputs.activity_token_limit }}"
+          ACTIVITY_SYMBOLS="${{ github.event.inputs.activity_symbols }}"
+          ACTIVITY_TOKEN_CONFIG="${{ github.event.inputs.activity_token_config }}"
+          ACTIVITY_EXPLICIT_ONLY="${{ github.event.inputs.activity_explicit_only }}"
+          ACTIVITY_RECENT_ENABLED="${{ github.event.inputs.activity_recent_enabled }}"
+          ACTIVITY_RECENT_TOKEN_LIMIT="${{ github.event.inputs.activity_recent_token_limit }}"
+          if [ -z "$CHAINS" ]; then
+            CHAINS="ethereum,arbitrum,berachain"
+          fi
+          if [ -z "$TOKEN_LIMIT" ]; then
+            TOKEN_LIMIT="0"
+          fi
+          if [ -z "$MAX_PAGES" ]; then
+            MAX_PAGES="600"
+          fi
+          if [ -z "$ACTIVE_USD_THRESHOLD" ]; then
+            ACTIVE_USD_THRESHOLD="0"
+          fi
+          if [ -z "$ACTIVITY_TOKEN_LIMIT" ]; then
+            ACTIVITY_TOKEN_LIMIT="0"
+          fi
+          if [ -z "$ACTIVITY_TOKEN_CONFIG" ]; then
+            ACTIVITY_TOKEN_CONFIG="config/supply_activity_static_tokens.json"
+          fi
+          if [ -z "$ACTIVITY_EXPLICIT_ONLY" ]; then
+            ACTIVITY_EXPLICIT_ONLY="true"
+          fi
+          if [ -z "$ACTIVITY_RECENT_ENABLED" ]; then
+            ACTIVITY_RECENT_ENABLED="true"
+          fi
+          if [ -z "$ACTIVITY_RECENT_TOKEN_LIMIT" ]; then
+            ACTIVITY_RECENT_TOKEN_LIMIT="0"
+          fi
+          python3 generate_supply_apr_history.py --chains "$CHAINS" --days 200 --refresh-days 7 --workers 4
+          python3 generate_supply_history.py --chains "$CHAINS" --token-limit "$TOKEN_LIMIT" --tokens "$TOKENS" --max-pages-per-entity "$MAX_PAGES" --active-usd-threshold "$ACTIVE_USD_THRESHOLD"
+          ACTIVITY_ARGS=(--chains "$CHAINS" --token-limit "$ACTIVITY_TOKEN_LIMIT" --symbols "$ACTIVITY_SYMBOLS" --tokens "$TOKENS" --max-pages-per-entity "$MAX_PAGES")
+          if [ -n "$ACTIVITY_TOKEN_CONFIG" ]; then
+            ACTIVITY_ARGS+=(--token-config "$ACTIVITY_TOKEN_CONFIG")
+          fi
+          if [ "$ACTIVITY_EXPLICIT_ONLY" = "true" ] || [ "$ACTIVITY_EXPLICIT_ONLY" = "1" ]; then
+            ACTIVITY_ARGS+=(--explicit-only)
+          fi
+          python3 generate_supply_activity.py "${ACTIVITY_ARGS[@]}"
+          if [ "$ACTIVITY_RECENT_ENABLED" = "true" ] || [ "$ACTIVITY_RECENT_ENABLED" = "1" ]; then
+            python3 generate_supply_activity.py --chains "$CHAINS" --token-limit "$ACTIVITY_RECENT_TOKEN_LIMIT" --symbols "" --tokens "$TOKENS" --max-pages-per-entity "$MAX_PAGES" --recent-only
+            OVERVIEW_CHAINS=",${CHAINS//[[:space:]]/},"
+            if [[ "$OVERVIEW_CHAINS" == *",ethereum,"* && "$OVERVIEW_CHAINS" == *",arbitrum,"* && "$OVERVIEW_CHAINS" == *",berachain,"* && "$ACTIVITY_RECENT_TOKEN_LIMIT" == "0" && -z "${TOKENS//[[:space:]]/}" ]]; then
+              python3 generate_supply_activity_overview.py
+            else
+              echo "Preserving activity overview: targeted refresh does not cover the complete overview universe"
+            fi
+          fi
+
+      - name: Validate static supply history
+        run: |
+          python3 -m unittest discover -s tests -p 'test_supply_activity_overview.py'
+          python3 -m unittest discover -s tests -p 'test_supply_activity_semantics.py'
+          python3 -m unittest discover -s tests -p 'test_generate_supply_activity.py'
+          python3 -m unittest discover -s tests -p 'test_generate_supply_apr_history.py'
+          node --test tests/supply-activity-semantics.test.js
+          python3 -m py_compile generate_supply_history.py
+          python3 -m py_compile generate_supply_activity.py
+          python3 -m py_compile generate_supply_activity_overview.py
+          python3 -m py_compile generate_supply_apr_history.py
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          root = pathlib.Path("data/supply-apr")
+          errors = []
+          for path in sorted(root.glob("*.json")):
+              payload = json.loads(path.read_text())
+              points = payload.get("points") or []
+              if payload.get("schemaVersion") != 2:
+                  errors.append(f"{path}: expected schemaVersion 2")
+              if payload.get("source") != "official-dolomite-subgraph":
+                  errors.append(f"{path}: unexpected source")
+              if len(points) < 2:
+                  errors.append(f"{path}: fewer than 2 APR snapshots")
+              timestamps = [int(point.get("timestamp") or 0) for point in points]
+              if timestamps != sorted(set(timestamps)):
+                  errors.append(f"{path}: timestamps are not unique and increasing")
+              for index, point in enumerate(points):
+                  if int(point.get("blockNumber") or 0) <= 0 or not point.get("rates") or not point.get("markets"):
+                      errors.append(f"{path}: invalid block/rates/markets at point {index}")
+                      break
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print("Supply APR history validation passed")
+          PY
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import sys
+          from decimal import Decimal, InvalidOperation
+
+          root = pathlib.Path("data/supply-history")
+          manifest_path = root / "manifest.json"
+          if not manifest_path.exists():
+              print("Missing data/supply-history/manifest.json", file=sys.stderr)
+              sys.exit(1)
+          manifest = json.loads(manifest_path.read_text())
+          errors = []
+
+          def decimal_or_zero(value):
+              try:
+                  return Decimal(str(value or "0"))
+              except (InvalidOperation, ValueError):
+                  return Decimal(0)
+
+          active_usd_threshold = decimal_or_zero(manifest.get("activeUsdThreshold"))
+
+          manifest_paths = {
+              token.get("path")
+              for chain in manifest.get("chains", [])
+              for token in chain.get("tokens", [])
+              if token.get("path")
+          }
+          for path_text in sorted(manifest_paths):
+              path = pathlib.Path(path_text)
+              if not path.exists():
+                  errors.append(f"{path_text}: manifest path is missing")
+
+          for chain in manifest.get("chains", []):
+              chain_name = chain.get("chain")
+              for token in chain.get("skippedTokens", []):
+                  usd = decimal_or_zero(token.get("supplyLiquidityUSD"))
+                  if usd > active_usd_threshold:
+                      symbol = token.get("symbol") or token.get("tokenId")
+                      reason = token.get("reason") or "unknown"
+                      errors.append(f"{chain_name} {symbol}: skipped active token (${token.get('supplyLiquidityUSD')}) reason={reason}")
+
+          for path in sorted(root.glob("*/*.json")):
+              payload = json.loads(path.read_text())
+              points = payload.get("points") or []
+              if len(points) < 2:
+                  errors.append(f"{path}: fewer than 2 points")
+                  continue
+              last_ts = 0
+              for index, point in enumerate(points):
+                  timestamp = int(point.get("timestamp") or 0)
+                  value = float(point.get("value") or 0)
+                  token_value = float(point.get("tokenValue") or point.get("value") or 0)
+                  if timestamp <= last_ts:
+                      errors.append(f"{path}: timestamp is not increasing at point {index}")
+                      break
+                  if value < 0 or token_value < 0:
+                      errors.append(f"{path}: negative value at point {index}")
+                      break
+                  last_ts = timestamp
+
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print("Supply history validation passed")
+          PY
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          root = pathlib.Path("data/supply-activity")
+          manifest_path = root / "manifest.json"
+          if not manifest_path.exists():
+              print("Missing data/supply-activity/manifest.json", file=sys.stderr)
+              sys.exit(1)
+          manifest = json.loads(manifest_path.read_text())
+          errors = []
+          manifest_paths = {
+              path
+              for chain in manifest.get("chains", [])
+              for token in chain.get("tokens", [])
+              for path in (token.get("path"), token.get("recentPath"))
+              if path
+          }
+          def validate_rows(path, rows):
+              last_ts = None
+              for index, row in enumerate(rows):
+                  if not isinstance(row, list) or len(row) < 8:
+                      errors.append(f"{path}: malformed row at {index}")
+                      return
+                  timestamp = int(row[2] or 0)
+                  if timestamp <= 0:
+                      errors.append(f"{path}: missing timestamp at {index}")
+                      return
+                  if last_ts is not None and timestamp > last_ts:
+                      errors.append(f"{path}: rows are not sorted desc at {index}")
+                      return
+                  last_ts = timestamp
+
+          for path_text in sorted(manifest_paths):
+              path = pathlib.Path(path_text)
+              if not path.exists():
+                  errors.append(f"{path_text}: manifest path is missing")
+                  continue
+              payload = json.loads(path.read_text())
+              if payload.get("__supplyActivityCompact") != 1:
+                  errors.append(f"{path}: missing compact activity marker")
+              row_parts = payload.get("rowParts") or []
+              if row_parts:
+                  # Sharded oversized market: validate every part file instead
+                  # of the (intentionally empty) inline rows.
+                  total_rows = 0
+                  for part_name in row_parts:
+                      part_path = path.parent / part_name
+                      if not part_path.exists():
+                          errors.append(f"{part_path}: rowParts shard is missing")
+                          continue
+                      part_payload = json.loads(part_path.read_text())
+                      if part_payload.get("__supplyActivityCompact") != 1:
+                          errors.append(f"{part_path}: missing compact activity marker")
+                      part_rows = part_payload.get("rows") or []
+                      total_rows += len(part_rows)
+                      validate_rows(part_path, part_rows)
+                  expected = int(payload.get("events") or 0)
+                  if expected and total_rows != expected:
+                      errors.append(
+                          f"{path}: rowParts hold {total_rows} rows but index declares {expected}"
+                      )
+              else:
+                  validate_rows(path, payload.get("rows") or [])
+          if errors:
+              print("\n".join(errors), file=sys.stderr)
+              sys.exit(1)
+          print("Supply activity validation passed")
+          PY
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/supply-history data/supply-activity data/supply-apr config/supply_activity_static_tokens.json generate_supply_history.py generate_supply_activity.py generate_supply_apr_history.py generate_supply_activity_overview.py
+          git diff --staged --quiet && echo "No supply history changes to commit" && exit 0
+          git commit -m "📊 Refresh Supply history - $(date -u '+%Y-%m-%d %H:%M UTC')"
+          pushed=false
+          for i in $(seq 1 12); do
+            if git pull --rebase -X theirs origin master && git push; then pushed=true; break; fi
+            echo "⚠️ Push attempt $i failed, retrying..."
+            sleep $((5 + RANDOM % 15))
+          done
+          if [ "$pushed" != "true" ]; then echo "::error::Push failed after 12 attempts — data NOT published"; exit 1; fi
+

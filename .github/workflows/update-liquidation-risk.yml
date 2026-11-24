@@ -1,0 +1,80 @@
+name: Update Liquidation Risk Data
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'  # Twice hourly, away from the busy hour boundary
+  workflow_dispatch:  # Allow manual trigger
+
+concurrency:
+  group: update-liquidation-risk
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/workflows/update-liquidation-risk.yml
+            /requirements.txt
+            /fetch_liquidation_risk.py
+            /build_borrow_earnings.py
+            /rpc_usage.py
+            /validate_data.py
+            /vedolo_vote_power.py
+            /tests/test_borrow_risk_*.py
+            /tests/test_borrow_earnings*.py
+            /liquidation_risk.json
+            /liquidation_history.json
+            /borrow_earnings.json
+            /data/liquidation-risk/
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test borrow earnings publication
+        run: |
+          python3 -m unittest discover -s tests -p 'test_borrow_risk_*.py'
+          python3 -m unittest discover -s tests -p 'test_borrow_earnings.py'
+          python3 -m unittest discover -s tests -p 'test_borrow_earnings_workflow.py'
+
+      - name: Fetch liquidation risk data
+        run: python3 fetch_liquidation_risk.py
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Validate generated data
+        run: python3 validate_data.py liquidation_risk.json liquidation_history.json data/liquidation-risk
+
+      - name: Build borrow earnings snapshot
+        run: python3 build_borrow_earnings.py --risk liquidation_risk.json --output borrow_earnings.json
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add liquidation_risk.json liquidation_history.json data/liquidation-risk borrow_earnings.json
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "📊 Liquidation risk update: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # Retry push with rebase up to 3 times to handle concurrent pushes
+          pushed=false
+          for i in 1 2 3; do
+            if git pull --rebase -X theirs origin master && git push; then pushed=true; break; fi
+            echo "⚠️ Push attempt $i failed, retrying..."
+            sleep 5
+          done
+          if [ "$pushed" != "true" ]; then echo "::error::Push failed after 3 attempts — data NOT published"; exit 1; fi
+

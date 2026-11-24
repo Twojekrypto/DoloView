@@ -1,0 +1,1290 @@
+#!/usr/bin/env python3
+"""
+Scan DolomiteMargin on-chain events to compute netflow per address per market.
+Generates data/earn-netflow/{chainId}.json for each chain.
+
+The scanner supports both the legacy DolomiteMargin event layout and the newer
+event topics/layout used by the replay verifier in the dashboard. This keeps
+backend netflow accounting aligned with the frontend replay model.
+
+Netflow = signed sum of all balance-changing deltaWei updates.
+Yield = currentWei - netflow.
+
+For current-layout events we also keep enough rolling balance state to derive a
+"recent cycle" baseline. That lets downstream verification distinguish all-time
+historical turnover from the active supply cycle of a market.
+"""
+
+import argparse
+import json, os, sys, time
+from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
+
+import rpc_usage
+
+
+def _mainnet_rpc_from_env(env_name):
+    value = os.environ.get(env_name, "").strip()
+    if not value or rpc_usage.is_obvious_testnet_endpoint(value):
+        return []
+    return [value]
+
+
+# --- Chain configs ---
+CHAINS = {
+    "arbitrum": {
+        "margin": "0x6bd780e7fDf01D77e4d475c821f1e7AE05409072",
+        "rpcs": [
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC_KAT") else [os.environ["ALCHEMY_ARBITRUM_RPC_KAT"]]),
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC_DAN") else [os.environ["ALCHEMY_ARBITRUM_RPC_DAN"]]),
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC_ZEN") else [os.environ["ALCHEMY_ARBITRUM_RPC_ZEN"]]),
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC") else [os.environ["ALCHEMY_ARBITRUM_RPC"]]),
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC_2") else [os.environ["ALCHEMY_ARBITRUM_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_ARBITRUM_RPC_3") else [os.environ["ALCHEMY_ARBITRUM_RPC_3"]]),
+            "https://arbitrum-one-rpc.publicnode.com/",
+            "https://1rpc.io/arb",
+            "https://arb1.arbitrum.io/rpc",
+        ],
+        "start_block": 29_750_000,
+    },
+    "ethereum": {
+        "margin": "0x003Ca23Fd5F0ca87D01F6eC6CD14A8AE60c2b97D",
+        "rpcs": [
+            *_mainnet_rpc_from_env("DRPC_ETHEREUM_RPC_2_JEFF"),
+            "https://mainnet.gateway.tenderly.co",
+            "https://rpc.mevblocker.io",
+            # These public endpoints were cross-checked against each other on
+            # historical and head ranges. Keep them first so canonical scans
+            # do not stall behind free-tier or non-archive providers.
+            "https://eth.drpc.org/",
+            "https://eth.api.onfinality.io/public",
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC_KAT") else [os.environ["ALCHEMY_ETHEREUM_RPC_KAT"]]),
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC_DAN") else [os.environ["ALCHEMY_ETHEREUM_RPC_DAN"]]),
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC_ZEN") else [os.environ["ALCHEMY_ETHEREUM_RPC_ZEN"]]),
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC") else [os.environ["ALCHEMY_ETHEREUM_RPC"]]),
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC_2") else [os.environ["ALCHEMY_ETHEREUM_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_ETHEREUM_RPC_3") else [os.environ["ALCHEMY_ETHEREUM_RPC_3"]]),
+            "https://1rpc.io/eth",
+        ],
+        "start_block": 22_790_000,
+        # dRPC rejects ranges of 10,000+ blocks. Canonical history backfills use
+        # this provider-safe ceiling and can adapt down to free-tier fallbacks.
+        "canonical_max_block_chunk": 9_999,
+        "min_block_chunk": 10,
+    },
+    "berachain": {
+        "margin": "0x003Ca23Fd5F0ca87D01F6eC6CD14A8AE60c2b97D",
+        "rpcs": [
+            *([] if not os.environ.get("DRPC_BERACHAIN_RPC_ZEN") else [os.environ["DRPC_BERACHAIN_RPC_ZEN"]]),
+            *([] if not os.environ.get("QUICKNODE_BERACHAIN_RPC_2") else [os.environ["QUICKNODE_BERACHAIN_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_BERACHAIN_RPC_2_JEFF") else [os.environ["ALCHEMY_BERACHAIN_RPC_2_JEFF"]]),
+            *([] if not os.environ.get("ALCHEMY_BERACHAIN_RPC_2") else [os.environ["ALCHEMY_BERACHAIN_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_BERACHAIN_RPC") else [os.environ["ALCHEMY_BERACHAIN_RPC"]]),
+            *([] if not os.environ.get("ALCHEMY_BERACHAIN_RPC_3") else [os.environ["ALCHEMY_BERACHAIN_RPC_3"]]),
+            "https://rpc.berachain.com/",
+            "https://berachain-rpc.publicnode.com/",
+            "https://1rpc.io/berachain",
+        ],
+        "start_block": 7_000_000,
+        # Large multi-topic getLogs ranges repeatedly time out on Berachain.
+        # Canonical event scans favor predictable progress over optimistic spans.
+        "canonical_max_block_chunk": 9_999,
+    },
+    "mantle": {
+        "margin": "0xe6ef4f0b2455bab92ce7cc78e35324ab58917de8",
+        "rpcs": [
+            *([] if not os.environ.get("MANTLE_RPC") else [os.environ["MANTLE_RPC"]]),
+            *([] if not os.environ.get("MANTLE_RPC_2") else [os.environ["MANTLE_RPC_2"]]),
+            *([] if not os.environ.get("QUICKNODE_MANTLE_RPC") else [os.environ["QUICKNODE_MANTLE_RPC"]]),
+            *([] if not os.environ.get("QUICKNODE_MANTLE_RPC_2") else [os.environ["QUICKNODE_MANTLE_RPC_2"]]),
+            *([] if not os.environ.get("MANTLE_RPC_QUICKNODE_TWOJE") else [os.environ["MANTLE_RPC_QUICKNODE_TWOJE"]]),
+            *([] if not os.environ.get("DRPC_MANTLE_RPC") else [os.environ["DRPC_MANTLE_RPC"]]),
+            *([] if not os.environ.get("DRPC_MANTLE_RPC_ZEN") else [os.environ["DRPC_MANTLE_RPC_ZEN"]]),
+            *_mainnet_rpc_from_env("ALCHEMY_MANTLE_RPC_2_JEFF"),
+            *([] if not os.environ.get("ALCHEMY_MANTLE_RPC_ZEN") else [os.environ["ALCHEMY_MANTLE_RPC_ZEN"]]),
+            *([] if not os.environ.get("ALCHEMY_MANTLE_RPC_DANU") else [os.environ["ALCHEMY_MANTLE_RPC_DANU"]]),
+            *([] if not os.environ.get("ALCHEMY_MANTLE_RPC") else [os.environ["ALCHEMY_MANTLE_RPC"]]),
+            *([] if not os.environ.get("ALCHEMY_MANTLE_RPC_2") else [os.environ["ALCHEMY_MANTLE_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_MANTLE_RPC_3") else [os.environ["ALCHEMY_MANTLE_RPC_3"]]),
+            "https://rpc.mantle.xyz/",
+            "https://mantle-rpc.publicnode.com/",
+            "https://mantle.api.onfinality.io/public",
+            "https://1rpc.io/mantle",
+        ],
+        "start_block": 64_046_000,
+        "max_block_chunk": 1_800,
+    },
+    "botanix": {
+        "margin": "0x003Ca23Fd5F0ca87D01F6eC6CD14A8AE60c2b97D",
+        "rpcs": [
+            *([] if not os.environ.get("BOTANIX_RPC") else [os.environ["BOTANIX_RPC"]]),
+            *([] if not os.environ.get("BOTANIX_RPC_2") else [os.environ["BOTANIX_RPC_2"]]),
+            *([] if not os.environ.get("BOTANIX_RPC_3") else [os.environ["BOTANIX_RPC_3"]]),
+            *([] if not os.environ.get("QUICKNODE_BOTANIX_RPC") else [os.environ["QUICKNODE_BOTANIX_RPC"]]),
+            *([] if not os.environ.get("QUICKNODE_BOTANIX_RPC_2") else [os.environ["QUICKNODE_BOTANIX_RPC_2"]]),
+            *([] if not os.environ.get("DRPC_BOTANIX_RPC_ZEN") else [os.environ["DRPC_BOTANIX_RPC_ZEN"]]),
+            *([] if not os.environ.get("ALCHEMY_BOTANIX_RPC_ZEN") else [os.environ["ALCHEMY_BOTANIX_RPC_ZEN"]]),
+            *([] if not os.environ.get("ALCHEMY_BOTANIX_RPC") else [os.environ["ALCHEMY_BOTANIX_RPC"]]),
+            *([] if not os.environ.get("ALCHEMY_BOTANIX_RPC_2") else [os.environ["ALCHEMY_BOTANIX_RPC_2"]]),
+            *([] if not os.environ.get("ALCHEMY_BOTANIX_RPC_3") else [os.environ["ALCHEMY_BOTANIX_RPC_3"]]),
+            "https://rpc.botanixlabs.com",
+            "https://rpc.ankr.com/botanix_mainnet",
+        ],
+        "start_block": 690_000,
+    },
+    "polygonzkevm": {
+        "margin": "0x836b557cf9ef29fcf49c776841191782df34e4e5",
+        "rpcs": [
+            *([] if not os.environ.get("ALCHEMY_POLYGONZKEVM_RPC_ZEN") else [os.environ["ALCHEMY_POLYGONZKEVM_RPC_ZEN"]]),
+            *([] if not os.environ.get("DRP_POLYGONZKEVM_RPC_TWO") else [os.environ["DRP_POLYGONZKEVM_RPC_TWO"]]),
+            *([] if not os.environ.get("POLYGONZKEVM_RPC") else [os.environ["POLYGONZKEVM_RPC"]]),
+            *([] if not os.environ.get("POLYGONZKEVM_RPC_2") else [os.environ["POLYGONZKEVM_RPC_2"]]),
+            "https://zkevm-rpc.com/",
+            "https://polygon-zkevm-rpc.publicnode.com/",
+        ],
+        "start_block": 9_860_000,
+        "max_block_chunk": 9_999,
+    },
+    "xlayer": {
+        "margin": "0x836b557cf9ef29fcf49c776841191782df34e4e5",
+        "rpcs": [
+            *_mainnet_rpc_from_env("XLAYER_RPC_QUICKNODE_TWOJE"),
+            *_mainnet_rpc_from_env("ALCHEMY_XLAYER_RPC_ZEN"),
+            *_mainnet_rpc_from_env("DRP_XLAYER_RPC_TWO"),
+            *_mainnet_rpc_from_env("XLAYER_RPC"),
+            *_mainnet_rpc_from_env("XLAYER_RPC_2"),
+            "https://rpc.xlayer.tech/",
+            "https://xlayerrpc.okx.com/",
+        ],
+        "start_block": 859_455,
+        # Dedicated providers can serve wider ranges; the official public
+        # ingresses remain capped per endpoint below, with adaptive reduction.
+        "max_block_chunk": 10_000,
+    },
+}
+
+# Event signatures (keccak256 hashes)
+LOG_DEPOSIT = "0x2bad8bc95088af2c247b30fa2b2e6a0886f88625e0945cd3051008e0e270198f"
+LOG_WITHDRAW = "0xbc83c08f0b269b1726990c8348ffdf1ae1696244a14868d766e542a2f18cd7d4"
+
+# Legacy DolomiteMargin events
+LEGACY_LOG_TRADE = "0x551e705b3457d01be14140987c43896f782b70542f778b43b9f5f94522302b6f"
+LEGACY_LOG_TRANSFER = "0xe95afb1ad6381b7e0935d86b6442b2f145381aa2f821b5d49096b61d9ee08d4b"
+LEGACY_LOG_LIQUIDATE = "0x5c18eb2c52b455100d6a3f07c1b2223d05d50135af3348404e76b1e42ddaef85"
+
+# Current dashboard replay event topics/layout
+CURRENT_LOG_TRANSFER = "0x21281f8d59117d0399dc467dbdd321538ceffe3225e80e2bd4de6f1b3355cbc7"
+CURRENT_LOG_BUY = "0x2e346762bf4ae4568971c30b51fcebd2138275aafcfe12d872956e9f3e120893"
+CURRENT_LOG_SELL = "0xcc3330184b6d88cad87f9e9543b4d4110a6a3eaf20164ca5252d598d0acba3f1"
+CURRENT_LOG_TRADE = "0x54d4cc60cf7d570631cc1a58942812cb0fc461713613400f56932040c3497d19"
+CURRENT_LOG_LIQUIDATE = "0x1b9e65b359b871d74b1af1fc8b13b11635bfb097c4631b091eb762fda7e67dc7"
+CURRENT_LOG_VAPORIZE = "0xefdcfda4e0be180f29bfeebc4bcb6de1e950d70b41e9ee813bff9882ee16ca91"
+
+ALL_EVENTS = [
+    LOG_DEPOSIT, LOG_WITHDRAW,
+    LEGACY_LOG_TRADE, LEGACY_LOG_TRANSFER, LEGACY_LOG_LIQUIDATE,
+    CURRENT_LOG_TRANSFER, CURRENT_LOG_BUY, CURRENT_LOG_SELL,
+    CURRENT_LOG_TRADE, CURRENT_LOG_LIQUIDATE, CURRENT_LOG_VAPORIZE,
+]
+
+SECOND_OWNER_EVENTS = [
+    LEGACY_LOG_TRADE, LEGACY_LOG_TRANSFER, LEGACY_LOG_LIQUIDATE,
+    CURRENT_LOG_TRANSFER, CURRENT_LOG_TRADE, CURRENT_LOG_LIQUIDATE, CURRENT_LOG_VAPORIZE,
+]
+
+BLOCK_CHUNK = 49999  # blocks per getLogs request (RPC max is typically 50k)
+MIN_BLOCK_CHUNK = 50
+# Endpoints that reject (or unreliably serve) large eth_getLogs ranges. The
+# per-request block span is capped ONLY for these (matched by URL substring);
+# capable providers keep the full BLOCK_CHUNK, and rpc_call skips a capped
+# endpoint for any wider getLogs so it can never silently truncate one.
+# Scope this to the Ethereum 1rpc path only ("1rpc.io/eth"): a bare "1rpc.io"
+# match also caught berachain/arbitrum/mantle (1rpc.io/<chain>) and regressed
+# those EARN scans — only Ethereum's 1rpc endpoint has the 50-block limit.
+ENDPOINT_BLOCK_CAPS = (
+    ("1rpc.io/eth", 50),
+    ("rpc.xlayer.tech", 100),
+    ("xlayerrpc.okx.com", 100),
+)
+ADDRESS_FILTER_CHUNK = 500000
+MAX_RETRIES = 3
+OUTPUT_DIR = Path(__file__).parent / "data" / "earn-netflow"
+PROGRESS_DIR = Path(__file__).parent / "data" / ".netflow-progress"
+PROGRESS_VERSION = 2
+
+rpc_id = 1
+
+
+def _rpc_max_attempts(method, rpcs):
+    if method == "eth_getLogs":
+        return max(1, len(rpcs))
+    return MAX_RETRIES * len(rpcs)
+
+
+def _rpc_timeout_seconds(method):
+    if method == "eth_getLogs":
+        return max(1, int(os.environ.get("EARN_RPC_GETLOGS_TIMEOUT_SECONDS") or 15))
+    return 30
+
+
+def _endpoint_block_cap(url):
+    """Max eth_getLogs block span an endpoint can serve, or None for no cap."""
+    for needle, cap in ENDPOINT_BLOCK_CAPS:
+        if needle in (url or ""):
+            return cap
+    return None
+
+
+def _getlogs_span(params):
+    """Number of blocks covered by an eth_getLogs params list (None if unknown)."""
+    try:
+        flt = params[0]
+        return int(flt["toBlock"], 16) - int(flt["fromBlock"], 16) + 1
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
+
+
+def rpc_call(rpcs, method, params, rpc_idx_ref):
+    """Make an RPC call with failover across multiple endpoints."""
+    global rpc_id
+    recent_errors = []
+    max_attempts = _rpc_max_attempts(method, rpcs)
+    for attempt in range(max_attempts):
+        idx = rpc_idx_ref[0] % len(rpcs)
+        rpc_url = rpcs[idx]
+        # Never hand a capped endpoint (e.g. 1rpc) a getLogs range wider than it
+        # can serve — rotate past it so a too-large range can't be silently
+        # truncated into missing events (lessons.md: silent chunk failures).
+        if method == "eth_getLogs":
+            cap = _endpoint_block_cap(rpc_url)
+            span = _getlogs_span(params)
+            if cap is not None and span is not None and span > cap:
+                recent_errors.append(
+                    f"{rpc_usage.provider_name(rpc_url)}: getLogs range {span} exceeds cap {cap}"
+                )
+                rpc_idx_ref[0] += 1
+                continue
+        payload = json.dumps({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": rpc_id,
+        }).encode()
+        rpc_id += 1
+        req = Request(rpc_url, data=payload, headers={
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) DolomiteScanner/1.0",
+            "Accept": "application/json",
+        })
+        try:
+            with urlopen(req, timeout=_rpc_timeout_seconds(method)) as response:
+                data = json.loads(response.read())
+                if "error" in data:
+                    error = data["error"]
+                    error_text = str(error).lower()
+                    rate_limited = (
+                        isinstance(error, dict) and error.get("code") == 429
+                    ) or any(token in error_text for token in (
+                        "rate limit", "too many", "throttl", "capacity", "quota",
+                    ))
+                    rpc_usage.record_provider_failure(rpc_url, rate_limited=rate_limited)
+                    message = f"RPC error from {rpc_usage.provider_name(rpc_url)}: {error}"
+                    recent_errors.append(message)
+                    print(f"  {message}", file=sys.stderr)
+                    rpc_idx_ref[0] += 1
+                    time.sleep(0.5)
+                    continue
+                rpc_usage.record_request(method)
+                rpc_usage.record_provider_success(rpc_url, served_methods=1)
+                return data.get("result")
+        except HTTPError as e:
+            body = ""
+            try:
+                body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                body = ""
+            body = body.strip()
+            body_tail = f" body={body[-500:]}" if body else ""
+            rpc_usage.record_provider_failure(rpc_url, rate_limited=e.code == 429)
+            message = f"RPC failed ({rpc_usage.provider_name(rpc_url)}): {e}{body_tail}"
+            recent_errors.append(message)
+            print(f"  {message}", file=sys.stderr)
+            rpc_idx_ref[0] += 1
+            time.sleep(1)
+        except (URLError, TimeoutError, OSError) as e:
+            rpc_usage.record_provider_failure(rpc_url)
+            message = f"RPC failed ({rpc_usage.provider_name(rpc_url)}): {e}"
+            recent_errors.append(message)
+            print(f"  {message}", file=sys.stderr)
+            rpc_idx_ref[0] += 1
+            time.sleep(1)
+    error_tail = " | ".join(recent_errors[-len(rpcs):])
+    detail = f"; recent errors: {error_tail}" if error_tail else ""
+    raise Exception(f"All RPCs failed after {max_attempts} attempts{detail}")
+
+
+def get_block_number(rpcs, rpc_idx):
+    """Get the latest block number."""
+    result = rpc_call(rpcs, "eth_blockNumber", [], rpc_idx)
+    return int(result, 16)
+
+
+def get_logs(rpcs, rpc_idx, contract, topics, from_block, to_block):
+    """Fetch logs for a given block range."""
+    params = [{
+        "address": contract,
+        "topics": topics,
+        "fromBlock": hex(from_block),
+        "toBlock": hex(to_block),
+    }]
+    return rpc_call(rpcs, "eth_getLogs", params, rpc_idx)
+
+
+def _addr_topic(addr):
+    return "0x" + str(addr).lower().replace("0x", "").rjust(64, "0")
+
+
+def _dedupe_logs(logs):
+    seen = set()
+    out = []
+    for log in logs or []:
+        key = (
+            str(log.get("transactionHash", "")).lower(),
+            str(log.get("logIndex", "")).lower(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(log)
+    return out
+
+
+def find_first_event_block(rpcs, rpc_idx, contract, latest_block):
+    """Find the first block with events using log-based binary search in 1M chunks."""
+    chunk = 1_000_000
+    for start in range(0, latest_block, chunk):
+        end = min(start + chunk - 1, latest_block)
+        try:
+            logs = get_logs(rpcs, rpc_idx, contract, [ALL_EVENTS], start, min(start + 49_999, end))
+            if logs:
+                return int(logs[0]["blockNumber"], 16)
+        except Exception as exc:
+            print(f"[find_first_event_block] get_logs failed for range {start}-{min(start + 49_999, end)}: {exc}", flush=True)
+        # Quick binary within this 1M chunk
+        if end - start > 50_000:
+            # Try midpoints in 50k chunks
+            for s in range(start, end, 50_000):
+                try:
+                    sub_logs = get_logs(rpcs, rpc_idx, contract, [ALL_EVENTS], s, min(s + 49_999, end))
+                    if sub_logs:
+                        return int(sub_logs[0]["blockNumber"], 16)
+                except Exception as exc:
+                    print(f"[find_first_event_block] get_logs failed for range {s}-{min(s + 49_999, end)}: {exc}", flush=True)
+                    continue
+        time.sleep(0.1)
+    return 0
+
+
+def decode_signed_bool_uint(words, offset):
+    """Decode { bool sign, uint256 value } into a signed integer."""
+    sign = int(words[offset], 16)
+    value = int(words[offset + 1], 16)
+    return value if sign else -value
+
+
+def decode_uint(words, offset):
+    return int(words[offset], 16)
+
+
+def decode_balance_update_current(words, offset):
+    """Decode current dashboard replay BalanceUpdate layout."""
+    return {
+        "delta": decode_signed_bool_uint(words, offset),
+        "new_par": decode_signed_bool_uint(words, offset + 2),
+    }
+
+
+def decode_balance_update_legacy(words, offset):
+    """Decode legacy BalanceUpdate layout used by older scanner logic."""
+    sign = int(words[offset + 2], 16)
+    value = int(words[offset + 3], 16)
+    return value if sign else -value
+
+
+def decode_legacy_deposit_withdraw_log(log):
+    """Decode a legacy LogDeposit or LogWithdraw event."""
+    topics = log["topics"]
+    data = log["data"].replace("0x", "")
+    owner = "0x" + topics[1][-40:]
+    words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+    if len(words) < 6:
+        return None
+    market_id = int(words[1], 16)
+    delta_wei = decode_balance_update_legacy(words, 2)
+    return {"owner": owner.lower(), "market": str(market_id), "delta": delta_wei}
+
+
+def decode_legacy_trade_log(log):
+    """Decode a legacy LogTrade event."""
+    topics = log["topics"]
+    data = log["data"].replace("0x", "")
+    maker = "0x" + topics[1][-40:]
+    taker = "0x" + topics[2][-40:] if len(topics) > 2 else None
+    words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+    if len(words) < 12:
+        return None
+    input_market = str(int(words[2], 16))
+    output_market = str(int(words[3], 16))
+    # Maker: gets delta on input and output markets
+    maker_input_delta = decode_balance_update_legacy(words, 4)
+    maker_output_delta = decode_balance_update_legacy(words, 8) if len(words) >= 12 else 0
+    
+    results = [
+        {"owner": maker.lower(), "market": input_market, "delta": maker_input_delta},
+        {"owner": maker.lower(), "market": output_market, "delta": maker_output_delta},
+    ]
+    # Taker side (if enough data)
+    if taker and len(words) >= 20:
+        taker_input_delta = decode_balance_update_legacy(words, 12)
+        taker_output_delta = decode_balance_update_legacy(words, 16)
+        results.append({"owner": taker.lower(), "market": input_market, "delta": taker_input_delta})
+        results.append({"owner": taker.lower(), "market": output_market, "delta": taker_output_delta})
+    return results
+
+
+def decode_legacy_transfer_log(log):
+    """Decode a legacy LogTransfer event."""
+    topics = log["topics"]
+    data = log["data"].replace("0x", "")
+    owner1 = "0x" + topics[1][-40:]
+    owner2 = "0x" + topics[2][-40:] if len(topics) > 2 else None
+    words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+    if len(words) < 7:
+        return None
+    market = str(int(words[2], 16))
+    delta1 = decode_balance_update_legacy(words, 3)
+    results = [{"owner": owner1.lower(), "market": market, "delta": delta1}]
+    if owner2 and len(words) >= 11:
+        delta2 = decode_balance_update_legacy(words, 7)
+        results.append({"owner": owner2.lower(), "market": market, "delta": delta2})
+    return results
+
+
+def decode_legacy_liquidate_log(log):
+    """Decode a legacy LogLiquidate event."""
+    topics = log["topics"]
+    data = log["data"].replace("0x", "")
+    solid = "0x" + topics[1][-40:]
+    liquid = "0x" + topics[2][-40:] if len(topics) > 2 else None
+    words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+    if len(words) < 12:
+        return None
+    held_market = str(int(words[2], 16))
+    owed_market = str(int(words[3], 16))
+    solid_held_delta = decode_balance_update_legacy(words, 4)
+    solid_owed_delta = decode_balance_update_legacy(words, 8)
+    results = [
+        {"owner": solid.lower(), "market": held_market, "delta": solid_held_delta},
+        {"owner": solid.lower(), "market": owed_market, "delta": solid_owed_delta},
+    ]
+    if liquid and len(words) >= 20:
+        liquid_held_delta = decode_balance_update_legacy(words, 12)
+        liquid_owed_delta = decode_balance_update_legacy(words, 16)
+        results.append({"owner": liquid.lower(), "market": held_market, "delta": liquid_held_delta})
+        results.append({"owner": liquid.lower(), "market": owed_market, "delta": liquid_owed_delta})
+    return results
+
+
+def _empty_progress():
+    return {
+        "last_block": 0,
+        "netflows": {},
+        "cycle_account_state": {},
+        "cycle_market_state": {},
+        "cycle_state_enabled": True,
+    }
+
+
+def _serialize_cycle_account_state(cycle_account_state):
+    return {
+        f"{owner}|{account}|{market}": str(par)
+        for (owner, account, market), par in cycle_account_state.items()
+    }
+
+
+def _deserialize_cycle_account_state(raw_state):
+    cycle_account_state = {}
+    if not isinstance(raw_state, dict):
+        return cycle_account_state
+    for key, value in raw_state.items():
+        try:
+            owner, account, market = str(key).split("|", 2)
+            cycle_account_state[(owner, account, market)] = int(value)
+        except Exception:
+            continue
+    return cycle_account_state
+
+
+def _serialize_cycle_market_state(cycle_market_state):
+    serialized = {}
+    for (owner, market), state in cycle_market_state.items():
+        serialized[f"{owner}|{market}"] = {
+            "endingPar": str(state.get("endingPar", 0)),
+            "peakPar": str(state.get("peakPar", 0)),
+            "totalWei": str(state.get("totalWei", 0)),
+            "suffixCandidates": [
+                {
+                    "balance": str(candidate.get("balance", 0)),
+                    "prefixWei": str(candidate.get("prefixWei", 0)),
+                }
+                for candidate in state.get("suffixCandidates", [])
+            ],
+        }
+    return serialized
+
+
+def _deserialize_cycle_market_state(raw_state):
+    cycle_market_state = {}
+    if not isinstance(raw_state, dict):
+        return cycle_market_state
+    for key, value in raw_state.items():
+        try:
+            owner, market = str(key).split("|", 1)
+            suffix_candidates = []
+            for candidate in value.get("suffixCandidates", []) or []:
+                suffix_candidates.append({
+                    "balance": int(candidate.get("balance", 0)),
+                    "prefixWei": int(candidate.get("prefixWei", 0)),
+                })
+            cycle_market_state[(owner, market)] = {
+                "endingPar": int(value.get("endingPar", 0)),
+                "peakPar": int(value.get("peakPar", 0)),
+                "totalWei": int(value.get("totalWei", 0)),
+                "suffixCandidates": suffix_candidates,
+            }
+        except Exception:
+            continue
+    return cycle_market_state
+
+
+def _build_progress_payload(last_block, netflows, cycle_account_state, cycle_market_state):
+    return {
+        "version": PROGRESS_VERSION,
+        "last_block": last_block,
+        "netflows": netflows,
+        "cycleAccountState": _serialize_cycle_account_state(cycle_account_state),
+        "cycleMarketState": _serialize_cycle_market_state(cycle_market_state),
+    }
+
+
+def _build_legacy_progress_payload(last_block, netflows):
+    return {
+        "last_block": last_block,
+        "netflows": netflows,
+    }
+
+
+def load_progress(chain_id):
+    """Load scanning progress for a chain."""
+    progress_file = PROGRESS_DIR / f"{chain_id}.json"
+    if progress_file.exists():
+        try:
+            with open(progress_file) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            # Corrupted progress (e.g. truncated write persisted by cache).
+            # Loudly fall back to a full rescan instead of crashing every run.
+            print(f"  ⚠️ Progress file for {chain_id} is corrupted ({exc}); "
+                  "starting from empty progress (full rescan)")
+            return _empty_progress()
+        if data.get("version") != PROGRESS_VERSION:
+            legacy = _empty_progress()
+            legacy["last_block"] = int(data.get("last_block", 0))
+            legacy["netflows"] = data.get("netflows", {}) or {}
+            legacy["cycle_state_enabled"] = False
+            print(f"  ℹ Legacy progress detected for {chain_id}; keeping incremental netflow and waiting for reset_chain to enable cycle-aware rebuild")
+            return legacy
+        return {
+            "last_block": int(data.get("last_block", 0)),
+            "netflows": data.get("netflows", {}) or {},
+            "cycle_account_state": _deserialize_cycle_account_state(data.get("cycleAccountState")),
+            "cycle_market_state": _deserialize_cycle_market_state(data.get("cycleMarketState")),
+            "cycle_state_enabled": True,
+        }
+    return _empty_progress()
+
+
+def decode_current_deposit_withdraw_log(log):
+    """Decode current replay-style deposit/withdraw event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 2:
+            return None
+        owner = "0x" + topics[1][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 6:
+            return None
+        account = str(decode_uint(words, 0))
+        market_id = str(int(words[1], 16))
+        update = decode_balance_update_current(words, 2)
+        return [{
+            "owner": owner.lower(),
+            "account": account,
+            "market": market_id,
+            "delta": update["delta"],
+            "new_par": update["new_par"],
+        }]
+    except Exception:
+        return None
+
+
+def decode_current_transfer_log(log):
+    """Decode current replay-style transfer event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 3:
+            return None
+        owner1 = "0x" + topics[1][-40:]
+        owner2 = "0x" + topics[2][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 11:
+            return None
+        account1 = str(decode_uint(words, 0))
+        account2 = str(decode_uint(words, 1))
+        market_id = str(int(words[2], 16))
+        update1 = decode_balance_update_current(words, 3)
+        update2 = decode_balance_update_current(words, 7)
+        return [
+            {"owner": owner1.lower(), "account": account1, "market": market_id, "delta": update1["delta"], "new_par": update1["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": market_id, "delta": update2["delta"], "new_par": update2["new_par"]},
+        ]
+    except Exception:
+        return None
+
+
+def decode_current_buy_sell_log(log):
+    """Decode current replay-style buy/sell event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 2:
+            return None
+        owner = "0x" + topics[1][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 11:
+            return None
+        account = str(decode_uint(words, 0))
+        update_a = decode_balance_update_current(words, 3)
+        update_b = decode_balance_update_current(words, 7)
+        return [
+            {"owner": owner.lower(), "account": account, "market": str(int(words[1], 16)), "delta": update_a["delta"], "new_par": update_a["new_par"]},
+            {"owner": owner.lower(), "account": account, "market": str(int(words[2], 16)), "delta": update_b["delta"], "new_par": update_b["new_par"]},
+        ]
+    except Exception:
+        return None
+
+
+def decode_current_trade_log(log):
+    """Decode current replay-style trade event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 3:
+            return None
+        owner1 = "0x" + topics[1][-40:]
+        owner2 = "0x" + topics[2][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 20:
+            return None
+        account1 = str(decode_uint(words, 0))
+        account2 = str(decode_uint(words, 1))
+        input_market = str(int(words[2], 16))
+        output_market = str(int(words[3], 16))
+        update1_in = decode_balance_update_current(words, 4)
+        update1_out = decode_balance_update_current(words, 8)
+        update2_in = decode_balance_update_current(words, 12)
+        update2_out = decode_balance_update_current(words, 16)
+        return [
+            {"owner": owner1.lower(), "account": account1, "market": input_market, "delta": update1_in["delta"], "new_par": update1_in["new_par"]},
+            {"owner": owner1.lower(), "account": account1, "market": output_market, "delta": update1_out["delta"], "new_par": update1_out["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": input_market, "delta": update2_in["delta"], "new_par": update2_in["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": output_market, "delta": update2_out["delta"], "new_par": update2_out["new_par"]},
+        ]
+    except Exception:
+        return None
+
+
+def decode_current_liquidate_log(log):
+    """Decode current replay-style liquidate event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 3:
+            return None
+        owner1 = "0x" + topics[1][-40:]
+        owner2 = "0x" + topics[2][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 20:
+            return None
+        account1 = str(decode_uint(words, 0))
+        account2 = str(decode_uint(words, 1))
+        held_market = str(int(words[2], 16))
+        owed_market = str(int(words[3], 16))
+        solid_held = decode_balance_update_current(words, 4)
+        solid_owed = decode_balance_update_current(words, 8)
+        liquid_held = decode_balance_update_current(words, 12)
+        liquid_owed = decode_balance_update_current(words, 16)
+        return [
+            {"owner": owner1.lower(), "account": account1, "market": held_market, "delta": solid_held["delta"], "new_par": solid_held["new_par"]},
+            {"owner": owner1.lower(), "account": account1, "market": owed_market, "delta": solid_owed["delta"], "new_par": solid_owed["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": held_market, "delta": liquid_held["delta"], "new_par": liquid_held["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": owed_market, "delta": liquid_owed["delta"], "new_par": liquid_owed["new_par"]},
+        ]
+    except Exception:
+        return None
+
+
+def decode_current_vaporize_log(log):
+    """Decode current replay-style vaporize event."""
+    try:
+        topics = log["topics"]
+        if len(topics) < 3:
+            return None
+        owner1 = "0x" + topics[1][-40:]
+        owner2 = "0x" + topics[2][-40:]
+        data = log["data"].replace("0x", "")
+        words = [data[i*64:(i+1)*64] for i in range(len(data)//64)]
+        if len(words) < 16:
+            return None
+        account1 = str(decode_uint(words, 0))
+        account2 = str(decode_uint(words, 1))
+        held_market = str(int(words[2], 16))
+        borrowed_market = str(int(words[3], 16))
+        solid_held = decode_balance_update_current(words, 4)
+        solid_borrowed = decode_balance_update_current(words, 8)
+        vapor_borrowed = decode_balance_update_current(words, 12)
+        return [
+            {"owner": owner1.lower(), "account": account1, "market": held_market, "delta": solid_held["delta"], "new_par": solid_held["new_par"]},
+            {"owner": owner1.lower(), "account": account1, "market": borrowed_market, "delta": solid_borrowed["delta"], "new_par": solid_borrowed["new_par"]},
+            {"owner": owner2.lower(), "account": account2, "market": borrowed_market, "delta": vapor_borrowed["delta"], "new_par": vapor_borrowed["new_par"]},
+        ]
+    except Exception:
+        return None
+
+
+def decode_log_entries(log):
+    """Decode any known log type into [{owner, market, delta}, ...]."""
+    topic0 = (log.get("topics") or [""])[0].lower()
+    if topic0 == LOG_DEPOSIT:
+        current = decode_current_deposit_withdraw_log(log)
+        if current:
+            return current
+        legacy = decode_legacy_deposit_withdraw_log(log)
+        return [legacy] if legacy else None
+    if topic0 == LOG_WITHDRAW:
+        current = decode_current_deposit_withdraw_log(log)
+        if current:
+            return current
+        legacy = decode_legacy_deposit_withdraw_log(log)
+        if legacy:
+            legacy["delta"] = -abs(int(legacy["delta"]))
+            return [legacy]
+        return None
+    if topic0 == LEGACY_LOG_TRADE:
+        return decode_legacy_trade_log(log)
+    if topic0 == LEGACY_LOG_TRANSFER:
+        return decode_legacy_transfer_log(log)
+    if topic0 == LEGACY_LOG_LIQUIDATE:
+        return decode_legacy_liquidate_log(log)
+    if topic0 == CURRENT_LOG_TRANSFER:
+        return decode_current_transfer_log(log)
+    if topic0 == CURRENT_LOG_BUY or topic0 == CURRENT_LOG_SELL:
+        return decode_current_buy_sell_log(log)
+    if topic0 == CURRENT_LOG_TRADE:
+        return decode_current_trade_log(log)
+    if topic0 == CURRENT_LOG_LIQUIDATE:
+        return decode_current_liquidate_log(log)
+    if topic0 == CURRENT_LOG_VAPORIZE:
+        return decode_current_vaporize_log(log)
+    return None
+
+
+def save_progress(chain_id, progress):
+    """Save scanning progress atomically (tmp + rename).
+
+    The runner can be killed mid-write (hard timeout/OOM); a truncated progress
+    file would be persisted by the always()-cache step and poison every
+    subsequent run of this chain until a manual reset.
+    """
+    PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+    path = PROGRESS_DIR / f"{chain_id}.json"
+    tmp = path.with_suffix(".json.tmp")
+    with open(tmp, "w") as f:
+        json.dump(progress, f)
+    os.replace(tmp, path)
+
+
+def apply_cycle_metadata(netflows, cycle_market_state):
+    """Attach cycle-aware active position metadata to the public netflow map."""
+    for (owner, mid), state in cycle_market_state.items():
+        if owner not in netflows or mid not in netflows[owner]:
+            continue
+        storage_entry = netflows[owner][mid]
+        storage_entry["endingPar"] = str(state["endingPar"])
+        storage_entry.pop("recentNetFlow", None)
+        storage_entry.pop("resetPar", None)
+        storage_entry.pop("cycleStartProof", None)
+        if state["endingPar"] <= 0 or state["peakPar"] <= 0:
+            continue
+
+        reset_candidate = None
+        for candidate in reversed(state["suffixCandidates"]):
+            if candidate["balance"] == 0:
+                reset_candidate = candidate
+                break
+        if reset_candidate is None:
+            continue
+        recent_netflow = state["totalWei"] - reset_candidate["prefixWei"]
+        storage_entry["recentNetFlow"] = str(recent_netflow)
+        storage_entry["resetPar"] = "0"
+        storage_entry["cycleStartProof"] = "exact-zero"
+
+
+def write_netflow_output(chain_id, last_block, netflows, *, scan_complete=True, scan_status="complete"):
+    """Write the public chain netflow file for the data scanned so far."""
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output_file = OUTPUT_DIR / f"{chain_id}.json"
+    output_data = {
+        "chain": chain_id,
+        "lastBlock": int(last_block),
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "scanComplete": bool(scan_complete),
+        "scanStatus": scan_status,
+        "addressCount": len(netflows),
+        "netflows": netflows,
+    }
+    with open(output_file, "w") as f:
+        json.dump(output_data, f, separators=(",", ":"))
+    return output_file
+
+
+def _progress_payload_for_state(last_block, netflows, cycle_account_state, cycle_market_state, cycle_state_enabled):
+    return (
+        _build_progress_payload(
+            last_block,
+            netflows,
+            cycle_account_state,
+            cycle_market_state,
+        )
+        if cycle_state_enabled
+        else _build_legacy_progress_payload(last_block, netflows)
+    )
+
+
+def _is_chunk_too_large_error(error_msg):
+    lowered = str(error_msg).lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "413",
+            "entity too large",
+            "request too large",
+            "payload too large",
+            "response too large",
+            "range",
+            "10000",
+            "exceed",
+        )
+    )
+
+
+def _reduced_chunk_size(chunk_size):
+    return max(MIN_BLOCK_CHUNK, chunk_size // 2)
+
+
+def scan_chain(
+    chain_id,
+    chain_config,
+    only_chains=None,
+    target_addresses=None,
+    soft_deadline=None,
+    partial_output_interval_seconds=0,
+):
+    """Scan a single chain for deposit/withdraw events."""
+    if only_chains and chain_id not in only_chains:
+        return {"completed": True, "skipped": True}
+    
+    print(f"\n{'='*60}")
+    print(f"Scanning {chain_id.upper()}")
+    print(f"{'='*60}")
+    
+    rpcs = chain_config["rpcs"]
+    contract = chain_config["margin"]
+    rpc_idx = [0]
+    
+    # Chains with no events — generate empty file
+    if chain_config["start_block"] < 0:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        output_file = OUTPUT_DIR / f"{chain_id}.json"
+        output_data = {
+            "chain": chain_id,
+            "lastBlock": 0,
+            "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "addressCount": 0,
+            "netflows": {},
+        }
+        with open(output_file, "w") as f:
+            json.dump(output_data, f, separators=(",", ":"))
+        print(f"  ✓ No events on chain — wrote empty file")
+        return {"completed": True}
+    
+    # Get latest block
+    try:
+        latest_block = get_block_number(rpcs, rpc_idx)
+    except Exception as e:
+        print(f"  ✗ Cannot get block number: {e}")
+        return {"completed": False, "reason": "block_number_failed"}
+    
+    print(f"  Latest block: {latest_block:,}")
+    
+    target_addresses = {a.lower() for a in (target_addresses or []) if a}
+    target_addr_topics = [_addr_topic(addr) for addr in sorted(target_addresses)]
+
+    output_file = OUTPUT_DIR / f"{chain_id}.json"
+    existing_output = {}
+    if output_file.exists():
+        try:
+            with open(output_file) as f:
+                existing_output = json.load(f)
+        except Exception:
+            existing_output = {}
+
+    if target_addresses:
+        existing_netflows = existing_output.get("netflows", {}) or {}
+        netflows = {addr: data for addr, data in existing_netflows.items() if addr.lower() not in target_addresses}
+        filtered_netflows = {}
+        cycle_account_state = {}
+        cycle_market_state = {}
+        cycle_state_enabled = True
+        start_block = chain_config["start_block"]
+        print(f"  Targeted rescan for {len(target_addresses)} address(es) from block: {start_block:,}")
+    else:
+        progress = load_progress(chain_id)
+        netflows = progress["netflows"]
+        filtered_netflows = netflows
+        cycle_account_state = progress["cycle_account_state"]
+        cycle_market_state = progress["cycle_market_state"]
+        cycle_state_enabled = progress["cycle_state_enabled"]
+        start_block = progress["last_block"]
+
+        if start_block == 0:
+            start_block = chain_config["start_block"]
+            print(f"  Starting from block: {start_block:,}")
+        else:
+            print(f"  Resuming from block: {start_block:,}")
+    
+    # Scan in chunks
+    current = start_block
+    total_events = 0
+    max_chunk_size = int(chain_config.get("max_block_chunk") or BLOCK_CHUNK)
+    chunk_size = min(ADDRESS_FILTER_CHUNK, max_chunk_size) if target_addresses else max_chunk_size
+    last_partial_output_at = time.monotonic()
+    failed_block = None
+    consecutive_failures_at_block = 0
+
+    def maybe_write_partial_output(scanned_block, *, force=False):
+        nonlocal last_partial_output_at
+        if target_addresses or scanned_block < start_block:
+            return None
+        if partial_output_interval_seconds <= 0 and not force:
+            return None
+        now = time.monotonic()
+        if not force and now - last_partial_output_at < partial_output_interval_seconds:
+            return None
+        apply_cycle_metadata(netflows, cycle_market_state)
+        output_path = write_netflow_output(
+            chain_id,
+            scanned_block,
+            netflows,
+            scan_complete=False,
+            scan_status="partial",
+        )
+        last_partial_output_at = now
+        return output_path
+    
+    while current <= latest_block:
+        if soft_deadline is not None and time.monotonic() >= soft_deadline:
+            if current <= start_block:
+                print(f"  ✗ Soft runtime limit reached before scanning any block at {current:,}")
+                return {
+                    "completed": False,
+                    "reason": "soft_runtime_no_progress",
+                    "lastBlock": current,
+                    "hasExistingOutput": output_file.exists(),
+                }
+            if not target_addresses:
+                save_progress(
+                    chain_id,
+                    _progress_payload_for_state(
+                        current,
+                        netflows,
+                        cycle_account_state,
+                        cycle_market_state,
+                        cycle_state_enabled,
+                    ),
+            )
+            print(f"  ⏱ Soft runtime limit reached at block {current:,}; saved progress for next run")
+            if not target_addresses and current > start_block:
+                scanned_block = max(0, current - 1)
+                output_file = maybe_write_partial_output(scanned_block, force=True)
+                file_size = output_file.stat().st_size
+                print(f"  ✓ Partial output: {output_file} through block {scanned_block:,} ({file_size/1024:.1f} KB)")
+            return {"completed": False, "reason": "soft_runtime_limit", "lastBlock": current}
+
+        to_block = min(current + chunk_size - 1, latest_block)
+        
+        try:
+            # Fetch all logs. For targeted rescans, filter by indexed owner topics so we can
+            # rebuild a single address from genesis without a full-chain rescan.
+            if target_addresses:
+                topic_one_logs = get_logs(rpcs, rpc_idx, contract, [ALL_EVENTS, target_addr_topics], current, to_block) or []
+                topic_two_logs = get_logs(rpcs, rpc_idx, contract, [SECOND_OWNER_EVENTS, None, target_addr_topics], current, to_block) or []
+                all_logs = _dedupe_logs([*topic_one_logs, *topic_two_logs])
+            else:
+                all_logs = get_logs(rpcs, rpc_idx, contract, [ALL_EVENTS], current, to_block) or []
+            
+            events_in_chunk = len(all_logs)
+            total_events += events_in_chunk
+            
+            # Helper to add flow to netflows
+            def add_flow(storage, addr, mid, delta, flow_type):
+                if addr not in storage:
+                    storage[addr] = {}
+                if mid not in storage[addr]:
+                    storage[addr][mid] = {"t": "0", "d": "0", "w": "0", "s": "0", "x": "0", "l": "0", "v": "0"}
+                # Ensure all keys exist (for old-format data)
+                for k in ("d", "w", "s", "x", "l", "v"):
+                    if k not in storage[addr][mid]:
+                        storage[addr][mid][k] = "0"
+                old_t = int(storage[addr][mid]["t"])
+                storage[addr][mid]["t"] = str(old_t + delta)
+                old_ft = int(storage[addr][mid][flow_type])
+                storage[addr][mid][flow_type] = str(old_ft + abs(delta))
+
+            def update_cycle_state(owner, account, market, delta, new_par):
+                if not cycle_state_enabled:
+                    return
+                if account is None or new_par is None:
+                    return
+
+                account_key = (owner, str(account), market)
+                prev_account_par = cycle_account_state.get(account_key, 0)
+                next_account_par = int(new_par)
+                par_delta = next_account_par - prev_account_par
+                cycle_account_state[account_key] = next_account_par
+
+                market_key = (owner, market)
+                state = cycle_market_state.setdefault(market_key, {
+                    "endingPar": 0,
+                    "peakPar": 0,
+                    "totalWei": 0,
+                    "suffixCandidates": [],
+                })
+                state["endingPar"] += par_delta
+                if state["endingPar"] > state["peakPar"]:
+                    state["peakPar"] = state["endingPar"]
+                state["totalWei"] += int(delta)
+
+                candidate = {
+                    "balance": state["endingPar"],
+                    "prefixWei": state["totalWei"],
+                }
+                while state["suffixCandidates"] and state["suffixCandidates"][-1]["balance"] >= candidate["balance"]:
+                    state["suffixCandidates"].pop()
+                state["suffixCandidates"].append(candidate)
+            
+            # Process all logs
+            for log in all_logs:
+                topic0 = log["topics"][0].lower()
+                flow_type = (
+                    "d" if topic0 == LOG_DEPOSIT else
+                    "w" if topic0 == LOG_WITHDRAW else
+                    "x" if topic0 in (LEGACY_LOG_TRANSFER, CURRENT_LOG_TRANSFER) else
+                    "l" if topic0 in (LEGACY_LOG_LIQUIDATE, CURRENT_LOG_LIQUIDATE) else
+                    "v" if topic0 == CURRENT_LOG_VAPORIZE else
+                    "s"
+                )
+                entries = decode_log_entries(log)
+                if not entries:
+                    continue
+                for entry in entries:
+                    owner = entry["owner"].lower()
+                    if target_addresses and owner not in target_addresses:
+                        continue
+                    storage = filtered_netflows if target_addresses else netflows
+                    add_flow(storage, owner, entry["market"], int(entry["delta"]), flow_type)
+                    update_cycle_state(
+                        owner,
+                        entry.get("account"),
+                        entry["market"],
+                        entry["delta"],
+                        entry.get("new_par"),
+                    )
+            
+            pct = ((to_block - start_block) / max(1, latest_block - start_block)) * 100
+            blocks_done = to_block - start_block
+            if events_in_chunk > 0 or blocks_done % 500_000 < chunk_size:
+                addr_count = len(filtered_netflows if target_addresses else netflows)
+                print(f"  [{pct:5.1f}%] Block {to_block:,} — {events_in_chunk} events (total: {total_events}, addrs: {addr_count})")
+            
+            # Save progress periodically
+            if not target_addresses and (to_block - start_block) % (chunk_size * 10) < chunk_size:
+                payload = _progress_payload_for_state(
+                    to_block + 1,
+                    netflows,
+                    cycle_account_state,
+                    cycle_market_state,
+                    cycle_state_enabled,
+                )
+                save_progress(chain_id, payload)
+
+            partial_output = maybe_write_partial_output(to_block)
+            if partial_output:
+                file_size = partial_output.stat().st_size
+                print(f"  ✓ Partial public output through block {to_block:,} ({file_size/1024:.1f} KB)")
+            
+            # If we get too many logs, reduce chunk size
+            if events_in_chunk > 5000:
+                chunk_size = max(5000, chunk_size // 2)
+                print(f"  ⚠ Reducing chunk size to {chunk_size}")
+            elif events_in_chunk < 100 and chunk_size < max_chunk_size:
+                chunk_size = min(max_chunk_size, chunk_size * 2)
+            
+            current = to_block + 1
+            failed_block = None
+            consecutive_failures_at_block = 0
+            
+        except Exception as e:
+            error_msg = str(e)
+            if _is_chunk_too_large_error(error_msg):
+                reduced_chunk_size = _reduced_chunk_size(chunk_size)
+                if reduced_chunk_size < chunk_size:
+                    chunk_size = reduced_chunk_size
+                    print(f"  ⚠ Block range too large, reducing to {chunk_size}")
+                    continue
+            if "Too Many" in error_msg or "rate" in error_msg.lower():
+                print(f"  ⚠ Rate limited, waiting 5s...")
+                time.sleep(5)
+                continue
+            else:
+                reduced_chunk_size = _reduced_chunk_size(chunk_size)
+                if reduced_chunk_size < chunk_size:
+                    chunk_size = reduced_chunk_size
+                    print(f"  ⚠ RPC failed at block {current}; reducing chunk size to {chunk_size}")
+                    time.sleep(2)
+                    rpc_idx[0] += 1
+                    continue
+                if failed_block == current:
+                    consecutive_failures_at_block += 1
+                else:
+                    failed_block = current
+                    consecutive_failures_at_block = 1
+                if consecutive_failures_at_block >= 3:
+                    print(f"  ✗ RPC failed repeatedly at block {current}; no progress after {consecutive_failures_at_block} full retry cycles")
+                    return {"completed": False, "reason": "rpc_failed", "lastBlock": current}
+                print(f"  ✗ Error at block {current}: {e}")
+                time.sleep(2)
+                rpc_idx[0] += 1
+                continue
+    
+    # Final save
+    if not target_addresses:
+        payload = _progress_payload_for_state(
+            latest_block + 1,
+            netflows,
+            cycle_account_state,
+            cycle_market_state,
+            cycle_state_enabled,
+        )
+        save_progress(chain_id, payload)
+
+    if target_addresses:
+        netflows.update(filtered_netflows)
+    apply_cycle_metadata(netflows, cycle_market_state)
+    output_file = write_netflow_output(chain_id, latest_block, netflows)
+    
+    file_size = output_file.stat().st_size
+    print(f"\n  ✓ {chain_id}: {len(netflows)} addresses, {total_events} events")
+    print(f"  ✓ Output: {output_file} ({file_size/1024:.1f} KB)")
+    return {"completed": True, "lastBlock": latest_block}
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Scan DolomiteMargin balance-changing events into netflow files")
+    parser.add_argument("chains", nargs="?", default="", help="Comma-separated chain ids, e.g. arbitrum,ethereum")
+    parser.add_argument("--address", action="append", default=[], help="Targeted owner address to rebuild from genesis")
+    parser.add_argument(
+        "--max-runtime-seconds",
+        type=int,
+        default=int(os.environ.get("EARN_NETFLOW_MAX_RUNTIME_SECONDS") or 0),
+        help="Stop cleanly after this many seconds so GitHub Actions can save cache/progress.",
+    )
+    parser.add_argument(
+        "--partial-output-interval-seconds",
+        type=int,
+        default=int(os.environ.get("EARN_NETFLOW_PARTIAL_OUTPUT_INTERVAL_SECONDS") or 0),
+        help="Write a public partial netflow JSON at this cadence while a long scan is still catching up.",
+    )
+    args = parser.parse_args()
+
+    only_chains = ["ethereum", "arbitrum"]
+    if args.chains:
+        only_chains = [c.strip().lower() for c in args.chains.split(",") if c.strip()]
+        print(f"Scanning only: {', '.join(only_chains)}")
+
+    target_addresses = [a.strip().lower() for a in args.address if str(a).strip()]
+    if target_addresses:
+        print(f"Target addresses: {', '.join(target_addresses)}")
+
+    soft_deadline = None
+    if args.max_runtime_seconds and args.max_runtime_seconds > 0:
+        soft_deadline = time.monotonic() + args.max_runtime_seconds
+        print(f"Soft runtime limit: {args.max_runtime_seconds}s")
+    
+    for chain_id, config in CHAINS.items():
+        result = scan_chain(
+            chain_id,
+            config,
+            only_chains,
+            target_addresses=target_addresses,
+            soft_deadline=soft_deadline,
+            partial_output_interval_seconds=args.partial_output_interval_seconds,
+        )
+        if isinstance(result, dict) and result.get("reason") == "soft_runtime_limit":
+            print("Soft runtime limit reached; stopping remaining chains until next scheduled run")
+            break
+        if isinstance(result, dict) and result.get("completed") is False:
+            if (
+                result.get("reason") == "soft_runtime_no_progress"
+                and result.get("hasExistingOutput")
+                and not target_addresses
+            ):
+                print(
+                    f"No new {chain_id} blocks were scanned before the soft runtime limit; "
+                    "preserving the existing public netflow file and retrying on the next scheduled run."
+                )
+                break
+            print(f"Scan failed for {chain_id}: {result.get('reason') or 'unknown'}", file=sys.stderr)
+            return 1
+    
+    print(f"\n{'='*60}")
+    print("Done! Files written to data/earn-netflow/")
+    print(f"{'='*60}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

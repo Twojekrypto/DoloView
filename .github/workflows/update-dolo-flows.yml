@@ -1,0 +1,257 @@
+name: Update DOLO Flows Data
+
+on:
+  schedule:
+    - cron: '47 */4 * * *'  # Leave room for ~2.5h generation and delayed scheduled starts.
+  workflow_dispatch: # Allow manual trigger
+    inputs:
+      fresh_wallet_audit_verbose:
+        description: 'Print detailed Fresh Wallet 90D candidate audit rows'
+        required: false
+        default: '0'
+      full_verified_backfill:
+        description: 'Rebuild DOLO Transfer history from deploy blocks with independent RPC quorum'
+        required: false
+        type: boolean
+        default: false
+      skip_holders:
+        description: 'Reuse published holder data for an urgent flow-only refresh'
+        required: false
+        type: boolean
+        default: false
+      holder_history_only:
+        description: 'Rebuild holder chart history from verified cached transfers without a full flow rescan'
+        required: false
+        type: boolean
+        default: false
+      cex_history_only:
+        description: 'Repair CEX history and net flow at published verified blocks without an RPC rescan'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: update-dolo-flows
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  LP_DATA_STORAGE: ${{ vars.LP_DATA_STORAGE || 'git' }}
+  LP_R2_READY_DIGEST: ${{ vars.LP_R2_READY_DIGEST }}
+
+jobs:
+  update-flows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check LP storage mode
+        run: python3 scripts/data_artifact_store.py check-mode
+
+      - name: Install optional LP storage dependencies
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        run: pip install -r requirements-storage.txt
+
+      - name: Restore gated current LP attribution
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        env:
+          R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+        run: python3 scripts/data_artifact_store.py prepare --purpose current
+
+      - name: Check DeBank fallback browser
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            google-chrome --version
+          elif command -v google-chrome-stable >/dev/null 2>&1; then
+            google-chrome-stable --version
+          elif command -v chromium >/dev/null 2>&1; then
+            chromium --version
+          elif command -v chromium-browser >/dev/null 2>&1; then
+            chromium-browser --version
+          else
+            echo "::warning::No Chrome/Chromium binary found; Fresh Wallet DeBank age fallback will be skipped."
+          fi
+
+      - name: Run DOLO flow and holder exposure tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_dispatch_pages.py'
+          python3 -m unittest tests/test_fresh_wallets.py tests/test_generate_dolo_flows_integrity.py tests/test_generate_dolo_flows_rpc.py tests/test_flow_tx_metadata.py tests/test_validate_dolo_flows.py tests/test_cex_holder_history.py
+          node --test tests/dolo-flow-balance-display.test.js tests/dolo-flow-lp-display.test.js tests/dolo-holder-protocol-exposure.test.js tests/dolo-flow-protocol-filter.test.js tests/holder-distribution-contract.test.js
+
+      - name: Restore holders sync state
+        uses: actions/cache@v5
+        with:
+          path: dolo_holders_state.json
+          key: dolo-holders-state-${{ github.run_number }}
+          restore-keys: |
+            dolo-holders-state-
+
+      - name: Restore flows sync state
+        uses: actions/cache@v5
+        with:
+          path: dolo_flows_state.json
+          key: dolo-flows-state-${{ github.run_number }}
+          restore-keys: |
+            dolo-flows-state-
+
+      - name: Generate DOLO holders data (sync with flows)
+        if: ${{ !inputs.skip_holders && !inputs.holder_history_only && !inputs.cex_history_only }}
+        env:
+          PYTHONUNBUFFERED: '1'
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}
+          DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+          ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+          ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+          ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+          ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+          DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+          QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+          DOLO_HOLDERS_RPC_BATCH_SIZE: '50'
+          DOLO_HOLDERS_RPC_RETRIES_PER_ENDPOINT: '2'
+        run: python3 generate_dolo_holders.py
+
+      # A later flow quorum failure must not discard a validated holder snapshot.
+      - name: Publish validated DOLO holders independently
+        if: ${{ !inputs.skip_holders && !inputs.holder_history_only && !inputs.cex_history_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 validate_data.py dolo_holders.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dolo_holders.json vesting_investors.json
+          if ! git diff --staged --quiet; then
+            git commit -m "Refresh verified DOLO holders - $(date -u '+%Y-%m-%d %H:%M UTC')"
+            pushed=false
+            for attempt in $(seq 1 12); do
+              if git pull --rebase --autostash origin master && git push origin HEAD:master; then pushed=true; break; fi
+              sleep $((5 + RANDOM % 15))
+            done
+            if [ "$pushed" != "true" ]; then echo "::error::DOLO holder publication failed"; exit 1; fi
+            python3 scripts/dispatch_pages.py --repo "$GITHUB_REPOSITORY" --commit "$(git rev-parse HEAD)"
+          fi
+
+      - name: Generate DOLO flows data
+        if: ${{ !inputs.holder_history_only && !inputs.cex_history_only }}
+        timeout-minutes: 330
+        env:
+          PYTHONUNBUFFERED: '1'
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}
+          DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+          ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+          ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+          ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+          ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+          DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+          QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+          DOLO_FLOWS_RPC_BATCH_SIZE: '50'
+          DOLO_FLOWS_RPC_RETRIES_PER_ENDPOINT: '2'
+          DOLO_FLOWS_LOG_RETRIES_PER_ENDPOINT: '3'
+          DOLO_FLOWS_LOG_CHUNK_DELAY_SECONDS: '0.5'
+          DOLO_FLOWS_LOG_CHUNK_REGROW_SUCCESS_THRESHOLD: '8'
+          DOLO_FLOWS_ETHERSCAN_PAGE_DELAY_SECONDS: '0.4'
+          DOLO_FLOWS_BLOCKSCOUT_REQUEST_DELAY_SECONDS: '0.3'
+          DOLO_FLOWS_FULL_VERIFIED_BACKFILL: ${{ github.event.inputs.full_verified_backfill || 'false' }}
+          FRESH_WALLET_AUDIT_VERBOSE: ${{ github.event.inputs.fresh_wallet_audit_verbose || '0' }}
+          DOLO_HOLDER_EXPOSURE_REQUEST_DELAY_SECONDS: '0.1'
+        run: python3 generate_dolo_flows.py
+
+      - name: Rebuild holder exposure history from verified cache
+        if: ${{ inputs.holder_history_only }}
+        timeout-minutes: 90
+        env:
+          PYTHONUNBUFFERED: '1'
+          DOLO_HOLDER_EXPOSURE_REQUEST_DELAY_SECONDS: '0.1'
+        run: python3 generate_dolo_flows.py --rebuild-holder-history-only
+
+      - name: Rebuild CEX history at published verified blocks
+        if: ${{ inputs.cex_history_only }}
+        timeout-minutes: 20
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python3 generate_dolo_flows.py --rebuild-cex-history-only
+
+      - name: Save flows state cache (even on timeout)
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: dolo_flows_state.json
+          key: dolo-flows-state-${{ github.run_number }}
+
+      - name: Save holders state cache (even on timeout)
+        if: ${{ always() && !inputs.skip_holders && !inputs.holder_history_only && !inputs.cex_history_only }}
+        uses: actions/cache/save@v5
+        with:
+          path: dolo_holders_state.json
+          key: dolo-holders-state-${{ github.run_number }}
+
+      - name: Validate generated data
+        run: python3 validate_data.py dolo_flows.json dolo_holder_wallet_history.json dolo_holders.json
+
+      - name: Clean restored LP checkout copy
+        if: ${{ env.LP_DATA_STORAGE == 'r2' }}
+        run: |
+          if git ls-files --error-unmatch data/dolo-liquidity.json >/dev/null 2>&1; then
+            git restore --source=HEAD --worktree -- data/dolo-liquidity.json
+          fi
+
+      # NOTE: no `if: always()` here — if generation or validation failed,
+      # we must NOT publish potentially corrupted data files.
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dolo_flows.json dolo_holder_wallet_history.json dolo_holders.json vesting_investors.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "📊 Auto-update DOLO flows + holders $(date -u '+%Y-%m-%d %H:%M UTC')"
+            # Retry push with rebase up to 3 times; FAIL the job if all attempts fail
+            pushed=false
+            for i in 1 2 3; do
+              if git pull --rebase -X theirs origin master && git push origin master; then pushed=true; break; fi
+              echo "⚠️ Push attempt $i failed, retrying..."
+              sleep 5
+            done
+            if [ "$pushed" != "true" ]; then echo "::error::Push failed after 3 attempts — generated data was NOT published"; exit 1; fi
+          fi
+
+      # Guard-dispatched runs can exceed workflow_run chaining depth. Publish
+      # the final flows/history commit explicitly, not only the earlier holders.
+      - name: Publish refreshed flows to Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/dispatch_pages.py --repo "$GITHUB_REPOSITORY" --commit "$(git rev-parse HEAD)"

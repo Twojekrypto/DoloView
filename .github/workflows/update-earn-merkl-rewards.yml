@@ -1,0 +1,90 @@
+name: Update Earn Merkl Rewards
+
+on:
+  schedule:
+    - cron: '22 * * * *'  # Hourly fallback cache for browser-blocked MERKL lookups
+  workflow_dispatch:
+
+concurrency:
+  group: earn-merkl-rewards
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    # A full 1,674-wallet scan plus checkout/audit needs about 29 minutes.
+    timeout-minutes: 60
+    env:
+      PYTHONUNBUFFERED: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install check dependencies
+        run: python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Test bounded Merkl recovery and complete-publication gate
+        run: python3 -m unittest discover -s tests -p 'test_build_earn_merkl_rewards_cache.py'
+
+      - name: Guard — detect Merkl campaigns outside the eligible-market list
+        run: |
+          python3 - <<'PY'
+          import json, urllib.request
+          from build_earn_merkl_rewards_cache import ELIGIBLE_MARKETS
+          CHAINS = {"ethereum": 1, "arbitrum": 42161, "berachain": 80094}
+          missing = []
+          for chain, cid in CHAINS.items():
+              url = f"https://api.dolomite.io/tokens/{cid}/interest-rates?exclude-odolo=false"
+              req = urllib.request.Request(url, headers={"User-Agent": "dolomite-dashboard-ci"})
+              try:
+                  with urllib.request.urlopen(req, timeout=25) as resp:
+                      payload = json.load(resp)
+              except Exception as exc:
+                  print(f"::warning title=Merkl guard::{chain}: API unreachable ({exc})")
+                  continue
+              eligible = {a.lower() for a in (ELIGIBLE_MARKETS.get(chain) or {})}
+              for row in payload.get("interestRates", []):
+                  token = row.get("token") or {}
+                  addr = str(token.get("tokenAddress") or "").lower()
+                  for part in (row.get("outsideSupplyInterestRateParts") or []):
+                      if "merkl" in str(part.get("label") or "").lower() and addr not in eligible:
+                          missing.append((chain, token.get("tokenSymbol"), addr, part.get("label")))
+          for m in missing:
+              print(f"::warning title=New Merkl campaign not in ELIGIBLE_MARKETS::{m}")
+          print("Merkl guard:", f"{len(missing)} uncovered campaign(s)" if missing else "all campaigns covered")
+          PY
+
+      - name: Build Ethereum MERKL rewards cache
+        run: |
+          python3 build_earn_merkl_rewards_cache.py \
+            --chain ethereum \
+            --sleep 0.25
+
+      - name: Run EARN audit checks
+        run: python3 run_earn_audit_checks.py
+
+      - name: Commit and push refreshed MERKL rewards
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/earn-merkl-rewards/manifest.json data/earn-merkl-rewards/ethereum
+          bash scripts/commit_with_fresh_earn_status.sh "🎁 Refresh Earn MERKL rewards — $(date -u '+%Y-%m-%d %H:%M UTC')"

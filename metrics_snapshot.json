@@ -1,0 +1,134 @@
+{
+  "snapshots": [
+    {
+      "timestamp": "2026-11-22T02:08:59.470664Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21710409.8828,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 116294100,
+      "volume_24h": 3048359.32196735
+    },
+    {
+      "timestamp": "2026-11-22T06:59:41.645578Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21693967.238,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 115336329,
+      "volume_24h": 3020943.846389585
+    },
+    {
+      "timestamp": "2026-11-22T07:21:22.392537Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21692739.8373,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 115336329,
+      "volume_24h": 2178303.7876922647
+    },
+    {
+      "timestamp": "2026-11-22T15:15:58.310138Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21665895.3954,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 116763792,
+      "volume_24h": 3102887.537017406
+    },
+    {
+      "timestamp": "2026-11-22T19:49:35.637664Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21650418.0796,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 116955503,
+      "volume_24h": 2999028.179582721
+    },
+    {
+      "timestamp": "2026-11-22T20:06:26.357714Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21649465.9484,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 116955503,
+      "volume_24h": 3016977.195408972
+    },
+    {
+      "timestamp": "2026-11-23T02:37:20.359883Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21627355.7666,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 117035242,
+      "volume_24h": 2179266.5135960123
+    },
+    {
+      "timestamp": "2026-11-23T07:49:05.373791Z",
+      "vedolo_holders": 10847,
+      "dolo_locked": 59771098.28,
+      "vote_weight": 21609160.983,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 125419726,
+      "volume_24h": 3061606.6574492003
+    },
+    {
+      "timestamp": "2026-11-23T08:07:07.370594Z",
+      "vedolo_holders": 10846,
+      "dolo_locked": 59768355.09,
+      "vote_weight": 21608138.1963,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 125419726,
+      "volume_24h": 3056205.034373948
+    },
+    {
+      "timestamp": "2026-11-23T14:29:53.123449Z",
+      "vedolo_holders": 10845,
+      "dolo_locked": 59765303.05,
+      "vote_weight": 21586189.2029,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 127941515,
+      "volume_24h": 3178203.4670964438
+    },
+    {
+      "timestamp": "2026-11-23T20:44:30.360620Z",
+      "vedolo_holders": 10845,
+      "dolo_locked": 59765303.05,
+      "vote_weight": 21565003.0508,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 128254220,
+      "volume_24h": 2314213.222166101
+    },
+    {
+      "timestamp": "2026-11-24T00:01:37.908198Z",
+      "vedolo_holders": 10845,
+      "dolo_locked": 59765303.05,
+      "vote_weight": 21553853.8335,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 123624212,
+      "volume_24h": 3060268.622906252
+    },
+    {
+      "timestamp": "2026-11-24T00:19:07.393267Z",
+      "vedolo_holders": 10845,
+      "dolo_locked": 59765303.05,
+      "vote_weight": 21552862.2055,
+      "exercised_usd": 2076791.18,
+      "exercised_txs": 4417,
+      "tvl": 123624212,
+      "volume_24h": 3070730.602186983
+    }
+  ]
+}

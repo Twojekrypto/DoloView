@@ -1,0 +1,628 @@
+import tempfile
+import unittest
+import inspect
+import json
+from pathlib import Path
+from unittest.mock import patch
+
+from select_earn_canonical_hot_addresses import _active_strict_quality, build_selection
+
+
+class SelectEarnCanonicalHotAddressesTest(unittest.TestCase):
+    def test_strict_quality_rejects_adjusted_nested_replay(self):
+        address = "0x1111111111111111111111111111111111111111"
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger_dir = Path(tmp) / "earn-verified-ledger"
+            (ledger_dir / "arbitrum").mkdir(parents=True)
+            (ledger_dir / "arbitrum" / f"{address}.json").write_text(
+                '{"markets":{"1":{"strictStatus":"mismatch"}},'
+                '"resolvedInterestLedger":{"strictStatus":"verified",'
+                '"strictMethod":"interest-ledger",'
+                '"markets":{"1":{"strictStatus":"verified","strictMethod":"interest-ledger"}},'
+                '"replayVerificationData":{"1":{"rawVerified":true,'
+                '"snapshotIncomplete":false,"subgraphReplayTruncated":false,'
+                '"replayStateAdjusted":true}}}}',
+                encoding="utf-8",
+            )
+            with patch(
+                "select_earn_canonical_hot_addresses._latest_snapshot_payload",
+                return_value={address: {"markets": {"1": {"par": "10"}}}},
+            ):
+                quality = _active_strict_quality("arbitrum", {address}, ledger_dir)
+
+        self.assertEqual("mismatch", quality[address])
+
+    def test_strict_quality_requires_resolved_proof_for_every_active_market(self):
+        address = "0x1111111111111111111111111111111111111111"
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger_dir = Path(tmp) / "earn-verified-ledger"
+            (ledger_dir / "arbitrum").mkdir(parents=True)
+            (ledger_dir / "arbitrum" / f"{address}.json").write_text(
+                '{"markets":{"1":{"strictStatus":"inferred"},'
+                '"2":{"strictStatus":"inferred"}},'
+                '"resolvedInterestLedger":{"strictStatus":"verified",'
+                '"strictMethod":"interest-ledger",'
+                '"markets":{"1":{"strictStatus":"verified","strictMethod":"interest-ledger"}},'
+                '"replayVerificationData":{"1":{"rawVerified":true,'
+                '"snapshotIncomplete":false,"subgraphReplayTruncated":false,'
+                '"replayStateAdjusted":false}}}}',
+                encoding="utf-8",
+            )
+            with patch(
+                "select_earn_canonical_hot_addresses._latest_snapshot_payload",
+                return_value={
+                    address: {
+                        "markets": {
+                            "1": {"par": "10"},
+                            "2": {"par": "20"},
+                        },
+                    },
+                },
+            ):
+                quality = _active_strict_quality("arbitrum", {address}, ledger_dir)
+
+        self.assertEqual("inferred", quality[address])
+
+    def test_strict_remediation_prioritizes_active_mismatch_and_skips_verified_wallet(self):
+        if "strict_remediation" not in inspect.signature(build_selection).parameters:
+            self.fail("build_selection must expose strict_remediation mode")
+
+        cold_missing = "0x1111111111111111111111111111111111111111"
+        active_mismatch = "0x2222222222222222222222222222222222222222"
+        active_verified = "0x3333333333333333333333333333333333333333"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            history_dir = root / "earn-subaccount-history"
+            ledger_dir = root / "earn-verified-ledger"
+            (history_dir / "arbitrum").mkdir(parents=True)
+            (ledger_dir / "arbitrum").mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"arbitrum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            for address in (active_mismatch, active_verified):
+                (history_dir / "arbitrum" / f"{address}.json").write_text(
+                    '{"lastScannedBlock":100}',
+                    encoding="utf-8",
+                )
+            (ledger_dir / "arbitrum" / f"{active_mismatch}.json").write_text(
+                '{"markets":{"1":{"strictStatus":"mismatch"}}}',
+                encoding="utf-8",
+            )
+            (ledger_dir / "arbitrum" / f"{active_verified}.json").write_text(
+                '{"snapshotDate":"2026-09-07","markets":{"1":{"strictStatus":"inferred"}},'
+                '"resolvedInterestLedger":{"strictStatus":"verified",'
+                '"snapshotDate":"2026-09-07","comparisonBlock":100,'
+                '"strictMethod":"interest-ledger",'
+                '"markets":{"1":{"strictStatus":"verified","strictMethod":"interest-ledger"}},'
+                '"replayVerificationData":{"1":{"rawVerified":true,'
+                '"snapshotIncomplete":false,"subgraphReplayTruncated":false,'
+                '"replayStateAdjusted":false}}}}',
+                encoding="utf-8",
+            )
+            priority_file = root / "priority.txt"
+            priority_file.write_text(f"{active_verified}\n", encoding="utf-8")
+            snapshots = {
+                active_mismatch: {"markets": {"1": {"par": "10"}}},
+                active_verified: {"markets": {"1": {"par": "20"}}},
+            }
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[cold_missing, active_mismatch, active_verified],
+                ),
+                patch(
+                    "select_earn_canonical_hot_addresses._latest_snapshot_payload",
+                    return_value=snapshots,
+                ),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+                patch(
+                    "select_earn_canonical_hot_addresses._latest_snapshot_details",
+                    return_value=("2026-09-07", {"chainMetadata": {"arbitrum": {"blockNumber": 100}}}),
+                ),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=1,
+                    priority_files=[priority_file],
+                    include_priority_even_if_unknown=False,
+                    history_dir=history_dir,
+                    ledger_dir=ledger_dir,
+                    strict_remediation=True,
+                )
+
+        self.assertEqual([active_mismatch], selected)
+        self.assertEqual(1, metadata["activeStrictBlockingAddressCount"])
+        self.assertEqual(1, metadata["activeMismatchAddressCount"])
+        self.assertEqual(1, metadata["activeStrictVerifiedAddressCount"])
+        self.assertEqual(1, metadata["skippedNonblockingPriorityAddressCount"])
+
+    def test_strict_remediation_prioritizes_material_deposit_over_raw_par_digits(self):
+        dust = "0x1111111111111111111111111111111111111111"
+        material = "0x2222222222222222222222222222222222222222"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            history_dir = root / "earn-subaccount-history"
+            ledger_dir = root / "earn-verified-ledger"
+            assets_file = root / "assets_live.json"
+            (history_dir / "arbitrum").mkdir(parents=True)
+            (ledger_dir / "arbitrum").mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"arbitrum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            for address in (dust, material):
+                (history_dir / "arbitrum" / f"{address}.json").write_text(
+                    '{"lastScannedBlock":100}',
+                    encoding="utf-8",
+                )
+                (ledger_dir / "arbitrum" / f"{address}.json").write_text(
+                    '{"markets":{"1":{"strictStatus":"mismatch"}}}',
+                    encoding="utf-8",
+                )
+            assets_file.write_text(
+                json.dumps(
+                    {
+                        "rows": [
+                            {"chain": "arbitrum", "marketId": "1", "price": "0.000001"},
+                            {"chain": "arbitrum", "marketId": "2", "price": "80000"},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            snapshots = {
+                # $1, but more raw digits than the material WBTC position.
+                dust: {
+                    "markets": {
+                        "1": {"par": str(10**24), "wei": str(10**24), "decimals": 18}
+                    }
+                },
+                # 0.01 WBTC = $800.
+                material: {
+                    "markets": {
+                        "2": {"par": "1000000", "wei": "1000000", "decimals": 8}
+                    }
+                },
+            }
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[dust, material],
+                ),
+                patch(
+                    "select_earn_canonical_hot_addresses._latest_snapshot_payload",
+                    return_value=snapshots,
+                ),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=False,
+                    history_dir=history_dir,
+                    ledger_dir=ledger_dir,
+                    assets_file=assets_file,
+                    material_usd_threshold="10",
+                    strict_remediation=True,
+                )
+
+        self.assertEqual([material], selected)
+        self.assertEqual(1, metadata["activeMaterialAddressCount"])
+        self.assertEqual(1, metadata["selectedMaterialAddressCount"])
+        self.assertEqual("10", metadata["materialUsdThreshold"])
+
+    def test_coverage_backfill_adds_missing_wallet_after_public_baseline(self):
+        if "coverage_backfill" not in inspect.signature(build_selection).parameters:
+            self.fail("build_selection must expose coverage_backfill mode")
+
+        existing = "0x1111111111111111111111111111111111111111"
+        missing = "0x2222222222222222222222222222222222222222"
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "mantle"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"mantle":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{existing}.json").write_text('{"lastScannedBlock":100}', encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[existing] = 100
+                scores[missing] = 10
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[existing, missing]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "mantle",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    existing_history_only=True,
+                    coverage_backfill=True,
+                )
+
+        self.assertEqual(selected, [missing])
+        self.assertTrue(metadata["coverageBackfill"])
+        self.assertFalse(metadata["existingHistoryOnly"])
+
+    def test_coverage_backfill_prioritizes_material_active_deposit_before_dust(self):
+        dust = "0x1111111111111111111111111111111111111111"
+        material = "0x2222222222222222222222222222222222222222"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            history_dir = root / "earn-subaccount-history"
+            assets_file = root / "assets_live.json"
+            (history_dir / "arbitrum").mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"arbitrum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            assets_file.write_text(
+                json.dumps(
+                    {
+                        "rows": [
+                            {"chain": "arbitrum", "marketId": "1", "price": "0.000001"},
+                            {"chain": "arbitrum", "marketId": "2", "price": "80000"},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            snapshots = {
+                dust: {
+                    "markets": {
+                        "1": {"par": str(10**24), "wei": str(10**24), "decimals": 18}
+                    }
+                },
+                material: {
+                    "markets": {
+                        "2": {"par": "1000000", "wei": "1000000", "decimals": 8}
+                    }
+                },
+            }
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[dust, material],
+                ),
+                patch(
+                    "select_earn_canonical_hot_addresses._latest_snapshot_payload",
+                    return_value=snapshots,
+                ),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=False,
+                    history_dir=history_dir,
+                    assets_file=assets_file,
+                    material_usd_threshold="10",
+                    coverage_backfill=True,
+                )
+
+        self.assertEqual([material], selected)
+        self.assertEqual(1, metadata["activeMaterialMissingHistoryAddressCount"])
+        self.assertEqual(1, metadata["activeSubthresholdAddressCount"])
+
+    def test_coverage_backfill_skips_fresh_priority_and_keeps_stale_or_missing_priority(self):
+        fresh = "0x1111111111111111111111111111111111111111"
+        stale = "0x2222222222222222222222222222222222222222"
+        missing = "0x3333333333333333333333333333333333333333"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            history_dir = root / "earn-subaccount-history"
+            chain_dir = history_dir / "berachain"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"berachain":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{fresh}.json").write_text(
+                '{"lastScannedBlock":100}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{stale}.json").write_text(
+                '{"lastScannedBlock":90}',
+                encoding="utf-8",
+            )
+            priority_file = root / "priority.txt"
+            priority_file.write_text(
+                f"{fresh}\n{stale}\n{missing}\n",
+                encoding="utf-8",
+            )
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[fresh, stale, missing],
+                ),
+                patch("select_earn_canonical_hot_addresses._active_snapshot_wallets", return_value=set()),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", return_value=None),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "berachain",
+                    limit=2,
+                    priority_files=[priority_file],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    coverage_backfill=True,
+                )
+
+        self.assertEqual([stale, missing], selected)
+        self.assertEqual(3, metadata["priorityAddressCount"])
+        self.assertEqual(2, metadata["eligiblePriorityAddressCount"])
+        self.assertEqual(1, metadata["skippedFreshPriorityAddressCount"])
+
+    def test_coverage_backfill_skips_fresh_priority_outside_known_universe(self):
+        unknown_but_fresh = "0x1111111111111111111111111111111111111111"
+        known_missing = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            history_dir = root / "earn-subaccount-history"
+            chain_dir = history_dir / "berachain"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"berachain":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{unknown_but_fresh}.json").write_text(
+                '{"lastScannedBlock":100}',
+                encoding="utf-8",
+            )
+            priority_file = root / "priority.txt"
+            priority_file.write_text(f"{unknown_but_fresh}\n", encoding="utf-8")
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[known_missing],
+                ),
+                patch("select_earn_canonical_hot_addresses._active_snapshot_wallets", return_value=set()),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", return_value=None),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "berachain",
+                    limit=1,
+                    priority_files=[priority_file],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    coverage_backfill=True,
+                )
+
+        self.assertEqual([known_missing], selected)
+        self.assertEqual(0, metadata["eligiblePriorityAddressCount"])
+        self.assertEqual(1, metadata["skippedFreshPriorityAddressCount"])
+
+    def test_existing_history_only_keeps_steady_refresh_on_public_baseline(self):
+        existing = "0x1111111111111111111111111111111111111111"
+        new_hot = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "berachain"
+            chain_dir.mkdir(parents=True)
+            (chain_dir / f"{existing}.json").write_text("{}", encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[existing] = 10
+                scores[new_hot] = 20
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[existing, new_hot]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "berachain",
+                    limit=10,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    existing_history_only=True,
+                )
+
+        self.assertEqual(selected, [existing])
+        self.assertTrue(metadata["existingHistoryOnly"])
+        self.assertEqual(metadata["existingHistoryAddressCount"], 1)
+        self.assertEqual(metadata["selectedAddressCount"], 1)
+
+    def test_unbounded_existing_history_selection_includes_unscored_wallets(self):
+        scored = "0x1111111111111111111111111111111111111111"
+        cold = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "arbitrum"
+            chain_dir.mkdir(parents=True)
+            for address in (scored, cold):
+                (chain_dir / f"{address}.json").write_text("{}", encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[scored] = 10
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[scored, cold]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=0,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    existing_history_only=True,
+                )
+
+        self.assertEqual(selected, [scored, cold])
+        self.assertEqual(metadata["existingHistoryAddressCount"], 2)
+        self.assertEqual(metadata["selectedAddressCount"], 2)
+
+    def test_prefer_stale_history_prioritizes_scored_stale_wallets(self):
+        fresh = "0x1111111111111111111111111111111111111111"
+        stale = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "arbitrum"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"arbitrum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{fresh}.json").write_text('{"lastScannedBlock":100}', encoding="utf-8")
+            (chain_dir / f"{stale}.json").write_text('{"lastScannedBlock":90}', encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[fresh] = 100
+                scores[stale] = 10
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[fresh, stale]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=2,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    prefer_stale_history=True,
+                )
+
+        self.assertEqual(selected, [stale, fresh])
+        self.assertEqual(metadata["staleHistoryAddressCount"], 1)
+
+    def test_prefer_stale_history_selects_oldest_wallet_before_higher_score(self):
+        oldest = "0x1111111111111111111111111111111111111111"
+        recent = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "ethereum"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"ethereum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{oldest}.json").write_text('{"lastScannedBlock":10}', encoding="utf-8")
+            (chain_dir / f"{recent}.json").write_text('{"lastScannedBlock":90}', encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[oldest] = 1
+                scores[recent] = 1_000
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[oldest, recent]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, _metadata = build_selection(
+                    "ethereum",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    prefer_stale_history=True,
+                )
+
+        self.assertEqual(selected, [oldest])
+
+    def test_prefer_stale_history_selects_missing_history_before_stale(self):
+        stale = "0x1111111111111111111111111111111111111111"
+        missing = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "ethereum"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"ethereum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{stale}.json").write_text('{"lastScannedBlock":10}', encoding="utf-8")
+
+            def score_snapshot(_chain, scores):
+                scores[stale] = 1_000
+                scores[missing] = 1
+
+            with (
+                patch("select_earn_canonical_hot_addresses._load_known_addresses", return_value=[stale, missing]),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", side_effect=score_snapshot),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, _metadata = build_selection(
+                    "ethereum",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    prefer_stale_history=True,
+                )
+
+        self.assertEqual(selected, [missing])
+
+    def test_coverage_backfill_refreshes_active_stale_wallet_before_cold_missing_wallet(self):
+        active_stale = "0x1111111111111111111111111111111111111111"
+        cold_missing = "0x2222222222222222222222222222222222222222"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            history_dir = Path(tmp) / "earn-subaccount-history"
+            chain_dir = history_dir / "arbitrum"
+            chain_dir.mkdir(parents=True)
+            (history_dir / "manifest.json").write_text(
+                '{"chains":{"arbitrum":{"lastBlock":100}}}',
+                encoding="utf-8",
+            )
+            (chain_dir / f"{active_stale}.json").write_text(
+                '{"lastScannedBlock":99}',
+                encoding="utf-8",
+            )
+
+            with (
+                patch(
+                    "select_earn_canonical_hot_addresses._load_known_addresses",
+                    return_value=[active_stale, cold_missing],
+                ),
+                patch(
+                    "select_earn_canonical_hot_addresses._active_snapshot_wallets",
+                    return_value={active_stale},
+                    create=True,
+                ),
+                patch("select_earn_canonical_hot_addresses._score_snapshot_wallets", return_value=None),
+                patch("select_earn_canonical_hot_addresses._score_netflow_wallets", return_value=None),
+            ):
+                selected, metadata = build_selection(
+                    "arbitrum",
+                    limit=1,
+                    priority_files=[],
+                    include_priority_even_if_unknown=True,
+                    history_dir=history_dir,
+                    coverage_backfill=True,
+                )
+
+        self.assertEqual([active_stale], selected)
+        self.assertEqual(1, metadata["activeSnapshotAddressCount"])
+        self.assertEqual(1, metadata["activeStaleHistoryAddressCount"])
+        self.assertEqual(1, metadata["coldMissingHistoryAddressCount"])
+
+
+if __name__ == "__main__":
+    unittest.main()

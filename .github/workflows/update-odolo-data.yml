@@ -1,0 +1,113 @@
+name: Update oDOLO Data
+
+on:
+  schedule:
+    - cron: '37 */6 * * *'  # Every 6 hours, staggered from oDOLO flows
+  workflow_dispatch:  # Allow manual trigger
+
+concurrency:
+  group: odolo-data-push
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update-odolo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+      BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run oDOLO UI regression tests
+        run: |
+          python3 -m unittest tests/test_odolo_preview_contracts.py
+          node --test tests/odolo-latest-activity-empty-state.test.js
+
+      - name: Test explorer retries and complete-history guarantees
+        env:
+          ETHERSCAN_API_KEY: ''
+          BERASCAN_API_KEY: ''
+        run: |
+          python3 -m unittest discover -s tests -p 'test_explorer_retry_burst.py'
+          python3 -m unittest discover -s tests -p 'test_explorer_outage.py'
+
+      - name: Restore exercisers cache
+        uses: actions/cache@v5
+        with:
+          path: exercisers_cache.json
+          key: exercisers-cache-${{ github.run_id }}
+          restore-keys: |
+            exercisers-cache-
+
+      - name: Update exercised USD (incremental)
+        run: python3 update_exercised_usd.py
+
+      - name: Update average lock data
+        run: python3 calculate_avg_lock.py
+
+      - name: Update exercisers by address
+        run: python3 generate_exercisers.py
+        timeout-minutes: 30
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Fetch early exit penalty data
+        id: early-exits
+        continue-on-error: true
+        run: python3 fetch_early_exits.py
+        env:
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+
+      - name: Fetch oDOLO contract data
+        run: python3 fetch_odolo_contract.py
+        env:
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+
+      - name: Validate generated data
+        run: |
+          files=(exercisers_by_address.json avg_lock_data.json odolo_contract_data.json)
+          if [ "${{ steps.early-exits.outcome }}" = "success" ]; then
+            files+=(early_exits.json)
+          else
+            echo "::warning::Early-exit refresh failed; preserving the previous audited artifact while publishing independent oDOLO updates"
+          fi
+          python3 validate_data.py "${files[@]}"
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add exercised_usd.json avg_lock_data.json exercisers_by_address.json odolo_contract_data.json early_exits.json
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "📊 oDOLO data update: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # Retry push with rebase up to 3 times to handle concurrent pushes
+          pushed=false
+          for i in 1 2 3; do
+            if git pull --rebase -X theirs origin master && git push; then pushed=true; break; fi
+            echo "⚠️ Push attempt $i failed, retrying..."
+            sleep 5
+          done
+          if [ "$pushed" != "true" ]; then echo "::error::Push failed after 3 attempts — data NOT published"; exit 1; fi

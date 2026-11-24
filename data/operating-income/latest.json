@@ -1,0 +1,570 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-23T18:46:42.923663Z",
+  "period": {
+    "from": "2026-10-24",
+    "to": "2026-11-23",
+    "days": 30
+  },
+  "treasury": {
+    "complete": true,
+    "period": {
+      "startTimestamp": 1792800000,
+      "endTimestamp": 1795392000
+    },
+    "chains": {
+      "ethereum": {
+        "complete": true,
+        "chainId": 1,
+        "netInterestUSD": "1151.53068974892276708915825527",
+        "wallets": [
+          {
+            "address": "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4",
+            "label": "Dolomite Core Safe",
+            "netInterestUSD": "1151.53068974892276708915825527",
+            "positions": [
+              {
+                "account": "0",
+                "marketId": "1",
+                "token": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+                "symbol": "USD1",
+                "decimals": 18,
+                "startPar": "111373220829536183724470",
+                "endPar": "193682300367689951646425",
+                "startWei": "115862994353028595164482",
+                "endWei": "202101835156399298006362",
+                "capitalFlowWei": "85745353246393758028819",
+                "interestWei": "493487556976944813061",
+                "oraclePrice": "999481070000000000",
+                "netInterestUSD": "493.23147147900276708915825527",
+                "eventLegCount": 3,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "2",
+                "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                "symbol": "USDC",
+                "decimals": 6,
+                "startPar": "260571818399",
+                "endPar": "198024141855",
+                "startWei": "274419411741",
+                "endWei": "209200229573",
+                "capitalFlowWei": "-65877586731",
+                "interestWei": "658404563",
+                "oraclePrice": "999840000000000000000000000000",
+                "netInterestUSD": "658.29921826992",
+                "eventLegCount": 3,
+                "reconciled": true
+              }
+            ]
+          },
+          {
+            "address": "0x6e939bbaceb45159982a2cac3a1fcbf7e93cf682",
+            "label": "Dolomite DAO Safe",
+            "netInterestUSD": "0",
+            "positions": []
+          }
+        ],
+        "sourceHead": {
+          "number": 26479717,
+          "timestamp": 1795459595,
+          "hash": "0x349f7a2a1275bd75845cb20b26b2ef4ab908c280e23741e039186e4043fe0a19"
+        },
+        "sourceDeployment": "QmY1JUNFYwDUGzURUh6qEhTg1WSFVNLUoPFNg44BLZMh6T",
+        "boundaries": {
+          "start": {
+            "number": 26258773,
+            "timestamp": 1792799999,
+            "hash": "0x3810fa63484991fcd818af1d3bc0fcf5a25a66d09ffdd2e2e06735ece78c8cb0",
+            "nextTimestamp": 1792800011,
+            "nextBlockHash": "0xd552336197c5bce82d6aeb00769a1b70f7570553ea9608ee7a2b893f88dc96ba"
+          },
+          "end": {
+            "number": 26474105,
+            "timestamp": 1795391999,
+            "hash": "0x88ffe97d9c7a8c64548642dae3157e39821712b99824e0c80d24a5a50a6688e3",
+            "nextTimestamp": 1795392011,
+            "nextBlockHash": "0x8e9c9808eba87ea48d3d45dc63090b9e897df00b47bd47d1da7f923f24a6f406"
+          }
+        },
+        "proof": {
+          "transactionCount": 6,
+          "eventCount": 6,
+          "ownedLegCount": 6,
+          "positionCount": 2,
+          "allPrincipalReconciled": true,
+          "sourcePinRechecked": true
+        },
+        "sources": {
+          "subgraph": "https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-ethereum/latest/gn",
+          "margin": "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d",
+          "safeMaps": "https://github.com/dolomite-exchange/dolomite-margin-modules/blob/master/packages/base/src/utils/constants.ts"
+        }
+      },
+      "arbitrum": {
+        "complete": true,
+        "chainId": 42161,
+        "netInterestUSD": "3684.991420852222607777144",
+        "wallets": [
+          {
+            "address": "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4",
+            "label": "Dolomite Core Safe",
+            "netInterestUSD": "114.591865609034527777144",
+            "positions": [
+              {
+                "account": "0",
+                "marketId": "0",
+                "token": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+                "symbol": "WETH",
+                "decimals": 18,
+                "startPar": "0",
+                "endPar": "539306650059788236",
+                "startWei": "0",
+                "endWei": "599376735324354700",
+                "capitalFlowWei": "599203769218000836",
+                "interestWei": "172966106353864",
+                "oraclePrice": "1720271000000000000000",
+                "netInterestUSD": "0.297548576743467977144",
+                "eventLegCount": 1,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "17",
+                "token": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                "symbol": "USDC",
+                "decimals": 6,
+                "startPar": "17989248279",
+                "endPar": "25804498023",
+                "startWei": "23130728911",
+                "endWei": "33308828640",
+                "capitalFlowWei": "10063796529",
+                "interestWei": "114303200",
+                "oraclePrice": "999874060000000000000000000000",
+                "netInterestUSD": "114.288804654992",
+                "eventLegCount": 2,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "4",
+                "token": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f",
+                "symbol": "WBTC",
+                "decimals": 8,
+                "startPar": "0",
+                "endPar": "215290",
+                "startWei": "0",
+                "endWei": "229889",
+                "capitalFlowWei": "229880",
+                "interestWei": "9",
+                "oraclePrice": "612486366562200000000000000000000",
+                "netInterestUSD": "0.0055123772990598",
+                "eventLegCount": 1,
+                "reconciled": true
+              }
+            ]
+          },
+          {
+            "address": "0x6e939bbaceb45159982a2cac3a1fcbf7e93cf682",
+            "label": "Dolomite DAO Safe",
+            "netInterestUSD": "3570.39955524318808",
+            "positions": [
+              {
+                "account": "0",
+                "marketId": "17",
+                "token": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+                "symbol": "USDC",
+                "decimals": 6,
+                "startPar": "713271824736",
+                "endPar": "713271824736",
+                "startWei": "917130997474",
+                "endWei": "920701846742",
+                "capitalFlowWei": "0",
+                "interestWei": "3570849268",
+                "oraclePrice": "999874060000000000000000000000",
+                "netInterestUSD": "3570.39955524318808",
+                "eventLegCount": 0,
+                "reconciled": true
+              }
+            ]
+          }
+        ],
+        "sourceHead": {
+          "number": 526891190,
+          "timestamp": 1795459613,
+          "hash": "0x8ed9405c4a0ec0df27c85e5a2a7831b3b2752dc1adcd6f2ccc6a1bc0aabb28b5"
+        },
+        "sourceDeployment": "QmQ2542fgLADjtnPyuPp5YE52yUc5jjG3xTdbDjWBmigUc",
+        "boundaries": {
+          "start": {
+            "number": 517682963,
+            "timestamp": 1792799999,
+            "hash": "0x8bf9f9b23763740745f92cf3419d4fe881a6d89a570fb1d3373dc6f105aa71e9",
+            "nextTimestamp": 1792800000,
+            "nextBlockHash": "0xcc1a848f631b117b232dd0981031f531bece48eee104042f3e5b380b7666f498"
+          },
+          "end": {
+            "number": 526649901,
+            "timestamp": 1795391999,
+            "hash": "0x6137c092c254feaee8f23f8a64b59282e9114b99f5577817414eee0705e6577a",
+            "nextTimestamp": 1795392000,
+            "nextBlockHash": "0xd904968b3c90dafb93ca2cf09ab9953cda4135590d95189d21ee434efe0ddb7a"
+          }
+        },
+        "proof": {
+          "transactionCount": 4,
+          "eventCount": 4,
+          "ownedLegCount": 4,
+          "positionCount": 4,
+          "allPrincipalReconciled": true,
+          "sourcePinRechecked": true
+        },
+        "sources": {
+          "subgraph": "https://api.goldsky.com/api/public/project_clyuw4gvq4d5801tegx0aafpu/subgraphs/dolomite-arbitrum/latest/gn",
+          "margin": "0x6bd780e7fdf01d77e4d475c821f1e7ae05409072",
+          "safeMaps": "https://github.com/dolomite-exchange/dolomite-margin-modules/blob/master/packages/base/src/utils/constants.ts"
+        }
+      },
+      "berachain": {
+        "complete": true,
+        "chainId": 80094,
+        "netInterestUSD": "5801.33296500469723055023876597376",
+        "wallets": [
+          {
+            "address": "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4",
+            "label": "Dolomite Core Safe",
+            "netInterestUSD": "29.68818434704950470004194291376",
+            "positions": [
+              {
+                "account": "0",
+                "marketId": "2",
+                "token": "0x549943e04f40284185054145c6e4e9568c1d3241",
+                "symbol": "USDC.e",
+                "decimals": 6,
+                "startPar": "6738684405",
+                "endPar": "9185942684",
+                "startWei": "7195123458",
+                "endWei": "9840540783",
+                "capitalFlowWei": "2615743869",
+                "interestWei": "29673456",
+                "oraclePrice": "999888300000000000000000000000",
+                "netInterestUSD": "29.6701414749648",
+                "eventLegCount": 1,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "8",
+                "token": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+                "symbol": "rUSD",
+                "decimals": 18,
+                "startPar": "1534236191042898345",
+                "endPar": "1534236191042898345",
+                "startWei": "1721750405177595912",
+                "endWei": "1739795934496087428",
+                "capitalFlowWei": "0",
+                "interestWei": "18045529318491516",
+                "oraclePrice": "999852748360000000",
+                "netInterestUSD": "0.01804287208470470004194291376",
+                "eventLegCount": 0,
+                "reconciled": true
+              }
+            ]
+          },
+          {
+            "address": "0x6e939bbaceb45159982a2cac3a1fcbf7e93cf682",
+            "label": "Dolomite DAO Safe",
+            "netInterestUSD": "5771.64478065764772585019682306",
+            "positions": [
+              {
+                "account": "0",
+                "marketId": "2",
+                "token": "0x549943e04f40284185054145c6e4e9568c1d3241",
+                "symbol": "USDC.e",
+                "decimals": 6,
+                "startPar": "1344502095932",
+                "endPar": "1255396360655",
+                "startWei": "1435570801033",
+                "endWei": "1344856974558",
+                "capitalFlowWei": "-95312239331",
+                "interestWei": "4598412856",
+                "oraclePrice": "999888300000000000000000000000",
+                "netInterestUSD": "4597.8992132839848",
+                "eventLegCount": 14,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "3",
+                "token": "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce",
+                "symbol": "HONEY",
+                "decimals": 18,
+                "startPar": "4737057468027712135060",
+                "endPar": "4737057468027712135060",
+                "startWei": "5050439418672500229811",
+                "endWei": "5085261485720386202682",
+                "capitalFlowWei": "0",
+                "interestWei": "34822067047885972871",
+                "oraclePrice": "998774860000000000",
+                "netInterestUSD": "34.77940514066292585019682306",
+                "eventLegCount": 0,
+                "reconciled": true
+              },
+              {
+                "account": "0",
+                "marketId": "5",
+                "token": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+                "symbol": "USD₮0",
+                "decimals": 6,
+                "startPar": "355260253381",
+                "endPar": "355260253381",
+                "startWei": "384066632383",
+                "endWei": "385207309561",
+                "capitalFlowWei": "0",
+                "interestWei": "1140677178",
+                "oraclePrice": "998500000000000000000000000000",
+                "netInterestUSD": "1138.966162233",
+                "eventLegCount": 0,
+                "reconciled": true
+              }
+            ]
+          }
+        ],
+        "sourceHead": {
+          "number": 29222502,
+          "timestamp": 1795459720,
+          "hash": "0x3d7f2994f5a1374a9c7cba2aa2cf1f4f9eba35b2d191607aff5b58acfeaca2f7"
+        },
+        "sourceDeployment": "QmQf98kbjc8LK1cnjL5NcPxguohKK5JkhmLQqME4YP2xY8",
+        "boundaries": {
+          "start": {
+            "number": 27892641,
+            "timestamp": 1792799998,
+            "hash": "0x83e9205090e7d667f30a1568ac8c08ba95fa4b4001764b9f1193bfc2043a8ed6",
+            "nextTimestamp": 1792800000,
+            "nextBlockHash": "0x5e53774a0b6c9d2a19b0088fda0d7eb204361a546e8e1a5dee93d2802d6d57d4"
+          },
+          "end": {
+            "number": 29188641,
+            "timestamp": 1795391998,
+            "hash": "0x46749f0f0376d99e3b2f62772198de488417e882bba9c16ff86d5d36a4de7dc0",
+            "nextTimestamp": 1795392000,
+            "nextBlockHash": "0xedf5225b8819b6857e7b6eed239ea1fbf32c8d9491f89502a325dafa2c19c91f"
+          }
+        },
+        "proof": {
+          "transactionCount": 15,
+          "eventCount": 15,
+          "ownedLegCount": 15,
+          "positionCount": 5,
+          "allPrincipalReconciled": true,
+          "sourcePinRechecked": true
+        },
+        "sources": {
+          "subgraph": "https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-berachain-mainnet/latest/gn",
+          "margin": "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d",
+          "safeMaps": "https://github.com/dolomite-exchange/dolomite-margin-modules/blob/master/packages/base/src/utils/constants.ts"
+        }
+      }
+    },
+    "generatedAt": "2026-11-23T18:49:00.269548Z",
+    "scope": "Dolomite lending interest on official Core and DAO Safes, all raw owned subaccounts; fee-agent excluded",
+    "valuation": "Signed token interest at period-end Dolomite oracle prices; principal flows, incentives and external yield excluded",
+    "partnerShareApplied": false,
+    "netInterestUSD": "10637.85507560584260541654102124376"
+  },
+  "liquidations": {
+    "complete": true,
+    "period": {
+      "startTimestamp": 1763856000,
+      "endTimestamp": 1795392000,
+      "from": "2025-11-23",
+      "to": "2026-11-23",
+      "months": 12
+    },
+    "scope": "ethereum_arbitrum_berachain_protocol_fee_agent_liquidation_rake_only",
+    "chains": {
+      "ethereum": {
+        "grossProtocolFeeUSD": "6320.812730643132970865",
+        "feeTransferCount": 98,
+        "positiveUSDTransferCount": 98,
+        "zeroUSDTransferCount": 0,
+        "liquidationEventCount": 156,
+        "liquidationsWithoutFeeTransferCount": 58,
+        "duplicateEventsRemoved": 0,
+        "unmatchedTransferCount": 0,
+        "eventEvidenceSHA256": "6753a3d472ccff90755e31cba1dd1d0518e37b743dee2ed21c8110d7750bb88b",
+        "valuation": {
+          "method": "official_subgraph_event_block_oracle",
+          "cachedOracleFallbackPossible": true,
+          "independentReceiptAudit": false,
+          "priceBasis": "recorded_historical_usd_no_current_price_revaluation",
+          "source": "https://github.com/dolomite-exchange/dolomite-subgraph/blob/master/src/mappings/helpers/pricing.ts"
+        },
+        "complete": true,
+        "chainId": 1,
+        "margin": "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d",
+        "feeAgent": "0x4d5f0344d245f1d13607e5b61dd317de3b3178b8",
+        "feeAgentAccountNumber": "0",
+        "source": {
+          "subgraph": "https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-ethereum/latest/gn",
+          "blockNumber": 26479728,
+          "blockHash": "0xaab0b2170622baacf386fe8062d3e746541cc83323b038ee073738b6135092e1",
+          "deployment": "QmY1JUNFYwDUGzURUh6qEhTg1WSFVNLUoPFNg44BLZMh6T",
+          "timestamp": 1795459727,
+          "eventSourceSHA256": "d891d3b8bf4a1cff3e49b81800bd5140c56924620b79de5652bc9539ff9369b0"
+        },
+        "coverage": {
+          "complete": true,
+          "allPagesReached": true,
+          "pages": {
+            "liquidations": 1,
+            "transfers": 1
+          },
+          "hasIndexingErrors": false,
+          "method": "pinned_indexed_events_and_unique_raw_account_join",
+          "independentReceiptAudit": false
+        },
+        "activation": {
+          "feeAgentAndRakeBlock": 24650900,
+          "feeAgentAndRakeTimestamp": 1773433283,
+          "rakeActivationTransaction": "0x37f83291fbfe5e42cc97ad14be5be2cb2c060cf1760101f5a18498caefacc74f",
+          "operator": "0x8564f36e53ac4f16a2c0b8449cf98d51c3438efd",
+          "priorMechanism": "V1_no_protocol_rake"
+        },
+        "retainedShare": "0.2",
+        "retainedProtocolFeeUSD": "1264.162546128626594173"
+      },
+      "arbitrum": {
+        "grossProtocolFeeUSD": "1170.279399872662716175",
+        "feeTransferCount": 179,
+        "positiveUSDTransferCount": 179,
+        "zeroUSDTransferCount": 0,
+        "liquidationEventCount": 437,
+        "liquidationsWithoutFeeTransferCount": 258,
+        "duplicateEventsRemoved": 0,
+        "unmatchedTransferCount": 0,
+        "eventEvidenceSHA256": "daeab19c7a389d37e2ce29225ab0c10fbb5f352e44b5d520b0c5f0afe73456a9",
+        "valuation": {
+          "method": "official_subgraph_event_block_oracle",
+          "cachedOracleFallbackPossible": true,
+          "independentReceiptAudit": false,
+          "priceBasis": "recorded_historical_usd_no_current_price_revaluation",
+          "source": "https://github.com/dolomite-exchange/dolomite-subgraph/blob/master/src/mappings/helpers/pricing.ts"
+        },
+        "complete": true,
+        "chainId": 42161,
+        "margin": "0x6bd780e7fdf01d77e4d475c821f1e7ae05409072",
+        "feeAgent": "0x4d5f0344d245f1d13607e5b61dd317de3b3178b8",
+        "feeAgentAccountNumber": "0",
+        "source": {
+          "subgraph": "https://api.goldsky.com/api/public/project_clyuw4gvq4d5801tegx0aafpu/subgraphs/dolomite-arbitrum/latest/gn",
+          "blockNumber": 526891668,
+          "blockHash": "0x6a6e5ac1b15678499b110dbd7192780cf802e51dc7052a5d5191560f68bf6510",
+          "deployment": "QmQ2542fgLADjtnPyuPp5YE52yUc5jjG3xTdbDjWBmigUc",
+          "timestamp": 1795459743,
+          "eventSourceSHA256": "32fcf63a8fcab92e8b23e657d1d0b332f0ace12e25df0169d291b01db9f8271e"
+        },
+        "coverage": {
+          "complete": true,
+          "allPagesReached": true,
+          "pages": {
+            "liquidations": 1,
+            "transfers": 1
+          },
+          "hasIndexingErrors": false,
+          "method": "pinned_indexed_events_and_unique_raw_account_join",
+          "independentReceiptAudit": false
+        },
+        "activation": {
+          "feeAgentAndRakeBlock": 441386386,
+          "feeAgentAndRakeTimestamp": 1773412299,
+          "rakeActivationTransaction": "0x1085d64ff4833e4352ecc7e01c5733a31183a8aed3ad1d0ba44bb8230db66047",
+          "operator": "0x8564f36e53ac4f16a2c0b8449cf98d51c3438efd",
+          "priorMechanism": "V1_no_protocol_rake"
+        },
+        "retainedShare": "1",
+        "retainedProtocolFeeUSD": "1170.279399872662716175"
+      },
+      "berachain": {
+        "grossProtocolFeeUSD": "2929.819509670397998713",
+        "feeTransferCount": 760,
+        "positiveUSDTransferCount": 757,
+        "zeroUSDTransferCount": 3,
+        "liquidationEventCount": 962,
+        "liquidationsWithoutFeeTransferCount": 202,
+        "duplicateEventsRemoved": 0,
+        "unmatchedTransferCount": 0,
+        "eventEvidenceSHA256": "117e544226a6e41152d58c9055a91ea83cd57c59513d926bcd1bcbf2387515ca",
+        "valuation": {
+          "method": "official_subgraph_event_block_oracle",
+          "cachedOracleFallbackPossible": true,
+          "independentReceiptAudit": false,
+          "priceBasis": "recorded_historical_usd_no_current_price_revaluation",
+          "source": "https://github.com/dolomite-exchange/dolomite-subgraph/blob/master/src/mappings/helpers/pricing.ts"
+        },
+        "complete": true,
+        "chainId": 80094,
+        "margin": "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d",
+        "feeAgent": "0x4d5f0344d245f1d13607e5b61dd317de3b3178b8",
+        "feeAgentAccountNumber": "0",
+        "source": {
+          "subgraph": "https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-berachain-mainnet/latest/gn",
+          "blockNumber": 29222513,
+          "blockHash": "0x0b812a33784bffee819d103791d70e943f6d12decd18db57d891b27962009110",
+          "deployment": "QmQf98kbjc8LK1cnjL5NcPxguohKK5JkhmLQqME4YP2xY8",
+          "timestamp": 1795459742,
+          "eventSourceSHA256": "b62e9ba05e9b21b7891496b751e997c0ce7b8777b70f45c24619b0a0287c14ef"
+        },
+        "coverage": {
+          "complete": true,
+          "allPagesReached": true,
+          "pages": {
+            "liquidations": 1,
+            "transfers": 1
+          },
+          "hasIndexingErrors": false,
+          "method": "pinned_indexed_events_and_unique_raw_account_join",
+          "independentReceiptAudit": false
+        },
+        "activation": {
+          "feeAgentAndRakeBlock": 18198820,
+          "feeAgentAndRakeTimestamp": 1773412356,
+          "rakeActivationTransaction": "0xf4cdb4e90e6a83ebd4594c0344ea36faf1b1cd1b524e9a47bd5a3e1274dc39e8",
+          "operator": "0x8564f36e53ac4f16a2c0b8449cf98d51c3438efd",
+          "priorMechanism": "V1_no_protocol_rake"
+        },
+        "retainedShare": "1",
+        "retainedProtocolFeeUSD": "2929.819509670397998713"
+      }
+    },
+    "valuation": {
+      "method": "official_subgraph_event_block_oracle",
+      "cachedOracleFallbackPossible": true,
+      "independentReceiptAudit": false,
+      "priceBasis": "recorded_historical_usd_no_current_price_revaluation",
+      "source": "https://github.com/dolomite-exchange/dolomite-subgraph/blob/master/src/mappings/helpers/pricing.ts"
+    },
+    "grossUSD": "10420.911640186193685753",
+    "retainedUSD": "5364.261455671687309061",
+    "monthlyRetainedUSD": "447.0217879726406090884166666666666666666666666666666666666666666666666666666666666666666666666666667",
+    "excludedChains": [
+      "retired_and_other_chains_including_mantle"
+    ]
+  },
+  "coverage": {
+    "complete": true
+  },
+  "sources": {
+    "treasury": "official_safe_accounts_and_dolomite_rpc_principal_replay",
+    "liquidations": "official_pinned_subgraphs_and_unique_fee_agent_event_joins",
+    "ethereumLiquidationRetainedShare": "0.2"
+  },
+  "limitations": [
+    "Treasury interest uses end-period protocol oracle prices; principal flows, rewards and external yield excluded.",
+    "Liquidation fees use historical indexed oracle valuations, including the official cached-price fallback.",
+    "Liquidations are a trailing 12-calendar-month monthly average for Ethereum, Arbitrum and Berachain.",
+    "Published veDOLO rebates and borrow revenue are supplied separately by dolomite_revenue.json."
+  ]
+}

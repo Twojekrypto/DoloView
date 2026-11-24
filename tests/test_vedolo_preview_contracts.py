@@ -1,0 +1,620 @@
+import unittest
+import re
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+VEDOLO_HTML = ROOT / "vedolo-preview.html"
+VEDOLO_ROUTE = ROOT / "vedolo" / "index.html"
+
+
+class VeDoloPreviewContractsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = VEDOLO_HTML.read_text(encoding="utf-8")
+        cls.route = VEDOLO_ROUTE.read_text(encoding="utf-8")
+        cls.claimable_table = re.search(
+            r'<table class="tbl" id="claimable-table"[^>]*>(?P<body>.*?)</table>',
+            cls.html,
+            re.S,
+        ).group("body")
+
+    def test_lock_expiry_timeline_has_wallet_search(self):
+        self.assertIn("Lock Expiry Timeline", self.html)
+        self.assertIn('id="q-expiry"', self.html)
+        self.assertIn('placeholder="Search wallet address…"', self.html)
+        self.assertIn('state.expiryUi.q = e.target.value.trim(); renderExpiry();', self.html)
+        self.assertIn("function buildExpiryView()", self.html)
+        self.assertIn("holder.token_details", self.html)
+        self.assertIn("expiryBucketLabel(position.end)", self.html)
+        self.assertIn("No wallet expiry data.", self.html)
+        self.assertIn("expirySearchHasClear", self.html)
+        self.assertIn("expirySearchMatchesHolderWidth", self.html)
+
+    def test_lock_expiry_removes_summary_and_keeps_source_update_time(self):
+        section = re.search(
+            r'<section class="card chart-card expiry-card">(?P<body>.*?)</section>',
+            self.html,
+            re.S,
+        ).group("body")
+        self.assertIn('id="expiry-meta"', section)
+        self.assertNotIn('class="expiry-summary"', section)
+        self.assertNotIn('id="expiry-summary-value"', section)
+        self.assertNotIn('id="expiry-summary-label"', section)
+        self.assertNotIn('id="expiry-focus"', section)
+        self.assertIn('setText("expiry-meta", dataUpdatedLabel(state.expiry?.timestamp));', self.html)
+        self.assertNotIn('setText("expiry-summary-value",', self.html)
+        self.assertNotIn('setText("expiry-summary-label",', self.html)
+        self.assertNotIn('.expiry-summary{', self.html)
+        self.assertIn('vedolo-chart-summary-cleanup-20260718', self.route)
+
+    def test_main_hero_is_not_rendered_again_by_render_static(self):
+        render_static = re.search(
+            r'function renderStatic\(\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        ).group("body")
+        self.assertNotIn("renderHero();", render_static)
+        self.assertIn('if(!stats?.stats && holders?.stats){ state.stats = holders.stats; renderHero(); }', self.html)
+
+    def test_vedolo_route_busts_preview_cache_for_expiry_search(self):
+        self.assertIn("expiry-search-20260610", self.route)
+
+    def test_expired_claimable_vedolo_table_contract(self):
+        self.assertIn("Expired veDOLO Ready to Claim", self.html)
+        self.assertNotIn("<h2>Expired Claimable veDOLO</h2>", self.html)
+        self.assertIn('id="q-claimable"', self.html)
+        self.assertIn('id="claimable-table"', self.html)
+        self.assertIn('id="claimable-body"', self.html)
+        self.assertIn('id="claimable-info"', self.html)
+        self.assertIn('id="claimable-pager"', self.html)
+        self.assertIn("function buildExpiredClaimableRows()", self.html)
+        self.assertIn("end <= nowSec", self.html)
+        self.assertIn("function renderExpiredClaimable()", self.html)
+        self.assertIn("renderExpiredClaimable();", self.html)
+        self.assertIn('id="claimable-meta"', self.html)
+
+    def test_recent_flow_tables_show_six_rows_per_page(self):
+        self.assertIn(
+            'locksPage:1,unlocksPage:1,perPage:6',
+            self.html,
+        )
+
+    def test_recent_locks_use_canonical_external_deposit_classification(self):
+        self.assertIn(
+            'script src="vedolo-position-activity.js?v=20260908-receipt-evidence-v1"',
+            self.html,
+        )
+        self.assertIn("position-activity-helper-20260817", self.route)
+        self.assertIn(
+            'state.locks.filter(lock => window.VeDoloPositionActivity.isExternalLock(lock))',
+            self.html,
+        )
+        self.assertIn('const sourceKey = routeKeyFromLock(l);', self.html)
+        self.assertNotIn(
+            'const sourceKey = l.isOdolo ? (l.addressSource === "odolo-vester-fallback" ? "protocol" : "odolo") : "direct";',
+            self.html,
+        )
+
+    def test_position_activity_is_a_standalone_searchable_table(self):
+        flow_start = self.html.index('<section class="card flow-card">')
+        activity_start = self.html.index('<section class="card position-activity-card"')
+        claimable_start = self.html.index('<section class="card claimable-card">')
+        self.assertLess(flow_start, activity_start)
+        self.assertLess(activity_start, claimable_start)
+        self.assertIn('</section>', self.html[flow_start:activity_start])
+        self.assertIn('id="position-activity-card"', self.html)
+        self.assertIn('veDOLO Position Activity', self.html)
+        self.assertIn('id="position-activity-meta"', self.html)
+        self.assertIn('id="q-position-activity"', self.html)
+        self.assertIn('placeholder="Search wallet, tx or position ID…"', self.html)
+        self.assertIn('id="dd-position-activity-kind"', self.html)
+        for kind in ("all", "transfer", "merge", "split", "extend"):
+            self.assertIn(f'data-value="{kind}"', self.html)
+        self.assertIn('class="tbl wallet-flow-table" id="position-activity-table" data-address-match-cells', self.html)
+        self.assertIn('id="position-activity-body"', self.html)
+        self.assertIn('id="position-activity-info"', self.html)
+        self.assertIn('id="position-activity-pager"', self.html)
+        self.assertIn('activityRows:[]', self.html)
+        self.assertIn('activity:{q:"",kind:"all",period:"7",sort:"date",asc:false,page:1,perPage:10}', self.html)
+        self.assertIn('window.VeDoloPositionActivity.buildActivityRows(state.locks,state.transfers)', self.html)
+        self.assertIn('function renderPositionActivity()', self.html)
+        self.assertIn('renderPositionActivity();', self.html)
+        self.assertIn('table === "position-activity-table"', self.html)
+
+    def test_flow_and_activity_filters_use_independent_single_select_dropdowns(self):
+        self.assertIn('id="dd-flow-source"', self.html)
+        self.assertIn('data-value="all" data-short="All routes"', self.html)
+        self.assertIn('data-value="odolo" data-short="via oDOLO"', self.html)
+        self.assertIn('data-value="direct" data-short="Direct"', self.html)
+        self.assertIn('id="dd-position-activity-kind"', self.html)
+        self.assertNotIn('id="flow-source"', self.html)
+        self.assertNotIn('id="position-activity-kind"', self.html)
+        self.assertIn('root.id === "dd-flow-source"', self.html)
+        self.assertIn('root.id === "dd-position-activity-kind"', self.html)
+        self.assertIn('state.activity.q = e.target.value.trim(); state.activity.page = 1; renderPositionActivity();', self.html)
+
+        filter_body = re.search(
+            r'function getFilteredPositionActivity\(\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        ).group("body")
+        self.assertIn("state.activity.q", filter_body)
+        self.assertIn("vedoloAddressName", filter_body)
+        self.assertNotIn("state.flows.q", filter_body)
+        self.assertNotIn("state.flows.period", filter_body)
+
+        bind_body = re.search(
+            r'function bindUi\(\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        ).group("body")
+        flow_search_line = next(line for line in bind_body.splitlines() if 'qs("#q-flows")' in line)
+        self.assertNotIn("state.activity", flow_search_line)
+        flow_period_branch = re.search(
+            r'root\.id === "dd-flow-period"\)\{(?P<body>.*?)\n\s*\}',
+            bind_body,
+            re.S,
+        ).group("body")
+        self.assertNotIn("state.activity", flow_period_branch)
+        self.assertNotIn("renderPositionActivity", flow_period_branch)
+
+    def test_position_activity_table_has_stable_ten_row_responsive_contract(self):
+        self.assertIn('.position-activity-card{', self.html)
+        self.assertIn('#position-activity-table{table-layout:fixed;min-width:936px;', self.html)
+        self.assertIn('#position-activity-table col.activity-rank{width:48px}', self.html)
+        self.assertIn('#position-activity-table col.activity-address{width:300px}', self.html)
+        self.assertIn('#position-activity-table col.activity-kind{width:118px}', self.html)
+        self.assertIn('#position-activity-table col.activity-position{width:180px}', self.html)
+        self.assertIn('#position-activity-table col.activity-amount{width:150px}', self.html)
+        self.assertIn('#position-activity-table col.activity-end{width:140px}', self.html)
+        self.assertIn('.position-activity-scroll{overflow-x:auto;', self.html)
+        self.assertIn('@media (max-width:720px)', self.html)
+        self.assertIn('activity-filter-table-20260816', self.route)
+
+    def test_early_unlock_simulation_table_and_details_contract(self):
+        flow_end = self.html.index('</section>', self.html.index('<section class="card flow-card">'))
+        early_start = self.html.find('<section class="card early-unlock-card"')
+        claimable_start = self.html.index('<section class="card claimable-card">')
+        self.assertGreaterEqual(early_start, 0)
+        self.assertLess(flow_end, early_start)
+        self.assertLess(early_start, claimable_start)
+        self.assertIn('<h2>Early Unlock Simulation</h2>', self.html)
+        self.assertIn('id="q-early-unlock"', self.html)
+        self.assertIn('id="early-unlock-table"', self.html)
+        self.assertIn('id="early-unlock-body"', self.html)
+        self.assertIn('id="early-unlock-info"', self.html)
+        self.assertIn('id="early-unlock-pager"', self.html)
+        self.assertIn('Exit Value', self.html)
+        self.assertIn('Avg Lock', self.html)
+        self.assertIn('fetchStaticJson("vedolo_early_unlock.json", "vedolo-early-unlock-v1")', self.html)
+
+    def test_early_unlock_summary_matches_liquidity_provider_rail_contract(self):
+        section_start = self.html.index('<section class="card early-unlock-card"')
+        section_end = self.html.index('</section>', section_start)
+        section = self.html[section_start:section_end]
+        summary_index = section.index('id="early-unlock-summary"')
+        self.assertLess(section.index('class="card-head"'), summary_index)
+        self.assertLess(summary_index, section.index('class="toolbar"'))
+        self.assertIn('class="early-unlock-summary selected-market-rail"', section)
+        for label, element_id in (
+            ("Exit Value", "early-unlock-summary-exit-value"),
+            ("Locked DOLO", "early-unlock-summary-locked"),
+            ("Exit Penalty", "early-unlock-summary-penalty"),
+            ("Avg Lock", "early-unlock-summary-lock"),
+        ):
+            self.assertIn(label, section)
+            self.assertIn(f'id="{element_id}"', section)
+        self.assertIn('.early-unlock-summary.selected-market-rail{', self.html)
+        self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))', self.html)
+        self.assertIn('@media (max-width:760px)', self.html)
+        self.assertIn('.early-unlock-summary.selected-market-rail{grid-template-columns:1fr}', self.html)
+
+    def test_early_unlock_summary_uses_filtered_rows_and_exact_raw_amounts(self):
+        self.assertIn('function renderEarlyUnlockSummary(rows)', self.html)
+        self.assertIn('BigInt(row.lockedDoloWei || "0")', self.html)
+        self.assertIn('BigInt(row.availableAfterExitWei || "0")', self.html)
+        self.assertIn('BigInt(row.penaltyWei || "0")', self.html)
+        self.assertIn('BigInt(position.lockedDoloWei || "0")', self.html)
+        self.assertIn('BigInt(Math.max(0, Math.round(num(position.remainingSeconds))))', self.html)
+        render_start = self.html.index('function renderEarlyUnlock(){')
+        render_end = self.html.index('function wireEarlyUnlockDetails(){', render_start)
+        self.assertIn('renderEarlyUnlockSummary(rows);', self.html[render_start:render_end])
+
+    def test_early_unlock_rows_use_compact_exit_and_odolo_lock_ux(self):
+        self.assertIn('earlyUnlockPenaltyLabel(row.penaltyPct)', self.html)
+        self.assertNotIn('Penalty ${fmtDolo(row.penalty)}', self.html)
+        self.assertIn('earlyUnlockLockCell(row.avgWeeksUntilUnlock, lockMaxWeeks)', self.html)
+        self.assertIn('.early-unlock-lock-cell{', self.html)
+        self.assertIn('.early-unlock-lock-bar{', self.html)
+        self.assertIn('function earlyUnlockLockLabel(value)', self.html)
+        self.assertIn('function earlyUnlockLockBucket(value)', self.html)
+        self.assertIn('class="early-unlock-value available loss"', self.html)
+        self.assertIn('#early-unlock-table .early-unlock-value.vote{color:var(--fg-1)}', self.html)
+        self.assertIn('#early-unlock-table .early-unlock-value.available{color:var(--down)}', self.html)
+        self.assertIn('#early-unlock-table .early-unlock-value.available.loss{color:var(--down)}', self.html)
+        self.assertIn('early-unlock-summary-ux-20260826', self.route)
+
+    def test_early_unlock_table_reuses_stable_holder_interactions(self):
+        self.assertIn('earlyUnlock:{q:"",sort:"availableAfterExit"', self.html)
+        self.assertIn('perPage:10,expanded:null,detailSort:"availableAfterExit"', self.html)
+        self.assertIn('tableSpacerRows(st.perPage - Math.max(pageRows.length, 1), 7)', self.html)
+        self.assertIn('syncSortHeader("#early-unlock-table", st.sort, st.asc);', self.html)
+        self.assertIn('data-early-unlock-addr="${esc(row.address || "")}"', self.html)
+        self.assertIn('class="early-unlock-toggle"', self.html)
+        self.assertIn('function renderEarlyUnlockDetailRow(row)', self.html)
+        self.assertIn('data-early-unlock-detail-sort', self.html)
+        self.assertIn('if(e.target.closest(".addr-copy") || e.target.closest(".addr-debank")) return;', self.html)
+        self.assertIn('earlyUnlock:state.earlyUnlock', self.html)
+        self.assertIn('table === "early-unlock-table"', self.html)
+
+    def test_early_unlock_snapshot_does_not_gate_existing_vedolo_content(self):
+        self.assertIn("earlyUnlockLoaded:false", self.html)
+        main_wait = re.search(
+            r"const \[holders, early, flows, expiry, exercises, votePower.*?Promise\.all\(\[(?P<promises>.*?)\]\)",
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(main_wait)
+        promises = main_wait.group("promises") if main_wait else ""
+        self.assertNotIn("earlyUnlockPromise", promises)
+        self.assertIn("earlyUnlockPromise.then(earlyUnlock => {", self.html)
+
+    def test_early_unlock_sort_controls_support_keyboard_activation(self):
+        self.assertIn('class="detail-sort-control" type="button"', self.html)
+        section_start = self.html.index('<section class="card early-unlock-card"')
+        section_end = self.html.index('</section>', section_start)
+        section = self.html[section_start:section_end]
+        self.assertIn('class="sort-control" type="button"', section)
+        self.assertNotIn('role="button" tabindex="0"', self.html)
+
+    def test_early_unlock_token_amount_sorting_uses_exact_wei(self):
+        self.assertIn("const EARLY_UNLOCK_WEI_SORT_KEYS", self.html)
+        self.assertIn('BigInt(a[weiKey] || "0")', self.html)
+        self.assertIn('BigInt(position[weiKey] || "0")', self.html)
+
+    def test_early_unlock_details_show_every_approved_position_metric(self):
+        section_match = re.search(
+            r'<section class="card early-unlock-card"(?P<body>.*?)</section>',
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(section_match)
+        section = section_match.group("body") if section_match else ""
+        for label in (
+            "Unlock Date",
+            "Route",
+            "Locked DOLO",
+            "Vote Weight",
+            "Exit Value",
+            "Penalty",
+            "Remaining",
+            "Position ID",
+        ):
+            self.assertIn(label, self.html)
+        self.assertIn('data-sort="veDolo"', section)
+        self.assertIn('aria-label="Sort by vote weight"', section)
+        self.assertIn('data-sort="lockedDolo"', section)
+        self.assertIn('data-sort="availableAfterExit"', section)
+        self.assertIn('data-sort="avgWeeksUntilUnlock"', section)
+        self.assertIn('No fee', self.html)
+
+    def test_expired_claimable_table_reuses_holder_wallet_ux_contracts(self):
+        self.assertIn("#claimable-table{table-layout:fixed;min-width:1040px}", self.html)
+        self.assertIn("#claimable-table .holder-wallet", self.html)
+        self.assertIn('data-claimable-id="${esc(row.id)}"', self.html)
+        self.assertIn("tableSpacerRows(st.perPage - Math.max(pageRows.length, 1), 8)", self.html)
+        self.assertIn("syncSortHeader(\"#claimable-table\", st.sort, st.asc);", self.html)
+        self.assertIn("claimable:state.claimable", self.html)
+        self.assertIn('table === "claimable-table"', self.html)
+
+    def test_expired_claimable_table_replaces_vote_and_details_with_route_and_exercise_price(self):
+        self.assertIn("Route", self.claimable_table)
+        self.assertIn("Exercise Price", self.claimable_table)
+        self.assertIn('data-sort="route"', self.claimable_table)
+        self.assertIn('data-sort="price"', self.claimable_table)
+        self.assertNotIn("USDC.e Paid", self.claimable_table)
+        self.assertNotIn("Vote Weight", self.claimable_table)
+        self.assertNotIn("Details", self.claimable_table)
+        self.assertNotIn("claimable-vote-col", self.claimable_table)
+        self.assertNotIn("claimable-actions-col", self.claimable_table)
+
+    def test_expired_claimable_route_column_is_center_aligned(self):
+        self.assertIn("#claimable-table th[data-sort=\"route\"],#claimable-table .claimable-route-cell{text-align:center}", self.html)
+        self.assertIn("#claimable-table th[data-sort=\"route\"] .th-content{justify-content:center}", self.html)
+        self.assertIn("#claimable-table .claimable-route-cell .flow-source-tag{display:inline-flex;margin-inline:auto;justify-content:center;max-width:100%}", self.html)
+
+    def test_expired_claimable_table_includes_lock_term_column(self):
+        self.assertIn('<col class="claimable-lock-col">', self.claimable_table)
+        self.assertIn("Lock Term", self.claimable_table)
+        self.assertIn('data-sort="lock"', self.claimable_table)
+        self.assertIn("function claimableLockTermDays(row)", self.html)
+        self.assertIn("function claimableLockTermLabel(row)", self.html)
+        self.assertIn("claimableLockTermLabel(row)", self.html)
+        self.assertIn('if(sort === "lock"){ va = claimableLockTermDays(a); vb = claimableLockTermDays(b); }', self.html)
+        self.assertIn('key === "lock"', self.html)
+        self.assertIn('<td colspan="8">No expired claimable veDOLO positions match the current filters.</td>', self.html)
+
+    def test_claimable_price_uses_exerciser_token_id_lookup(self):
+        self.assertIn('fetchJson("exercisers_by_address.json").catch(() => null)', self.html)
+        self.assertIn("exerciseEventsByToken:new Map()", self.html)
+        self.assertIn("function buildExerciseRouteIndexes(exercisers)", self.html)
+        self.assertIn("token_ids", self.html)
+        self.assertIn("function claimableExercisePrice(row)", self.html)
+        self.assertIn("function claimableExercisePriceLabel(row)", self.html)
+        self.assertIn("row.exercise?.paid_token === \"USDC.e\"", self.html)
+        self.assertNotIn("claimableUsdcPaidLabel", self.html)
+        self.assertNotIn("USDC.e</span>", self.html)
+        self.assertIn("flowSourceTag(row.route.kind, row.route.tooltip)", self.html)
+
+    def test_vedolo_route_busts_preview_cache_for_claimable_table(self):
+        self.assertIn("claimable-ready-title-20260706", self.route)
+
+    def test_locked_chart_has_accessible_metric_switch(self):
+        self.assertIn('id="lockedChartMode"', self.html)
+        self.assertIn('data-locked-chart-mode="locked"', self.html)
+        self.assertIn('data-locked-chart-mode="vote"', self.html)
+        self.assertIn('id="lockedChartTitle"', self.html)
+        self.assertIn('aria-pressed="true"', self.html)
+
+    def test_locked_chart_endpoint_uses_active_positions_at_holder_snapshot(self):
+        self.assertIn('script src="vedolo-locked-history.js?v=20260816-active-holder-endpoint"', self.html)
+        self.assertIn('Date.parse(state.holdersTimestamp || state.statsTimestamp || "")', self.html)
+        self.assertIn('window.VeDoloLockedHistory?.activeLockedDoloTotal(', self.html)
+        self.assertNotIn('const currentLocked = num(state.stats?.total_locked_dolo);', self.html)
+
+    def test_locked_chart_replays_position_state_instead_of_summing_internal_actions(self):
+        self.assertIn(
+            'window.VeDoloLockedHistory.buildActiveLockedHistory(',
+            self.html,
+        )
+        self.assertNotIn('addDelta(start, amount);', self.html)
+        self.assertNotIn('const tokenUnlock = new Map();', self.html)
+
+    def test_vedolo_segmented_controls_use_holder_distribution_pill_ux(self):
+        self.assertIn('class="locked-chart-mode vedolo-pill-segment"', self.html)
+        self.assertIn('class="seg vedolo-pill-segment" id="duration-mode"', self.html)
+        self.assertIn('.vedolo-pill-segment{', self.html)
+        self.assertIn('border-radius:999px', self.html)
+        self.assertIn('height:34px;min-height:34px', self.html)
+        self.assertIn('.vedolo-pill-segment button.active,', self.html)
+        self.assertIn('.vedolo-pill-segment button.active::after{display:none}', self.html)
+        self.assertNotIn('#flow-source.vedolo-pill-segment', self.html)
+        self.assertIn("vedolo-pill-controls-20260717", self.route)
+
+    def test_locked_chart_places_zoom_meta_in_the_top_right(self):
+        heading = re.search(
+            r'<div class="locked-chart-heading">(?P<body>.*?)</div>\n    <div class="locked-chart-wrap"',
+            self.html,
+            re.S,
+        ).group("body")
+        self.assertIn('class="card-meta locked-chart-meta"', heading)
+        title_pos = heading.index('class="card-title"')
+        meta_pos = heading.index('class="card-meta locked-chart-meta"')
+        controls_pos = heading.index('class="locked-chart-controls"')
+        self.assertLess(title_pos, meta_pos)
+        self.assertLess(meta_pos, controls_pos)
+        self.assertIn('<div class="card-meta locked-chart-meta"><span class="pulse"></span>drag window below to zoom</div>', heading)
+        self.assertIn('.locked-chart-heading{display:flex;align-items:flex-start;justify-content:space-between;', self.html)
+        self.assertIn('.locked-chart-meta{margin-left:auto}', self.html)
+        self.assertIn('.locked-chart-controls{display:flex;flex-basis:100%;align-items:flex-start}', self.html)
+        self.assertIn('@media (max-width:560px){', self.html)
+        self.assertIn('.locked-chart-heading{align-items:flex-start;flex-direction:column}', self.html)
+        self.assertIn('.locked-chart-meta{margin-left:0}', self.html)
+
+    def test_vote_power_availability_repeat_safe_setters_and_removals(self):
+        self.assertIn('const LOCKED_CHART_VOTE_UNAVAILABLE_TIP = "Verified vote-power history is unavailable.";', self.html)
+        self.assertIn('help.setAttribute("data-tip", LOCKED_CHART_VOTE_UNAVAILABLE_TIP);', self.html)
+        self.assertIn('help.setAttribute("tabindex", "0");', self.html)
+        self.assertIn('help.removeAttribute("data-tip");', self.html)
+        self.assertIn('help.removeAttribute("tabindex");', self.html)
+        self.assertNotIn('help.toggleAttribute(', self.html)
+
+    def test_unavailable_vote_power_tooltip_uses_focusable_wrapper(self):
+        match = re.search(
+            r'(?P<wrapper><span class="locked-chart-vote-help"[^>]*>\s*<button[^>]*data-locked-chart-mode="vote".*?</button>\s*</span>)',
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(match, "Vote Power unavailable state must use a focusable tooltip wrapper")
+        if match is None:
+            return
+        vote = match.group("wrapper")
+        self.assertIn('data-tip="Verified vote-power history is unavailable."', vote)
+        self.assertIn('tabindex="0"', vote)
+        self.assertIn('disabled', vote)
+        self.assertNotIn('data-tip=', re.sub(r'<span[^>]*>', '', vote, count=1))
+        self.assertIn('function syncLockedChartVoteAvailability()', self.html)
+        self.assertIn('attributeFilter:["disabled"]', self.html)
+
+    def test_vote_power_view_loads_static_history_only(self):
+        self.assertIn('const votePowerPromise = fetchStaticJson("data/vedolo-vote-power-history.json", "vedolo-vote-power-history-20260714")', self.html)
+        self.assertIn('async function fetchStaticJson(name, version)', self.html)
+        self.assertNotIn('rpc.berachain.com', self.html)
+
+    def test_locked_chart_uses_independent_vote_power_state_and_shared_brush(self):
+        self.assertIn('votePowerHistory:[]', self.html)
+        self.assertIn('lockedChartMode:"locked"', self.html)
+        self.assertIn('function activeLockedChartSeries()', self.html)
+        self.assertIn('function setLockedChartMode(mode)', self.html)
+        self.assertIn('state.lockedBrush', self.html)
+
+    def test_vote_power_parser_requires_canonical_static_contract(self):
+        self.assertIn('function parseVotePowerHistory(payload)', self.html)
+        self.assertIn('payload.schemaVersion !== 1', self.html)
+        self.assertIn('payload.metric !== "votePower"', self.html)
+        self.assertIn('payload.chain !== "berachain"', self.html)
+        self.assertIn('payload.lastPointWei !== payload.totalSupplyWei', self.html)
+        self.assertIn('timestamp <= previousTimestamp', self.html)
+        self.assertIn('Number.isFinite(value)', self.html)
+        self.assertIn('value < 0', self.html)
+
+    def test_vote_power_parser_accepts_generator_compact_decimals(self):
+        self.assertIn('^(0|[1-9]\\d*)(?:\\.\\d{1,18})?$', self.html)
+        self.assertIn('fraction.padEnd(18, "0")', self.html)
+
+    def test_locked_chart_switch_clears_previous_metric_hover(self):
+        mode_switch = re.search(
+            r'function setLockedChartMode\(mode\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(mode_switch)
+        self.assertIn('clearLockedChartHover();', mode_switch.group('body'))
+
+    def test_locked_brush_click_reads_active_series_bounds(self):
+        click_handler = re.search(
+            r'brushSvg\.addEventListener\("click", e => \{(?P<body>.*?)\n  \}\);',
+            self.html,
+            re.S,
+        )
+        self.assertIsNotNone(click_handler)
+        self.assertIn('const {minX,maxX} = bounds();', click_handler.group('body'))
+
+    def test_locked_chart_axis_uses_compact_value_without_metric_suffix(self):
+        self.assertIn('>${fmtCompact(v)}</text>`', self.html)
+
+    def test_locked_chart_switcher_is_mode_aware_and_clamps_shared_brush(self):
+        self.assertIn('clampLockedBrushToActiveSeries();', self.html)
+        self.assertIn('fmtCompact(value) + " Vote Power"', self.html)
+        self.assertIn('activeLockedChartSeries().unit', self.html)
+        self.assertIn('setVotePowerAvailability(state.votePowerHistory.length >= 2);', self.html)
+        self.assertIn('function bindLockedBrushInteractions()', self.html)
+        self.assertIn('state.lockedBrushListenersBound', self.html)
+
+    def test_vedolo_route_busts_cache_for_vote_power_chart(self):
+        self.assertIn('vedolo-vote-power-history-20260714', self.route)
+
+    def test_vedolo_route_busts_preview_cache_for_stacked_chart_controls(self):
+        self.assertIn('vedolo-chart-controls-stack-20260714', self.route)
+
+    def test_vedolo_route_busts_preview_cache_for_top_right_chart_meta(self):
+        self.assertIn('vedolo-chart-meta-right-20260715', self.route)
+
+    def test_recent_early_exit_controls_use_red_interactions(self):
+        self.assertIn('id="recent-early-exits-section"', self.html)
+        self.assertIn('--recent-exit-accent:var(--down)', self.html)
+        self.assertIn('class="card-meta early-exits-meta"><span class="pulse pulse-down"', self.html)
+        self.assertIn('.pulse-down{background:var(--down);box-shadow:0 0 8px var(--down)}', self.html)
+        self.assertIn('#recent-early-exits-section .search:focus-within', self.html)
+        self.assertIn('#recent-early-exits-section #dd-exit-period .dd-btn.open', self.html)
+        self.assertIn('#recent-early-exits-section #dd-exit-period .dd-opt.active .dd-opt-check', self.html)
+        self.assertIn('vedolo-exit-red-controls-20260711', self.route)
+
+    def test_early_exit_cards_share_crimson_surface_and_rounded_geometry(self):
+        self.assertIn('--exit-surface-bg:linear-gradient(', self.html)
+        self.assertIn('--exit-surface-accent:#c98678', self.html)
+        self.assertIn('.exit-suite{', self.html)
+        self.assertIn('overflow:visible', self.html)
+        self.assertIn(
+            '.exit-suite .card-meta .dot-live,.exit-suite .card-meta .pulse-down{background:var(--exit-surface-accent);box-shadow:0 0 8px var(--exit-surface-glow)}',
+            self.html,
+        )
+        self.assertIn(
+            '.exit-analytics-card>.card-head,.exit-table-card>.exit-table-head{border-radius:calc(var(--r-xl) - 1px) calc(var(--r-xl) - 1px) 0 0}',
+            self.html,
+        )
+        self.assertIn(
+            '.exit-analytics-card>.exit-summary,.exit-table-card>.tbl-foot{border-radius:0 0 calc(var(--r-xl) - 1px) calc(var(--r-xl) - 1px)}',
+            self.html,
+        )
+        self.assertIn('vedolo-exit-crimson-surface-20260814', self.route)
+
+    def test_recent_early_exit_owns_the_layered_oxblood_table_surface(self):
+        self.assertIn('--exit-surface-summary:linear-gradient(', self.html)
+        self.assertIn('--exit-surface-toolbar:', self.html)
+        self.assertIn('--exit-surface-th:linear-gradient(', self.html)
+        scoped_header_rule = (
+            '.exit-suite.exit-table-card #exits-table th{background:var(--exit-surface-th);'
+            'border-bottom:1px solid var(--exit-surface-line)}'
+        )
+        self.assertIn(scoped_header_rule, self.html)
+        self.assertGreater(
+            self.html.index(scoped_header_rule),
+            self.html.index('#exits-table th,#holders-table th,#claimable-table th,.flow-col .tbl th{'),
+        )
+        self.assertIn('vedolo-exit-oxblood-continuity-20260814', self.route)
+
+    def test_early_exit_rows_do_not_render_positive_micro_amounts_as_zero(self):
+        self.assertIn('function fmtExitDolo(v)', self.html)
+        self.assertIn('return value > 0 && value < 0.01 ? "<0.01 DOLO" : fmtDolo(value);', self.html)
+        self.assertIn('${fmtExitDolo(ex.original_locked)}', self.html)
+        self.assertIn('${fmtExitDolo(ex.total_penalty)}', self.html)
+        self.assertIn('vedolo-early-exit-exact-20260813', self.route)
+
+    def test_lock_duration_uses_header_update_metadata_without_summary(self):
+        duration_section = re.search(
+            r'<section class="card chart-card duration-card">(?P<body>.*?)</section>',
+            self.html,
+            re.S,
+        ).group("body")
+        card_head = re.search(
+            r'<div class="card-head">(?P<body>.*?)</div>\n    <div class="toolbar">',
+            duration_section,
+            re.S,
+        ).group("body")
+        self.assertIn('class="card-meta"', card_head)
+        self.assertIn('id="duration-meta"', duration_section)
+        self.assertIn('class="seg vedolo-pill-segment" id="duration-mode"', duration_section)
+        self.assertNotIn('class="duration-toolbar-update"', duration_section)
+        self.assertNotIn('id="duration-focus"', duration_section)
+        self.assertNotIn("All Durations", self.html)
+        self.assertNotIn('.duration-focus{', self.html)
+        self.assertIn('vedolo-chart-summary-cleanup-20260718', self.route)
+
+    def test_vedolo_tables_show_source_specific_data_update_metadata(self):
+        for meta_id in (
+            "recent-exits-meta",
+            "holders-meta",
+            "flows-meta",
+            "claimable-meta",
+            "duration-meta",
+        ):
+            self.assertIn(f'id="{meta_id}"', self.html)
+
+        metadata_sync = re.search(
+            r'function syncVedoloTableMetadata\(\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        ).group("body")
+        self.assertIn("state.earlyStats?.last_updated", metadata_sync)
+        self.assertIn("state.holdersTimestamp", metadata_sync)
+        self.assertIn("state.flowsTimestamp", metadata_sync)
+        self.assertIn('setText("recent-exits-meta",', metadata_sync)
+        self.assertIn('setText("holders-meta",', metadata_sync)
+        self.assertIn('setText("flows-meta",', metadata_sync)
+        self.assertIn('setText("claimable-meta",', metadata_sync)
+        self.assertIn('setText("duration-meta",', metadata_sync)
+        self.assertIn("vedolo-table-update-metadata-20260717", self.route)
+
+    def test_flow_wallet_cell_places_tx_beside_name_above_address(self):
+        flow_cell = re.search(
+            r'function flowAddressCell\(addr, date, txHash, timestamp\)\{(?P<body>.*?)\n\}',
+            self.html,
+            re.S,
+        ).group("body")
+        required = (
+            'DoloWalletTableUX.walletCellHtml',
+            'address:displayAddr',
+            'labels:VEDOLO_ADDRESS_LABELS',
+            'txHash',
+            'txTimestamp:timestamp',
+            'txDate:date',
+            'txChain:"berachain"',
+            'txInPrimaryLine:true',
+            'copyIcon:copySvg',
+        )
+        for item in required:
+            self.assertIn(item, flow_cell)
+        positions = [flow_cell.index(item) for item in required]
+        self.assertEqual(positions, sorted(positions))
+        self.assertNotIn('class="addr addr-tooltip-wrap"', flow_cell)
+        self.assertIn('wallet-table-ux.css?v=20260815-flow-name-date', self.html)
+        self.assertIn('.flow-address-main .addr-mono{', self.html)
+        self.assertIn('color:var(--fg-1)', self.html)
+        self.assertIn('color:var(--fg-3)', self.html)
+        self.assertIn('vedolo-flow-wallet-hierarchy-20260810', self.route)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+"""Build a static MERKL rewards fallback for Earn wallets.
+
+The dashboard still tries MERKL live first. This cache is a browser-safe fallback
+for known Earn addresses when api.merkl.xyz is blocked by the client.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Optional
+
+
+ROOT = Path(__file__).resolve().parent
+LEDGER_DIR = ROOT / "data" / "earn-verified-ledger"
+OUT_DIR = ROOT / "data" / "earn-merkl-rewards"
+
+CHAIN_IDS = {
+    "ethereum": 1,
+}
+
+ELIGIBLE_MARKETS = {
+    "ethereum": {
+        "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d": "USD1",
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDC",
+    },
+}
+
+CAMPAIGN_TOKEN_MAP = {
+    "ethereum": {
+        "576387d3d84237f5": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "2ed15ca6f6a47991": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    },
+}
+
+OPPORTUNITY_TOKEN_MAP = {
+    "ethereum": {
+        "4237566951584909094": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "8510007982293035752": "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        "13418763536600599808": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    },
+}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def raw_int(raw: Optional[Any]) -> int:
+    try:
+        return int(str(raw or "0"))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def decimal_number(raw: Optional[Any], decimals: int) -> float:
+    try:
+        return raw_int(raw) / (10 ** int(decimals or 18))
+    except (TypeError, ValueError, OverflowError):
+        return 0.0
+
+
+def reward_total_raw(reward: dict[str, Any]) -> int:
+    return raw_int(reward.get("amount") if "amount" in reward else reward.get("accumulated")) + raw_int(reward.get("pending"))
+
+
+def reward_unclaimed_raw(reward: dict[str, Any]) -> int:
+    if "claimed" in reward or "pending" in reward or "amount" in reward:
+        return max(0, raw_int(reward.get("amount")) - raw_int(reward.get("claimed"))) + max(0, raw_int(reward.get("pending")))
+    return raw_int(reward.get("unclaimed"))
+
+
+def normalize_campaign_id(value: Any) -> str:
+    return str(value or "").strip().lower().removeprefix("0x")
+
+
+def normalize_evm_address(value: Any) -> str:
+    match = re.search(r"0x[a-fA-F0-9]{40}", str(value or ""))
+    return match.group(0).lower() if match else ""
+
+
+def resolve_reason_token(chain: str, reason_key: str, reward: dict[str, Any]) -> str:
+    if reason_key.startswith("Dolomite_"):
+        return normalize_evm_address(reason_key.replace("Dolomite_", "", 1))
+    if not reason_key.startswith("MultiLogPerAdditionalParam_"):
+        return ""
+    direct = normalize_evm_address(reward.get("mainParameter"))
+    if direct:
+        return direct
+    opportunity_id = str(reward.get("opportunityId") or "").strip()
+    if opportunity_id:
+        mapped = OPPORTUNITY_TOKEN_MAP.get(chain, {}).get(opportunity_id, "")
+        if mapped:
+            return mapped
+    campaign_id = normalize_campaign_id(reward.get("mainParameter"))
+    return CAMPAIGN_TOKEN_MAP.get(chain, {}).get(campaign_id, "")
+
+
+def reward_bucket(decimals: int, token: Any) -> dict[str, Any]:
+    return {
+        "accumulated": 0.0,
+        "unclaimed": 0.0,
+        "decimals": decimals,
+        "token": token,
+        "perToken": {},
+        "unclaimedPerToken": {},
+        "perAccountToken": {},
+        "unclaimedPerAccountToken": {},
+        "assignedPerToken": {},
+        "assignedUnclaimedPerToken": {},
+    }
+
+
+def parse_merkl_rewards(chain: str, payload: Any) -> dict[str, Any]:
+    if isinstance(payload, list):
+        return parse_merkl_v4_rewards(chain, payload)
+
+    numeric_id = str(CHAIN_IDS[chain])
+    eligible_tokens = set(ELIGIBLE_MARKETS.get(chain, {}))
+    chain_data = payload.get(numeric_id) or {}
+    rewards: dict[str, Any] = {}
+    unresolved_symbols: set[str] = set()
+
+    for reasons in (chain_data.get("campaignData") or {}).values():
+        if not isinstance(reasons, dict):
+            continue
+        for reason_key, reward in reasons.items():
+            if not isinstance(reward, dict):
+                continue
+            token_addr = resolve_reason_token(chain, str(reason_key), reward)
+            symbol = str(reward.get("symbol") or "").strip()
+            decimals = int(reward.get("decimals") or 18)
+            if not symbol:
+                continue
+            if not token_addr:
+                unresolved_symbols.add(symbol)
+                continue
+            if eligible_tokens and token_addr.lower() not in eligible_tokens:
+                continue
+            bucket = rewards.setdefault(symbol, reward_bucket(decimals, reward.get("token")))
+            amount = decimal_number(reward.get("accumulated"), decimals)
+            unclaimed = decimal_number(reward.get("unclaimed"), decimals)
+            bucket["accumulated"] += amount
+            bucket["unclaimed"] += unclaimed
+            bucket["perToken"][token_addr] = bucket["perToken"].get(token_addr, 0.0) + amount
+            bucket["unclaimedPerToken"][token_addr] = bucket["unclaimedPerToken"].get(token_addr, 0.0) + unclaimed
+
+            account_match = re.match(r"^MultiLogPerAdditionalParam_accountNumber_([^_]+)_", str(reason_key))
+            if account_match:
+                account_number = account_match.group(1)
+                account_bucket = bucket["perAccountToken"].setdefault(account_number, {})
+                account_bucket[token_addr] = account_bucket.get(token_addr, 0.0) + amount
+                account_unclaimed_bucket = bucket["unclaimedPerAccountToken"].setdefault(account_number, {})
+                account_unclaimed_bucket[token_addr] = account_unclaimed_bucket.get(token_addr, 0.0) + unclaimed
+                bucket["assignedPerToken"][token_addr] = bucket["assignedPerToken"].get(token_addr, 0.0) + amount
+                bucket["assignedUnclaimedPerToken"][token_addr] = bucket["assignedUnclaimedPerToken"].get(token_addr, 0.0) + unclaimed
+
+    for token_data in (chain_data.get("tokenData") or {}).values():
+        if not isinstance(token_data, dict):
+            continue
+        symbol = str(token_data.get("symbol") or "").strip()
+        if not symbol or symbol not in unresolved_symbols:
+            continue
+        decimals = int(token_data.get("decimals") or 18)
+        bucket = rewards.setdefault(symbol, reward_bucket(decimals, token_data.get("token")))
+        bucket["accumulated"] = max(bucket.get("accumulated") or 0.0, decimal_number(token_data.get("accumulated"), decimals))
+        bucket["unclaimed"] = max(bucket.get("unclaimed") or 0.0, decimal_number(token_data.get("unclaimed"), decimals))
+
+    return {
+        symbol: data
+        for symbol, data in rewards.items()
+        if (data.get("accumulated") or 0) > 0 or (data.get("unclaimed") or 0) > 0
+    }
+
+
+def parse_merkl_v4_rewards(chain: str, payload: list[Any]) -> dict[str, Any]:
+    numeric_id = str(CHAIN_IDS[chain])
+    eligible_tokens = set(ELIGIBLE_MARKETS.get(chain, {}))
+    rewards: dict[str, Any] = {}
+
+    for chain_entry in payload:
+        if not isinstance(chain_entry, dict):
+            continue
+        chain_meta = chain_entry.get("chain") or {}
+        if str(chain_meta.get("id") or "") != numeric_id:
+            continue
+
+        for reward_entry in chain_entry.get("rewards") or []:
+            if not isinstance(reward_entry, dict):
+                continue
+            token_meta = reward_entry.get("token") or {}
+            symbol = str(token_meta.get("symbol") or reward_entry.get("symbol") or "").strip()
+            if not symbol:
+                continue
+            decimals = int(token_meta.get("decimals") or reward_entry.get("decimals") or 18)
+            reward_token = token_meta.get("address") or reward_entry.get("token")
+
+            for breakdown in reward_entry.get("breakdowns") or []:
+                if not isinstance(breakdown, dict):
+                    continue
+                reason_key = str(breakdown.get("reason") or "")
+                token_addr = resolve_reason_token(chain, reason_key, breakdown)
+                if not token_addr:
+                    continue
+                token_addr = token_addr.lower()
+                if eligible_tokens and token_addr not in eligible_tokens:
+                    continue
+
+                bucket = rewards.setdefault(symbol, reward_bucket(decimals, reward_token))
+                amount = decimal_number(reward_total_raw(breakdown), decimals)
+                unclaimed = decimal_number(reward_unclaimed_raw(breakdown), decimals)
+                bucket["accumulated"] += amount
+                bucket["unclaimed"] += unclaimed
+                bucket["perToken"][token_addr] = bucket["perToken"].get(token_addr, 0.0) + amount
+                bucket["unclaimedPerToken"][token_addr] = bucket["unclaimedPerToken"].get(token_addr, 0.0) + unclaimed
+
+                account_match = re.match(r"^MultiLogPerAdditionalParam_accountNumber_([^_]+)_", reason_key)
+                if account_match:
+                    account_number = account_match.group(1)
+                    account_bucket = bucket["perAccountToken"].setdefault(account_number, {})
+                    account_bucket[token_addr] = account_bucket.get(token_addr, 0.0) + amount
+                    account_unclaimed_bucket = bucket["unclaimedPerAccountToken"].setdefault(account_number, {})
+                    account_unclaimed_bucket[token_addr] = account_unclaimed_bucket.get(token_addr, 0.0) + unclaimed
+                    bucket["assignedPerToken"][token_addr] = bucket["assignedPerToken"].get(token_addr, 0.0) + amount
+                    bucket["assignedUnclaimedPerToken"][token_addr] = bucket["assignedUnclaimedPerToken"].get(token_addr, 0.0) + unclaimed
+
+    return {
+        symbol: data
+        for symbol, data in rewards.items()
+        if (data.get("accumulated") or 0) > 0 or (data.get("unclaimed") or 0) > 0
+    }
+
+
+def ledger_addresses(chain: str) -> list[str]:
+    eligible_tokens = set(ELIGIBLE_MARKETS.get(chain, {}))
+    chain_dir = LEDGER_DIR / chain
+    addresses: list[str] = []
+    for path in sorted(chain_dir.glob("0x*.json")):
+        try:
+            payload = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            print(f"warning: skipping unreadable ledger {path}: {exc}")
+            continue
+        markets = payload.get("markets") or {}
+        market_values = markets.values() if isinstance(markets, dict) else markets
+        has_eligible_market = any(
+            isinstance(market, dict) and str(market.get("token") or "").lower() in eligible_tokens
+            for market in market_values
+        )
+        if has_eligible_market:
+            addresses.append(str(payload.get("address") or path.stem).lower())
+    return addresses
+
+
+def fetch_merkl(chain: str, address: str, timeout: int, retries: int) -> Any:
+    numeric_id = CHAIN_IDS[chain]
+    encoded_address = urllib.parse.quote(address, safe="")
+    url = f"https://api.merkl.xyz/v4/users/{encoded_address}/protocols/dolomite/rewards?chainId={numeric_id}"
+    request = urllib.request.Request(
+        url,
+        headers={
+            "accept": "application/json",
+            "user-agent": "DolomiteDashboardMerklCache/1.0",
+        },
+    )
+    last_error: Optional[Exception] = None
+    for attempt in range(1, max(1, retries) + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            last_error = exc
+            if exc.code not in {429, 500, 502, 503, 504} or attempt >= retries:
+                raise
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+            last_error = exc
+            if attempt >= retries:
+                raise
+        time.sleep(min(2.0 * attempt, 8.0))
+    raise RuntimeError(f"MERKL request failed after {retries} attempts: {last_error}")
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    tmp.replace(path)
+
+
+def build_cache(chain: str, limit: Optional[int], only_address: Optional[str], sleep_seconds: float, timeout: int, retries: int) -> dict[str, Any]:
+    generated_at = utc_now()
+    addresses = [only_address.lower()] if only_address else ledger_addresses(chain)
+    if limit is not None:
+        addresses = addresses[:limit]
+
+    out_chain_dir = OUT_DIR / chain
+    out_chain_dir.mkdir(parents=True, exist_ok=True)
+
+    failures: list[dict[str, str]] = []
+    reward_addresses: set[str] = set()
+    successful_empty: set[str] = set()
+
+    def refresh_wallet(index: int, address: str) -> Optional[Exception]:
+        try:
+            payload = fetch_merkl(chain, address, timeout, retries)
+            rewards = parse_merkl_rewards(chain, payload)
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+            print(f"[{index}/{len(addresses)}] {address}: failed ({exc})")
+            return exc
+        else:
+            if rewards:
+                reward_addresses.add(address)
+                write_json(
+                    out_chain_dir / f"{address}.json",
+                    {
+                        "version": 1,
+                        "chain": chain,
+                        "address": address,
+                        "generatedAt": generated_at,
+                        "source": "merkl-v4-protocol-rewards",
+                        "rewards": rewards,
+                    },
+                )
+                print(f"[{index}/{len(addresses)}] {address}: {', '.join(rewards)}")
+            else:
+                successful_empty.add(address)
+                stale_path = out_chain_dir / f"{address}.json"
+                if stale_path.exists():
+                    stale_path.unlink()
+                print(f"[{index}/{len(addresses)}] {address}: no rewards")
+        return None
+
+    retry_wallets: list[tuple[int, str]] = []
+    for index, address in enumerate(addresses, start=1):
+        error = refresh_wallet(index, address)
+        if error is not None:
+            if isinstance(error, urllib.error.HTTPError) and error.code not in {429, 500, 502, 503, 504}:
+                failures.append({"address": address, "error": str(error)})
+            else:
+                retry_wallets.append((index, address))
+        if sleep_seconds > 0 and index < len(addresses):
+            time.sleep(sleep_seconds)
+
+    # Adjacent attempts can all hit the same short outage. Retry only failed
+    # wallets once after the scan, retaining this scan's original source time.
+    if retry_wallets:
+        print(f"Retrying {len(retry_wallets)} MERKL wallet(s) after the initial scan")
+    for retry_index, (index, address) in enumerate(retry_wallets, start=1):
+        error = refresh_wallet(index, address)
+        if error is not None:
+            failures.append({"address": address, "error": str(error)})
+        if sleep_seconds > 0 and retry_index < len(retry_wallets):
+            time.sleep(sleep_seconds)
+
+    if only_address is None:
+        current_scope = set(addresses)
+        for stale_path in out_chain_dir.glob("0x*.json"):
+            if stale_path.stem in current_scope and stale_path.stem not in reward_addresses and stale_path.stem in successful_empty:
+                stale_path.unlink(missing_ok=True)
+
+    manifest = {
+        "version": 1,
+        "generatedAt": generated_at,
+        "chains": {
+            chain: {
+                "eligibleAddressCount": len(addresses),
+                "rewardAddressCount": len(reward_addresses),
+                "failureCount": len(failures),
+                "markets": ELIGIBLE_MARKETS.get(chain, {}),
+            }
+        },
+        "failures": {chain: failures[:25]},
+    }
+    write_json(OUT_DIR / "manifest.json", manifest)
+    return manifest
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Build static MERKL rewards cache for Earn")
+    parser.add_argument("--chain", choices=sorted(CHAIN_IDS), default="ethereum")
+    parser.add_argument("--limit", type=int)
+    parser.add_argument("--address")
+    parser.add_argument("--sleep", type=float, default=0.25)
+    parser.add_argument("--timeout", type=int, default=20)
+    parser.add_argument("--retries", type=int, default=3)
+    args = parser.parse_args()
+
+    manifest = build_cache(args.chain, args.limit, args.address, args.sleep, args.timeout, args.retries)
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+    return 0 if manifest["chains"][args.chain]["failureCount"] == 0 else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

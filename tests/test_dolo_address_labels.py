@@ -1,0 +1,604 @@
+import json
+import re
+import subprocess
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+LABELS_JS = ROOT / "dolo-address-labels.js"
+ACTIVE_LABEL_CONSUMERS = (
+    ROOT / "dolo-preview.html",
+    ROOT / "dashboard-core.html",
+    ROOT / "liquidation-preview.html",
+)
+ROUTE_SHELLS = (
+    ROOT / "index.html",
+    ROOT / "dolo" / "index.html",
+    ROOT / "borrow" / "index.html",
+    ROOT / "liquidation" / "index.html",
+)
+
+
+def load_labels():
+    node_script = """
+global.window = {};
+require('./dolo-address-labels.js');
+const labels = window.cloneDoloAddressLabels();
+console.log(JSON.stringify({base: window.DOLO_ADDRESS_LABELS, labels}));
+"""
+    proc = subprocess.run(
+        ["node", "-e", node_script],
+        cwd=str(ROOT),
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return json.loads(proc.stdout)
+
+
+def tracked_repo_files():
+    proc = subprocess.run(
+        ["git", "ls-files"],
+        cwd=str(ROOT),
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    return [ROOT / line for line in proc.stdout.splitlines() if line]
+
+
+class DoloAddressLabelsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.loaded = load_labels()
+        cls.labels = cls.loaded["labels"]
+
+    def test_reviewed_multichain_recipient_is_not_a_confirmed_exchange(self):
+        info = self.labels.get("0xdfb5ab629e29afdd1cd2604fb6926d0ce5013f41", {})
+        self.assertEqual(info.get("label"), "Possible CEX/MM")
+        self.assertEqual(info.get("type"), "watch")
+        self.assertEqual(info.get("confidence"), "potential")
+        self.assertIn("0xfc89c020774524c9d03bd5de48fec149b10bdec3", info["note"])
+
+    def test_label_script_exports_normalized_metadata(self):
+        self.assertGreaterEqual(len(self.labels), 70)
+        self.assertEqual(set(self.loaded["base"].keys()), set(self.labels.keys()))
+        for address, info in self.labels.items():
+            with self.subTest(address=address):
+                self.assertRegex(address, r"^0x[a-f0-9]{40}$")
+                self.assertTrue(info.get("label"))
+                self.assertTrue(info.get("type"))
+                self.assertTrue(info.get("source"))
+                self.assertIn(info.get("confidence"), {"confirmed", "potential", "unconfirmed"})
+                if info["confidence"] == "unconfirmed":
+                    # A documented transfer link is not proof of ownership.
+                    self.assertEqual(info["type"], "watch")
+                    self.assertIn("unconfirmed", info.get("labelDetail", "").lower())
+                    self.assertTrue(info.get("sourceUrl"))
+                    self.assertTrue(info.get("evidenceTxs"))
+                    self.assertFalse(info.get("treasury"))
+                if info["type"] == "cex":
+                    self.assertEqual(info["confidence"], "confirmed")
+
+    def test_binance_linked_wallet_keeps_unconfirmed_ownership(self):
+        address = "0x5a1e5b56aa33c056ed7bb93b88b1774a456f6694"
+        for labels in (self.loaded["base"], self.labels):
+            info = labels[address]
+            self.assertEqual(info["label"], "Binance-linked")
+            self.assertEqual(info["type"], "watch")
+            self.assertEqual(info["confidence"], "unconfirmed")
+            self.assertEqual(info["labelDetail"], "Ownership unconfirmed")
+            self.assertEqual(info["source"], "manual-onchain-transfer-review")
+            self.assertIn("ownership", info["description"])
+            self.assertGreaterEqual(len(info["evidenceTxs"]), 2)
+
+    def test_label_script_exports_one_canonical_wallet_resolver(self):
+        node_script = """
+global.window = {};
+require('./dolo-address-labels.js');
+const known = window.resolveDoloWalletIdentity(
+  '0xf977814e90da44bfa03b6295a0616a897441acec',
+  {label:'Wallet', type:'eoa'}
+);
+const unknown = window.resolveDoloWalletIdentity(
+  '0x1111111111111111111111111111111111111111',
+  {label:'Wallet', type:'eoa'}
+);
+console.log(JSON.stringify({known, unknown}));
+"""
+        proc = subprocess.run(
+            ["node", "-e", node_script], cwd=str(ROOT), check=True,
+            text=True, capture_output=True,
+        )
+        result = json.loads(proc.stdout)
+        self.assertEqual(result["known"]["label"], "Binance Hot Wallet 20")
+        self.assertTrue(result["known"]["known"])
+        self.assertEqual(result["unknown"]["label"], "")
+        self.assertFalse(result["unknown"]["known"])
+
+    def test_coin_gecko_tokenomics_labels_are_confirmed(self):
+        expected = {
+            "0x185000fb4d98acea1a771db3714a431f7fe51cac": ("Core Team 1", "protocol"),
+            "0xbf3c4e55a444ed489736c3d856b0cd0533fc2edd": ("Investor 2", "investor"),
+            "0x6e939bbaceb45159982a2cac3a1fcbf7e93cf682": ("Ecosystem Incentives 1", "protocol"),
+            "0x06265db7ecd9c5724a97bd4909146625d2e2619c": ("Ecosystem Incentives 2", "protocol"),
+        }
+        for address, (label, label_type) in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], label_type)
+                self.assertEqual(info["source"], "coingecko-tokenomics")
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_confirmed_coinbase_and_enso_labels_are_shared(self):
+        expected = {
+            "0x906bd3aff2700f0d1aaf937d9c8dbf6024102e19": (
+                "Coinbase Wallet",
+                "cex",
+                "debank-public-label",
+            ),
+            "0x40e816361e9eceb4ded402def58cc77e9f097914": (
+                "Dolomite: Enso Aggregator Trader",
+                "contract",
+                "etherscan-verified-contract",
+            ),
+        }
+        for address, (label, label_type, source) in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], label_type)
+                self.assertEqual(info["source"], source)
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_confirmed_debank_public_labels_are_shared(self):
+        expected = {
+            "0x33305665f69b4642d1275f4ce81c23651674d21c": ("Pendle V2", "contract"),
+            "0x1e411fb98d9a6273d5b63dedd09dac2fe7cf16ea": ("Definitive", "contract"),
+            "0x7e9f37bbe81d3e17ff61ac67f7f2e7aac8b5c453": ("Kodiak DOLO/USD₮0 LP", "lp"),
+            "0xbdb3ba9ffe392549e1f8658dd2630c141fdf47b6": ("MEV Bot", "bot"),
+            "0x67fbb8a61d6d6433f3428d1f10cfb09babc1a4d5": ("BrownFi DOLO/BUSD LP", "lp"),
+            "0x9008d19f58aabd9ed0d60971565aa8510560ab41": ("CoW Swap", "contract"),
+            "0x7447c8f55c41b100781485be12fae928d0fcba7c": ("Kodiak DOLO/WBERA LP", "lp"),
+            "0x4be03f781c497a489e3cb0287833452ca9b9e80b": ("BEX", "contract"),
+            "0x79cbe94f46ba64ce2258d9fcb733a82f83e13270": ("Kodiak DOLO/WBERA LP", "lp"),
+            "0x9f88571c46b9b961ef1463d74dc29523056604f3": ("Kodiak oDOLO/DOLO LP", "lp"),
+            "0x71355972c9e332f73ff6921f9b3a02f349ff9752": ("Kodiak oDOLO/DOLO LP", "lp"),
+            "0x4e6d3691a30b35a0a4fb714a14e4a9f752a9d5ad": ("Arbera", "contract"),
+            "0x8194ed4d6701b7a1b40e48431de37047f0248b0b": ("Kodiak DOLO/USDC.e LP", "lp"),
+        }
+        for address, (label, label_type) in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], label_type)
+                self.assertEqual(info["source"], "debank-public-label")
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_confirmed_contract_wallet_identity_separates_owner_from_structure(self):
+        bitkub = self.labels["0xbb317c75f7ca98f830dd6f7eb1981852ebe6f839"]
+        self.assertEqual(bitkub["label"], "Bitkub 23")
+        self.assertEqual(bitkub["type"], "cex")
+        self.assertEqual(bitkub["accountStructure"], "BitGo Multisig")
+        self.assertEqual(bitkub["source"], "etherscan-public-label")
+        self.assertEqual(bitkub["confidence"], "confirmed")
+
+        argent = self.labels["0x344289238bc44f238cb0a16306c78c94aa3380f2"]
+        self.assertEqual(argent["label"], "Argent Vault")
+        self.assertEqual(argent["type"], "contract_wallet")
+        self.assertEqual(argent["accountStructure"], "Argent Smart Wallet")
+        self.assertEqual(argent["source"], "etherscan-public-label")
+        self.assertEqual(argent["confidence"], "confirmed")
+
+    def test_confirmed_claim_and_exchange_contracts_use_owner_labels(self):
+        advisor_claims = self.labels["0xbd225c09e4b032e41d5e8aea5f81efff45f20f7b"]
+        self.assertEqual(advisor_claims["label"], "Advisor Claims")
+        self.assertEqual(advisor_claims["type"], "protocol")
+        self.assertEqual(advisor_claims["source"], "dolomite-docs-module-dolo")
+        self.assertEqual(advisor_claims["confidence"], "confirmed")
+
+        coinex_deposit = self.labels["0xabfa4ad57e283758e9ec3e21147793745091c618"]
+        self.assertEqual(coinex_deposit["label"], "CoinEx Deposit Contract")
+        self.assertEqual(coinex_deposit["type"], "cex")
+        self.assertEqual(coinex_deposit["accountStructure"], "CoinEx deposit proxy")
+        self.assertEqual(coinex_deposit["source"], "etherscan-coinex-deposit-factory")
+        self.assertEqual(coinex_deposit["confidence"], "confirmed")
+
+    def test_unverified_contracts_do_not_receive_canonical_identity_labels(self):
+        unverified = {
+            "0x27ad186bb115a2b41fb64553efd4ba5a74b83b08",
+            "0x965dc72531bc322cab5537d432bb14451cabb30d",
+            "0x4ff1d40fb7b56665bf95d8d8e3a5320de46709a1",
+            "0xd4c318cc6977c4808caa91e07fad12d80c9c9e97",
+            "0xa3222357a0eccf60c73606170be6c99adecb59b3",
+            "0x96cef62810036947023b29e78b2fa2e30e35c926",
+            "0x90cbe4bdd538d6e9b379bff5fe72c3d67a521de5",
+            "0x0faeb60e1b406c2f84454f169a2512a5792e1aa8",
+            "0xd862cdcfeb856c32b3c4f7563f4811d8ddfd42e2",
+            "0x1103fc560de8b710983e7f3ec09d587f3f848566",
+            "0x278d858f05b94576c1e6f73285886876ff6ef8d2",
+        }
+        for address in unverified:
+            with self.subTest(address=address):
+                info = self.labels.get(address)
+                if info is None:
+                    continue
+                # Verified bytecode permits a neutral structure marker, never
+                # an unverified owner, exchange or protocol identity.
+                self.assertEqual(info["label"], "CA")
+                self.assertEqual(info["type"], "contract")
+                self.assertEqual(info["chain"], "ethereum")
+                self.assertEqual(info["source"], "blockscout-contract-metadata")
+                self.assertEqual(info["confidence"], "confirmed")
+                self.assertEqual(info["sourceUrl"], f"https://eth.blockscout.com/address/{address}")
+                self.assertFalse(info.get("treasury"))
+
+    def test_all_core_team_wallets_are_independent_confirmed_labels(self):
+        team_addresses = [
+            "0x185000fb4d98acea1a771db3714a431f7fe51cac",
+            "0x882e6d630a8c70a6a8d29a4d33f960b1267aa3d1",
+            "0x6c97802a1815bc459004c686560244de28a2de75",
+            "0x665b3ce67daeb5b19d4d14bbdb6297da0ffa5bf1",
+            "0x3f1f155949f32fa3e688093d176a1b5a72c488eb",
+            "0x871b0afcd3fd44f4c0071d4ade68ce40d0d6bbcc",
+            "0xf2b42104b5ac0b3145a5e18b84aa3fd76d0fdeec",
+            "0xb8ba44d5e46562ec011ade12603f353b18089a41",
+        ]
+        for index, address in enumerate(team_addresses, start=1):
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], f"Core Team {index}")
+                self.assertEqual(info["type"], "protocol")
+                self.assertTrue(info["treasury"])
+                self.assertEqual(info["source"], "coingecko-tokenomics")
+                self.assertEqual(info["confidence"], "confirmed")
+
+        strategic_claims = self.labels["0x7efd088ae500598a19a242d6d48b9f7e0d061176"]
+        self.assertEqual(strategic_claims["label"], "Strategic Investor Claims")
+        self.assertEqual(strategic_claims["type"], "protocol")
+        self.assertEqual(strategic_claims["source"], "dolomite-docs-module-dolo")
+
+        investor_claims = self.labels["0x3a025c7fcf7632197ea82e64acd6ff53e1c06c07"]
+        self.assertEqual(investor_claims["label"], "Investor Claims")
+        self.assertEqual(investor_claims["type"], "protocol")
+
+    def test_core_team_recipient_keeps_cautious_provenance(self):
+        recipient = self.labels["0x5e42031946bfabaef3b3839f035066f11a9ce33e"]
+        self.assertEqual(recipient["label"], "Core Team 4 recipient")
+        self.assertEqual(recipient["type"], "protocol")
+        self.assertTrue(recipient["treasury"])
+        self.assertEqual(recipient["source"], "direct-core-team-funding")
+        self.assertEqual(recipient["confidence"], "potential")
+        self.assertEqual(
+            recipient["fundedBy"],
+            "0x665b3ce67daeb5b19d4d14bbdb6297da0ffa5bf1",
+        )
+
+    def test_published_investor_payload_does_not_duplicate_investors_as_team(self):
+        payload = json.loads((ROOT / "vesting_investors.json").read_text())
+        self.assertEqual(payload["schemaVersion"], 3)
+        self.assertEqual(payload["strategic_investors"], payload["early_investors"])
+        self.assertGreater(len(payload["early_investors"]), 0)
+        self.assertGreater(len(payload["investors"]), 0)
+        self.assertEqual(payload["team"], [])
+        self.assertNotIn(
+            "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4",
+            payload["strategic_investors"],
+        )
+        self.assertNotIn(
+            "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4",
+            payload["investors"],
+        )
+
+    def test_wallet_table_pages_use_the_shared_vesting_label_loader(self):
+        expected_consumers = {
+            "dashboard-core.js": "window.loadDoloVestingLabels(DOLO_ADDR_LABELS)",
+            "dolo-preview.html": "window.loadDoloVestingLabels(ADDR_LABELS)",
+            "liquidation-preview.html": "window.loadDoloVestingLabels(DOLO_ADDR_LABELS)",
+            "odolo-preview.html": "window.loadDoloVestingLabels(ADDRESS_META)",
+            "revenue-preview.html": "window.loadDoloVestingLabels(VEBORROW_WALLET_LABELS)",
+            "vedolo-preview.html": "window.loadDoloVestingLabels(VEDOLO_ADDRESS_LABELS)",
+        }
+        for filename, marker in expected_consumers.items():
+            with self.subTest(filename=filename):
+                self.assertIn(marker, (ROOT / filename).read_text())
+
+    def test_protocol_safe_keeps_dolomite_label(self):
+        info = self.labels["0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4"]
+        self.assertEqual(info["label"], "Dolomite Gnosis Safe")
+        self.assertEqual(info["type"], "protocol")
+        self.assertTrue(info["treasury"])
+        self.assertTrue(info["safe"])
+        self.assertEqual(info["source"], "dolomite-docs-core-proxies")
+        self.assertEqual(info["confidence"], "confirmed")
+        for row in self.labels.values():
+            if row["type"] == "protocol":
+                self.assertNotEqual(row["label"], "Gnosis Safe Multisig")
+
+    def test_holder_distribution_chart_does_not_append_mismatched_live_bucket(self):
+        html = (ROOT / "dolo-preview.html").read_text()
+        self.assertNotIn("|| bucketMismatch", html)
+        self.assertIn("&& !bucketMismatch", html)
+        self.assertIn("false end-of-chart jump", html)
+
+    def test_holder_details_can_use_exact_history_wallet_snapshots(self):
+        html = (ROOT / "dolo-preview.html").read_text()
+        generator = (ROOT / "generate_dolo_flows.py").read_text()
+        self.assertIn("holder_wallet_history", html)
+        self.assertIn("holderHistoricalWalletRowsAtPoint", html)
+        self.assertIn("holderWalletRowsAvailableAtPoint", html)
+        self.assertIn(
+            "return !!holderHistoricalWalletRowsAtPoint(point, includeVeDolo);",
+            html,
+        )
+        self.assertIn("if(sourcePoint.key !== \"now\") return [];", html)
+        self.assertIn("holderWalletBaselinePointForRange(rawBaselinePoint", html)
+        self.assertIn("holder_wallet_history", generator)
+        self.assertIn("HOLDER_WALLET_HISTORY_VIEWS", generator)
+
+    def test_dolo_hero_uses_price_freshness_not_holder_timestamp(self):
+        html = (ROOT / "dolo-preview.html").read_text()
+        self.assertIn("Price updating", html)
+        self.assertIn("function syncPriceMeta", html)
+        self.assertIn("Price updated · ", html)
+        self.assertIn("Data updated · ", html)
+        self.assertIn("syncPriceMeta(data.last_updated)", html)
+        self.assertIn("syncLiveMeta(data.timestamp)", html)
+        sync_body = re.search(r"function syncLiveMeta\(timestamp\)\{(?P<body>.*?)\n  \}", html, re.S)
+        self.assertIsNotNone(sync_body)
+        self.assertNotIn(".hero-live", sync_body.group("body"))
+
+    def test_flow_and_fresh_meta_do_not_duplicate_visible_period_filters(self):
+        dolo_html = (ROOT / "dolo-preview.html").read_text()
+        odolo_html = (ROOT / "odolo-preview.html").read_text()
+        self.assertIn('id="flows-meta">Flow data</span>', dolo_html)
+        self.assertIn('id="flows-meta"><span class="pulse"></span>Loading data update…</div>', odolo_html)
+        self.assertIn('id="fresh-wallets-meta">Loading data update…</span>', dolo_html)
+        self.assertIn('<div class="sub">10K+ exposure</div>', dolo_html)
+        self.assertNotIn('id="flows-meta">Period:', dolo_html)
+        self.assertNotIn('id="flows-meta">Period:', odolo_html)
+        self.assertNotIn('Period: " + (meta ? meta.short', dolo_html)
+        self.assertNotIn('Period: " + (meta ? meta.short', odolo_html)
+        self.assertNotIn('`${meta.short} · first on-chain tx', dolo_html)
+        self.assertNotIn('metaEl.textContent = "First on-chain tx + 10K+ exposure"', dolo_html)
+        self.assertIn('setCardMeta("flows-meta", flowUpdated)', odolo_html)
+
+    def test_reviewed_watchlist_wallets_are_reclassified_without_claiming_cex_identity(self):
+        expected = {
+            "0x0fb6bac552b7a29a21b4e595b1ef5c371cda4f9d": ("Dolomite User", "eoa", "behavioral-flow-audit"),
+            "0x399f2700ce8ba81d10fe43c1d077365dc41017d4": ("DOLO Whale", "eoa", "behavioral-flow-audit"),
+            "0x6cb90ab6c7de4028af86f15ae97c4df2b954f84c": ("Active DeFi Trader", "eoa", "behavioral-flow-audit"),
+            "0x8cb5e212e6a3b70229ac1edb56fe5e6db199dde4": ("coffinlol", "eoa", "debank-profile-id"),
+            "0xf5fcd3a63abc766ac5ada296b4a4e860dbf9ebb0": ("Dolomite Whale", "eoa", "behavioral-flow-audit"),
+            "0x478ae1099333e7535de2a3abed00b413e52914cb": ("Automated DEX Trader", "bot", "behavioral-flow-audit"),
+            "0x7a1d00de77c0162d55d84a051bdc6840852b4a60": ("Cross-Exchange Arbitrage", "bot", "behavioral-flow-audit"),
+            "0x7bd27a0103e48e25acdb131cc190314562171fde": ("Cross-Chain DEX Trader", "bot", "behavioral-flow-audit"),
+            "0x93ae9fe008636d2d6d7376198a54edb20367968f": ("Exchange Arbitrage", "bot", "behavioral-flow-audit"),
+            "0xa8736d26162c74be3908d105594ab8c18ed25225": ("DEX / Bridge Trader", "bot", "behavioral-flow-audit"),
+            "0xcae214dcc97572152a667d7c9c06b39d7790efea": ("DEX / Bridge Trader", "bot", "behavioral-flow-audit"),
+            "0xefc662fe5c73e58bddfd97015a21726d6423b088": ("Automated DEX Trader", "bot", "behavioral-flow-audit"),
+            "0xf706d8831047dcb2b2614973390287742337f718": ("DEX Aggregator Trader", "bot", "behavioral-flow-audit"),
+            "0xfc89c020774524c9d03bd5de48fec149b10bdec3": ("Probable Market Maker", "mm", "behavioral-flow-audit"),
+        }
+        for address, (label, label_type, source) in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], label_type)
+                self.assertEqual(info["source"], source)
+                self.assertEqual(info["confidence"], "potential")
+                self.assertNotEqual(info["type"], "cex")
+        for info in self.labels.values():
+            if info["type"] == "cex":
+                self.assertNotIn("Potential", info["label"])
+                self.assertNotIn("CEX/MM", info["label"])
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_behavioral_bot_labels_are_confirmed(self):
+        expected = {
+            "0xb05ba67c11fc0b92a7bcb18e50cba87ce2d15109": "Bot / MM",
+            "0x5a6f918fcda24e9b5143f3a1b77e63df6de30f74": "Bot / MM",
+            "0x6a2383cff0d46d2b7d29759f17c26fba726f3ea3": "Bot / MM",
+            "0x601d9ad1b431577e3635a23b7eb3bcc46bcc648b": "Bot / MM",
+            "0xf10f81795b359f8a72682cc2a39444bf818ef4ca": "Bot / MM",
+            "0xbcccbff437ae872f869c2de48371d42960208209": "Bot / MM",
+            "0x9cb677f2a8daa9511ae79c2ba56395552b5d030d": "Active Trader/Bot",
+        }
+        for address, label in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], "bot")
+                self.assertEqual(info["source"], "behavioral-label")
+                self.assertEqual(info["confidence"], "confirmed")
+
+        import generate_dolo_flows as flows
+
+        generator_labels = flows.load_address_labels()
+        for address, label in expected.items():
+            with self.subTest(generator_address=address):
+                self.assertEqual(generator_labels[address]["label"], label)
+                self.assertEqual(generator_labels[address]["type"], "bot")
+                self.assertNotIn(address, flows.EXCLUDED_ADDRS)
+
+    def test_public_explorer_labels_are_current(self):
+        expected = {
+            "0x06fd4ba7973a0d39a91734bbc35bc2bcaa99e3b0": ("Binance Deposit", "cex"),
+            "0x000000000004444c5dc75cb358380d2e3de08a90": ("Uniswap V4 Pool Manager", "contract"),
+            "0xf977814e90da44bfa03b6295a0616a897441acec": ("Binance Hot Wallet 20", "cex"),
+            "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43": ("Coinbase 10", "cex"),
+            "0xf89d7b9c864f589bbf53a82105107622b35eaa40": ("Bybit Hot Wallet", "cex"),
+            "0x0529ea5885702715e83923c59746ae8734c553b7": ("Bitpanda 18", "cex"),
+            "0xd2dd7b597fd2435b6db61ddf48544fd931e6869f": ("Kraken 246", "cex"),
+            "0x21a31ee1afc51d94c2efccaa2092ad1028285549": ("Binance 15", "cex"),
+            "0xdfd5293d8e347dfe59e90efd55b2956a1343963d": ("Binance 16", "cex"),
+            "0x0d0707963952f2fba59dd06f2b425ace40b492fe": ("Gate.io Deposit", "cex"),
+            "0x1157a2076b9bb22a85cc2c162f20fab3898f4101": ("FalconX 1", "cex"),
+            "0x1ab4973a48dc892cd9971ece8e01dcc7688f8f23": ("Bitget 6", "cex"),
+            "0xe302dc0c3b74ae06da002fc66c2ee8a40cce256d": ("Gate.io Deposit", "cex"),
+            "0xb46a0f71fded6ceb00b1c9278e0ac7e22c242df5": ("Binance Deposit", "cex"),
+            "0x2933782b5a8d72f2754103d1489614f29bfa4625": ("KuCoin Wallet", "cex"),
+            "0xdb861e302ef7b7578a448e951aede06302936c28": ("Phemex 1", "cex"),
+            "0xf2067abfab8bc621211935431519d41825d2f344": ("Coinstore 3", "cex"),
+            "0xcd531ae9efcce479654c4926dec5f6209531ca7b": ("Coinbase Prime 1", "cex"),
+            "0x43684d03d81d3a4c70da68febdd61029d426f042": ("Binance 117", "cex"),
+            "0x28c6c06298d514db089934071355e5743bf21d60": ("Binance 14", "cex"),
+            "0x98adef6f2ac8572ec48965509d69a8dd5e8bba9d": ("Binance 93", "cex"),
+            "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": ("BingX 29", "cex"),
+            "0xb8001c3ec9aa1985f6c747e25c28324e4a361ec1": ("Cobo Custody 1", "cex"),
+            "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8": ("Binance 7", "cex"),
+            "0x56eddb7aa87536c09ccc2793473599fd21a8b17f": ("Binance 17", "cex"),
+            "0x9696f59e4d72e237be84ffd425dcad154bf96976": ("Binance 18", "cex"),
+            "0x9642b23ed1e01df1092b92641051881a322f5d4e": ("MEXC 16", "cex"),
+            "0x035ae7d933dcbfe617ffba194a88af0c2867b90c": ("Gate.io Deposit", "cex"),
+            "0x8782163068c7cd74d2510768a61135c1e4eb07b3": ("Gate.io Deposit", "cex"),
+            "0x478271c960137418c9d90082dddbf68aa72e4367": ("Gate.io Deposit", "cex"),
+            "0x753f43cca3dbd2bbe963609f8d25a833433a10c9": ("Gate.io Deposit", "cex"),
+            "0x4ed6cf63bd9c009d247ee51224fc1c7041f517f1": ("Ceffu 6", "cex"),
+            "0xef7960eb0b732f70007f7c05daf6bb597aa742d6": ("Binance Deposit", "cex"),
+            "0x7ff8bbf9c8ab106db589e7863fb100525f61cce5": ("BloFin Hot Wallet 1", "cex"),
+            "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": ("Revolut 3", "cex"),
+            "0xb8dbf21f34761347ccf1ec0c3bd8cb3fd41e155f": ("Gate.io Deposit", "cex"),
+            "0x5576132eb74518fb27de2123ed3e6b1d43e0dac7": ("Gate.io Deposit", "cex"),
+            "0x3e6f0c06dcca325f8f9175c1802927073394c67c": ("Gate.io Deposit", "cex"),
+            "0x039ac6fbcebf02b54259bc690e13540693d9eb8d": ("Gate.io Deposit", "cex"),
+            "0xf6012b3d6e669f0fdb58d1f62c2e6fe56c1b1625": ("Gate.io Deposit", "cex"),
+            "0x850c198d2469b569091211fb5f62ff5d5627fbf0": ("Gate.io Deposit", "cex"),
+            "0xb2655ac91bb3536bcfa0993069da6affabadc33d": ("Gate.io Deposit", "cex"),
+            "0xb2b99d9879dd29b4b8590087ae991eaf3808984f": ("Gate.io Deposit", "cex"),
+            "0xc17a40852e4bfe04bc81af355fdf132c539ba753": ("Binance Deposit", "cex"),
+        }
+        for address, (label, label_type) in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], label_type)
+                self.assertEqual(info["source"], "etherscan-public-label")
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_dolo_search_surfaces_include_label_type(self):
+        html = (ROOT / "dolo-preview.html").read_text()
+        self.assertIn('${h.type || ""} ${TYPE_LABELS[h.type] || ""}', html)
+        self.assertIn('${row.type || ""} ${TYPE_LABELS[row.type] || ""}', html)
+
+    def test_flow_search_matches_raw_and_display_types(self):
+        # Exercise the shared predicate, not a former inline loop variable name.
+        # Removing either raw types or display labels must break this contract.
+        script = r"""
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const html = fs.readFileSync('dolo-preview.html', 'utf8');
+const start = html.indexOf('function matchesFlowSearch(');
+assert.ok(start >= 0, 'Shared flow search predicate is missing');
+const end = html.indexOf('\n}', start);
+assert.ok(end > start, 'Flow search predicate is incomplete');
+const ctx = vm.createContext({TYPE_LABELS:{cex:'Exchange', eoa:'User'}});
+vm.runInContext(html.slice(start, end + 2), ctx);
+const row = {addr:'0xAbCd', label:'Named Wallet', type:'cex'};
+for (const query of ['0xabcd', 'named wallet', 'cex', 'exchange', '']) {
+  assert.equal(ctx.matchesFlowSearch(row, query), true, query);
+}
+assert.equal(ctx.matchesFlowSearch(row, 'user'), false);
+assert.equal(ctx.matchesFlowSearch(row, 'missing'), false);
+assert.equal(ctx.matchesFlowSearch({}, 'cex'), false);
+assert.equal(ctx.matchesFlowSearch({type:'unclassified'}, 'unclassified'), true);
+"""
+        proc = subprocess.run(["node", "-e", script], cwd=ROOT, text=True, capture_output=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_mexc_flow_audit_wallet_is_cex_not_market_holder(self):
+        info = self.labels["0xd5c342acbeedef81ab8e6072323bfda76172d05f"]
+        self.assertEqual(info["label"], "MEXC Wallet")
+        self.assertEqual(info["type"], "cex")
+        self.assertEqual(info["source"], "flow-audit")
+        self.assertEqual(info["confidence"], "confirmed")
+
+    def test_mexc_wallet_is_not_in_holder_wallet_history(self):
+        address = "0xd5c342acbeedef81ab8e6072323bfda76172d05f"
+        with (ROOT / "dolo_flows.json").open() as f:
+            flows = json.load(f)
+        rows = []
+        for point_key, point in (flows.get("holder_wallet_history") or {}).items():
+            for view in ("liquid", "with_vedolo"):
+                for group, group_rows in (point.get(view) or {}).items():
+                    for row in group_rows:
+                        if str(row.get("address", "")).lower() == address:
+                            rows.append((point_key, view, group, row.get("label"), row.get("type")))
+        self.assertEqual(rows, [])
+
+    def test_reviewed_dolomite_user_is_not_left_on_watchlist(self):
+        info = self.labels["0x0fb6bac552b7a29a21b4e595b1ef5c371cda4f9d"]
+        self.assertEqual(info["label"], "Dolomite User")
+        self.assertEqual(info["type"], "eoa")
+        self.assertEqual(info["source"], "behavioral-flow-audit")
+        self.assertEqual(info["confidence"], "potential")
+
+    def test_public_debank_id_is_a_user_label_not_a_watchlist_classification(self):
+        info = self.labels["0x8cb5e212e6a3b70229ac1edb56fe5e6db199dde4"]
+        self.assertEqual(info["label"], "coffinlol")
+        self.assertEqual(info["type"], "eoa")
+        self.assertEqual(info["source"], "debank-profile-id")
+        self.assertEqual(info["confidence"], "potential")
+
+    def test_chainlink_rewards_claim_contract_is_protocol_reward(self):
+        info = self.labels["0x2f41d42de3eab9e75f3d417259f24421771fb700"]
+        self.assertEqual(info["label"], "Chainlink Rewards Claim")
+        self.assertEqual(info["type"], "protocol")
+        self.assertTrue(info["treasury"])
+        self.assertEqual(info["source"], "etherscan-buildclaim")
+        self.assertEqual(info["confidence"], "confirmed")
+
+    def test_ens_reverse_names_are_identity_labels_not_entity_claims(self):
+        expected = {
+            "0xd6f631c796a56a5d448dd88a01f15058c4a0be52": "makeitback.eth",
+            "0x7bfee91193d9df2ac0bfe90191d40f23c773c060": "7bfee.eth",
+            "0x224f590a8b58f83bd2673348d6ac75a7b27f9b54": "mike-tyson.eth",
+            "0x87db27ac8459ab6602f7a6155b48f6b184065da0": "atheon.eth",
+        }
+        for address, label in expected.items():
+            with self.subTest(address=address):
+                info = self.labels[address]
+                self.assertEqual(info["label"], label)
+                self.assertEqual(info["type"], "eoa")
+                self.assertEqual(info["source"], "ens-reverse")
+                self.assertEqual(info["confidence"], "confirmed")
+
+    def test_active_pages_use_shared_label_source_only(self):
+        inline_map_re = re.compile(r"const\s+(?:ADDR_LABELS|DOLO_ADDR_LABELS)\s*=\s*\{")
+        for path in ACTIVE_LABEL_CONSUMERS:
+            source = path.read_text(encoding="utf-8")
+            if path.name == "dashboard-core.html":
+                # Main dashboard script was extracted to dashboard-core.js.
+                extracted = ROOT / "dashboard-core.js"
+                if extracted.exists():
+                    source += "\n" + extracted.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                self.assertIn("dolo-address-labels.js", source)
+                self.assertIn("cloneDoloAddressLabels", source)
+                self.assertIsNone(inline_map_re.search(source))
+
+    def test_route_shells_cache_bust_shared_label_cleanup(self):
+        for path in ROUTE_SHELLS:
+            with self.subTest(path=str(path.relative_to(ROOT))):
+                self.assertIn("dolo-label-cleanup-20260514", path.read_text(encoding="utf-8"))
+
+    def test_removed_legacy_preview_files_stay_removed(self):
+        removed_files = ("index_preview.html", "add_investors.py")
+        for filename in removed_files:
+            self.assertFalse((ROOT / filename).exists(), filename)
+
+        for path in tracked_repo_files():
+            if path.name == "test_dolo_address_labels.py":
+                continue
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for filename in removed_files:
+                self.assertNotIn(filename, text, str(path.relative_to(ROOT)))
+
+
+if __name__ == "__main__":
+    unittest.main()

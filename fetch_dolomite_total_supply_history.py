@@ -1,0 +1,571 @@
+#!/usr/bin/env python3
+"""Build Total Supply and Net TVL history from official Dolomite market metrics."""
+
+import json
+import math
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
+
+import requests
+
+from fetch_dolomite_tvl import (
+    ACTIVE_ASSETS_CHAINS,
+    DOLOMITE_TOKEN_API_CHAINS,
+    clean_price_map_from_api_prices,
+    fetch_token_api_json,
+)
+
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFILLAMA_FILE = os.path.join(DATA_DIR, "defillama_data.json")
+OFFICIAL_SNAPSHOT_FILE = os.path.join(DATA_DIR, "dolomite_tvl.json")
+OUTPUT_FILE = os.path.join(DATA_DIR, "dolomite_total_supply_history.json")
+METRICS_RETRY_DELAYS = (1, 2, 4)
+METRICS_TIMEOUT_SECONDS = 30
+MAX_WORKERS = 16
+MIN_ACTIVE_SUPPLY_USD = Decimal("1")
+MIN_OFFICIAL_HISTORY_POINTS = 60
+MIN_OFFICIAL_REFRESH_POINTS = 30
+MAX_METRIC_STALENESS_SECONDS = 2 * 86400
+MAX_STALE_MARKET_SHARE = Decimal("0.001")
+
+
+def _decimal(value):
+    try:
+        result = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0")
+    return result if result.is_finite() else Decimal("0")
+
+
+def _json_number(value):
+    result = float(_decimal(value))
+    return int(result) if result.is_integer() else result
+
+
+def _history_rows(points):
+    values = {}
+    for row in points or []:
+        if not isinstance(row, dict):
+            continue
+        timestamp = row.get("date")
+        value = row.get("totalLiquidityUSD")
+        if isinstance(timestamp, bool) or not isinstance(timestamp, (int, float)):
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        if not math.isfinite(timestamp) or not math.isfinite(value):
+            continue
+        timestamp = int(timestamp)
+        if timestamp <= 0 or value < 0:
+            continue
+        values[timestamp] = _decimal(value)
+    return values
+
+
+def split_recent_market_histories(market_histories):
+    latest_timestamp = max(
+        (
+            max((market.get("points") or {}).keys())
+            for market in market_histories or []
+            if market.get("points")
+        ),
+        default=0,
+    )
+    if latest_timestamp <= 0:
+        raise ValueError("Official Dolomite market histories are empty")
+
+    recent = []
+    stale_active = []
+    freshness_cutoff = latest_timestamp - MAX_METRIC_STALENESS_SECONDS
+    for market in market_histories or []:
+        points = market.get("points") or {}
+        current_supply = _decimal(market.get("currentSupplyUsd"))
+        latest_market_timestamp = max(points, default=0)
+        if (
+            current_supply > MIN_ACTIVE_SUPPLY_USD
+            and latest_market_timestamp < freshness_cutoff
+        ):
+            stale_active.append(market)
+        else:
+            recent.append(market)
+    return recent, stale_active
+
+
+def aggregate_market_histories(
+    market_histories,
+    point_key="points",
+    allow_negative_components=False,
+):
+    """Sum official histories without letting a newly listed market truncate them."""
+    recent_histories, _ = split_recent_market_histories(market_histories)
+    prepared = []
+    for market in recent_histories:
+        points = {
+            int(timestamp): _decimal(value)
+            for timestamp, value in (market.get(point_key) or {}).items()
+            if int(timestamp) > 0
+            and (allow_negative_components or _decimal(value) >= 0)
+        }
+        current_supply = _decimal(market.get("currentSupplyUsd"))
+        prepared.append((market, points))
+        if current_supply > MIN_ACTIVE_SUPPLY_USD:
+            if not points:
+                raise ValueError(
+                    f"Active market has no official metrics: {market.get('marketKey')}"
+                )
+
+    active_histories = [
+        points
+        for market, points in prepared
+        if _decimal(market.get("currentSupplyUsd")) > MIN_ACTIVE_SUPPLY_USD
+    ]
+    if not active_histories:
+        raise ValueError("No active Dolomite markets found for Total Supply history")
+
+    longest_history = max(len(points) for points in active_histories)
+    established_timestamp_sets = [
+        set(points)
+        for points in active_histories
+        if len(points) == longest_history
+    ]
+    complete_timestamps = set.intersection(*established_timestamp_sets)
+    if not complete_timestamps:
+        raise ValueError("Official market histories have no complete timestamps")
+
+    result = []
+    for timestamp in sorted(complete_timestamps):
+        total = sum(
+            (points.get(timestamp, Decimal("0")) for _, points in prepared),
+            Decimal("0"),
+        )
+        if total < 0:
+            raise ValueError(
+                f"Official aggregate is negative at timestamp {timestamp}"
+            )
+        result.append(
+            {
+                "date": timestamp,
+                "totalLiquidityUSD": _json_number(total),
+            }
+        )
+    return result
+
+
+def aggregate_net_tvl_histories(market_histories):
+    """Aggregate Net TVL as exact per-market supply minus borrowed liquidity."""
+    histories_with_net_tvl = []
+    for market in market_histories or []:
+        supply_points = market.get("points") or {}
+        borrow_points = market.get("borrowPoints") or {}
+        net_tvl_points = {}
+        for timestamp, supply in supply_points.items():
+            net_tvl = _decimal(supply) - _decimal(borrow_points.get(timestamp))
+            net_tvl_points[timestamp] = net_tvl
+        histories_with_net_tvl.append(
+            {
+                **market,
+                "netTvlPoints": net_tvl_points,
+            }
+        )
+    return aggregate_market_histories(
+        histories_with_net_tvl,
+        point_key="netTvlPoints",
+        allow_negative_components=True,
+    )
+
+
+def _merge_histories(
+    defillama_history,
+    official_history,
+    current_timestamp,
+    current_value,
+    metric_name,
+):
+    """Use DeFiLlama before the official window and exact Dolomite data after it."""
+    llama_values = _history_rows(defillama_history)
+    official_values = _history_rows(official_history)
+    if not official_values:
+        raise ValueError(f"Official {metric_name} history is empty")
+
+    official_start = min(official_values)
+    merged = {
+        timestamp: value
+        for timestamp, value in llama_values.items()
+        if timestamp < official_start
+    }
+    merged.update(official_values)
+
+    timestamp = int(current_timestamp)
+    current = _decimal(current_value)
+    if timestamp <= 0 or current <= 0:
+        raise ValueError(f"Current {metric_name} snapshot is invalid")
+    merged[timestamp] = current
+
+    return [
+        {
+            "date": timestamp,
+            "totalLiquidityUSD": _json_number(merged[timestamp]),
+        }
+        for timestamp in sorted(merged)
+    ]
+
+
+def merge_total_supply_histories(
+    defillama_history,
+    official_history,
+    current_timestamp,
+    current_supply,
+):
+    return _merge_histories(
+        defillama_history,
+        official_history,
+        current_timestamp,
+        current_supply,
+        "Total Supply",
+    )
+
+
+def _parse_metric_rows(rows):
+    supply_points = {}
+    borrow_points = {}
+    for row in rows or []:
+        try:
+            timestamp = int(row.get("timestamp") or 0)
+        except (AttributeError, TypeError, ValueError):
+            continue
+        supply = _decimal(
+            row.get("supplyLiquidityUSD") if isinstance(row, dict) else None
+        )
+        borrowed = _decimal(
+            row.get("borrowLiquidityUSD") if isinstance(row, dict) else None
+        )
+        if timestamp > 0 and supply >= 0 and borrowed >= 0:
+            supply_points[timestamp] = supply
+            borrow_points[timestamp] = borrowed
+    return supply_points, borrow_points
+
+
+def _fetch_metric_series(market):
+    url = (
+        "https://api.dolomite.io/tokens/"
+        f"{market['chainId']}/metrics/{market['tokenId']}/series"
+    )
+    attempts = len(METRICS_RETRY_DELAYS) + 1
+    for attempt in range(attempts):
+        try:
+            response = requests.get(url, timeout=METRICS_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            payload = response.json()
+            rows = payload.get("data") if isinstance(payload, dict) else None
+            if not isinstance(rows, list):
+                raise ValueError("Dolomite metrics response has no data array")
+            supply_points, borrow_points = _parse_metric_rows(rows)
+            return {
+                **market,
+                "points": supply_points,
+                "borrowPoints": borrow_points,
+            }
+        except (requests.RequestException, ValueError) as exc:
+            if attempt == len(METRICS_RETRY_DELAYS):
+                raise RuntimeError(
+                    f"Official metrics failed for {market['marketKey']}: {exc}"
+                ) from exc
+            time.sleep(METRICS_RETRY_DELAYS[attempt])
+
+    raise RuntimeError(f"Metrics retry loop exited for {market['marketKey']}")
+
+
+def _load_market_definitions():
+    markets = []
+    for chain_name in ACTIVE_ASSETS_CHAINS:
+        chain_id = DOLOMITE_TOKEN_API_CHAINS[chain_name]
+        token_payload = fetch_token_api_json(
+            f"https://api.dolomite.io/tokens/{chain_id}"
+        )
+        price_payload = fetch_token_api_json(
+            f"https://api.dolomite.io/tokens/{chain_id}/prices"
+        )
+        prices = clean_price_map_from_api_prices(price_payload.get("prices", {}))
+        for token in token_payload.get("tokens", []):
+            token_id = str(token.get("id") or "").strip().lower()
+            if not token_id:
+                continue
+            current_supply = _decimal(token.get("supplyLiquidity")) * _decimal(
+                prices.get(token_id)
+            )
+            markets.append(
+                {
+                    "chain": chain_name,
+                    "chainId": chain_id,
+                    "tokenId": token_id,
+                    "symbol": (
+                        token.get("cleanSymbol")
+                        or token.get("symbol")
+                        or "UNKNOWN"
+                    ),
+                    "marketKey": f"{chain_name}:{token_id}",
+                    "currentSupplyUsd": current_supply,
+                }
+            )
+    return markets
+
+
+def _fetch_all_market_histories(markets):
+    histories = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(_fetch_metric_series, market): market
+            for market in markets
+        }
+        for future in as_completed(futures):
+            market = futures[future]
+            try:
+                histories.append(future.result())
+            except RuntimeError as exc:
+                histories.append(
+                    {
+                        **market,
+                        "points": {},
+                        "borrowPoints": {},
+                        "fetchError": str(exc),
+                    }
+                )
+    return histories
+
+
+def retry_stale_market_histories(market_histories):
+    """Retry only stale active markets once, without weakening coverage checks."""
+    histories = list(market_histories or [])
+    _, stale_histories = split_recent_market_histories(histories)
+    if not stale_histories:
+        return histories
+
+    refreshed_by_key = {}
+    with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(stale_histories))) as executor:
+        futures = {
+            executor.submit(_fetch_metric_series, market): market
+            for market in stale_histories
+        }
+        for future in as_completed(futures):
+            market = futures[future]
+            try:
+                refreshed_by_key[market["marketKey"]] = future.result()
+            except RuntimeError:
+                continue
+
+    candidate_histories = [
+        refreshed_by_key.get(market.get("marketKey"), market)
+        for market in histories
+    ]
+    _, still_stale = split_recent_market_histories(candidate_histories)
+    still_stale_keys = {market.get("marketKey") for market in still_stale}
+    return [
+        (
+            refreshed_by_key.get(market.get("marketKey"), market)
+            if market.get("marketKey") not in still_stale_keys
+            else market
+        )
+        for market in histories
+    ]
+
+
+def _read_json(path):
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _snapshot_timestamp(value):
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return int(parsed.timestamp())
+
+
+def validate_official_snapshot_coverage(
+    current_supply,
+    current_tvl,
+    stale_histories,
+):
+    current_supply = _decimal(current_supply)
+    current_tvl = _decimal(current_tvl)
+    stale_market_supply = sum(
+        (
+            _decimal(market.get("currentSupplyUsd"))
+            for market in stale_histories
+        ),
+        Decimal("0"),
+    )
+    if (
+        current_supply <= 0
+        or current_tvl <= 0
+        or current_tvl > current_supply
+        or stale_market_supply > current_supply * MAX_STALE_MARKET_SHARE
+    ):
+        raise ValueError(
+            "Official liquidity snapshot or stale market coverage is invalid: "
+            f"Supply ${float(current_supply):,.2f}, "
+            f"Net TVL ${float(current_tvl):,.2f}, "
+            f"stale supply ${float(stale_market_supply):,.2f}"
+        )
+    return stale_market_supply
+
+
+def preserve_archived_history(current_rows, previous_rows):
+    """Do not rewrite pre-retirement aggregate values using the narrower scope."""
+    cutoff = int(datetime(2026, 9, 19, tzinfo=timezone.utc).timestamp())
+    archived = [row for row in previous_rows or [] if row.get("date", cutoff) < cutoff]
+    if not archived:
+        return current_rows
+    return sorted(archived + [row for row in current_rows if row["date"] >= cutoff],
+                  key=lambda row: row["date"])
+
+
+def preserve_official_history(fresh_rows, previous, metric, current_timestamp):
+    """Extend a verified archive with the API's complete rolling daily window."""
+    fresh = _history_rows(fresh_rows)
+    dates = sorted(fresh)
+    if (len(fresh) != len(fresh_rows)
+            or len(dates) < MIN_OFFICIAL_REFRESH_POINTS
+            or any(timestamp % 86400 for timestamp in dates)
+            or any(right - left != 86400 for left, right in zip(dates, dates[1:]))
+            or dates[-1] > current_timestamp
+            or current_timestamp - dates[-1] > MAX_METRIC_STALENESS_SECONDS):
+        raise ValueError(f"Official {metric} refresh is incomplete or stale")
+
+    archived = {}
+    compatible = (
+        previous.get("schemaVersion") == 2
+        and previous.get("source") == "defillama_then_dolomite_official_market_metrics"
+        and previous.get("activeChains") == sorted(ACTIVE_ASSETS_CHAINS)
+        and type(previous.get("officialWindowStart")) is int
+        and previous["officialWindowStart"] > 0
+    )
+    if compatible:
+        old_rows = previous.get(metric) or []
+        old_values = _history_rows(old_rows)
+        if len(old_values) != len(old_rows) or max(old_values, default=0) > current_timestamp:
+            raise ValueError(f"Previous official {metric} archive is invalid")
+        archived = {
+            timestamp: value for timestamp, value in old_values.items()
+            if previous["officialWindowStart"] <= timestamp < dates[0]
+            and timestamp % 86400 == 0
+        }
+        # An archive separated from the refreshed window is not proof of coverage.
+        if archived and not set(old_values).intersection(fresh):
+            raise ValueError(f"Official {metric} archive has no refresh overlap")
+
+    merged = {**archived, **fresh}
+    merged_dates = sorted(merged)
+    if (len(merged_dates) < MIN_OFFICIAL_HISTORY_POINTS
+            or any(right - left != 86400 for left, right in zip(merged_dates, merged_dates[1:]))):
+        raise ValueError(f"Official {metric} history is too short or has gaps")
+    return [{"date": timestamp, "totalLiquidityUSD": _json_number(merged[timestamp])}
+            for timestamp in merged_dates]
+
+
+def main():
+    llama_data = _read_json(DEFILLAMA_FILE)
+    official_snapshot = _read_json(OFFICIAL_SNAPSHOT_FILE)
+    previous = _read_json(OUTPUT_FILE) if os.path.exists(OUTPUT_FILE) else {}
+    markets = _load_market_definitions()
+    histories = _fetch_all_market_histories(markets)
+    histories = retry_stale_market_histories(histories)
+    recent_histories, stale_histories = split_recent_market_histories(histories)
+    current_supply = _decimal(official_snapshot.get("supplyLiquidity"))
+    current_tvl = _decimal(official_snapshot.get("totalTvl"))
+    stale_market_supply = validate_official_snapshot_coverage(
+        current_supply,
+        current_tvl,
+        stale_histories,
+    )
+
+    official_supply_history = aggregate_market_histories(histories)
+    official_tvl_history = aggregate_net_tvl_histories(histories)
+    current_timestamp = _snapshot_timestamp(official_snapshot.get("last_updated"))
+    refresh_start = official_supply_history[0]["date"]
+    refresh_points = len(official_supply_history)
+    official_supply_history = preserve_official_history(
+        official_supply_history, previous, "totalSupply", current_timestamp,
+    )
+    official_tvl_history = preserve_official_history(
+        official_tvl_history, previous, "tvl", current_timestamp,
+    )
+    total_supply_history = merge_total_supply_histories(
+        llama_data.get("totalSupply", []),
+        official_supply_history,
+        current_timestamp,
+        current_supply,
+    )
+    tvl_history = _merge_histories(
+        llama_data.get("tvl", []),
+        official_tvl_history,
+        current_timestamp,
+        current_tvl,
+        "Net TVL",
+    )
+    total_supply_history = preserve_archived_history(total_supply_history, previous.get("totalSupply"))
+    tvl_history = preserve_archived_history(tvl_history, previous.get("tvl"))
+    active_market_count = sum(
+        1
+        for market in markets
+        if _decimal(market.get("currentSupplyUsd")) > MIN_ACTIVE_SUPPLY_USD
+    )
+    official_market_count = sum(
+        1
+        for market in recent_histories
+        if _decimal(market.get("currentSupplyUsd")) > MIN_ACTIVE_SUPPLY_USD
+    )
+    output = {
+        "schemaVersion": 2,
+        "activeChains": sorted(ACTIVE_ASSETS_CHAINS),
+        "networkScopeChangedAt": "2026-09-19T00:00:00Z",
+        "historyScopeNote": "Pre-19 Sep 2026 aggregates retain their original network scope; current values cover Ethereum, Berachain and Arbitrum.",
+        "source": "defillama_then_dolomite_official_market_metrics",
+        "totalSupply": total_supply_history,
+        "currentSupply": _json_number(current_supply),
+        "tvl": tvl_history,
+        "currentTvl": _json_number(current_tvl),
+        "officialWindowStart": official_supply_history[0]["date"],
+        "officialRefreshWindowStart": refresh_start,
+        "officialRefreshPointCount": refresh_points,
+        "officialMarketCount": official_market_count,
+        "activeMarketCount": active_market_count,
+        "allMarketCount": len(markets),
+        "staleOfficialMarketCount": len(stale_histories),
+        "staleOfficialMarketSupply": _json_number(stale_market_supply),
+        "staleOfficialMarkets": [
+            {
+                "marketKey": market.get("marketKey"),
+                "symbol": market.get("symbol"),
+                "currentSupplyUsd": _json_number(market.get("currentSupplyUsd")),
+                "fetchError": market.get("fetchError"),
+            }
+            for market in sorted(
+                stale_histories,
+                key=lambda row: str(row.get("marketKey")),
+            )
+        ],
+        "last_updated": official_snapshot.get("last_updated"),
+    }
+
+    temporary_file = f"{OUTPUT_FILE}.tmp"
+    with open(temporary_file, "w", encoding="utf-8") as handle:
+        json.dump(output, handle, separators=(",", ":"))
+    os.replace(temporary_file, OUTPUT_FILE)
+
+    print(
+        "✅ Saved full liquidity history: "
+        f"{len(total_supply_history)} Total Supply points, "
+        f"{len(tvl_history)} Net TVL points, "
+        f"{len(official_supply_history)} official daily points, "
+        f"${float(current_supply):,.2f} current supply, "
+        f"${float(current_tvl):,.2f} current Net TVL"
+    )
+
+
+if __name__ == "__main__":
+    main()

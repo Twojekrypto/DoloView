@@ -1,0 +1,96 @@
+# Dolomite Dashboard — Project State
+
+> **Ostatnia aktualizacja:** 2026-06-12 (po audycie — patrz `CODE_AUDIT_2026-06-11.md`)
+> **Live:** https://twojekrypto.github.io/Dolomite-dashboard/
+> **Repo:** `Twojekrypto/Dolomite-dashboard` GitHub Pages (branch `master`)
+
+---
+
+## 🎯 Cel
+
+Institutional-grade analytics dashboard dla **Dolomite Protocol** na Berachain.
+Prezentuje metryki tokenów DOLO, oDOLO, veDOLO — flow analysis, holder tracking, early exits, liquidation risk.
+
+## 🏗️ Architektura
+
+### Aktywne sieci — 2026-09-19
+
+Dashboard, domyślne skanery i Freshness Guard obejmują Ethereum, Berachain
+i Arbitrum. Mantle i X Layer wycofano z aktywnej obsługi; ich pliki archiwalne
+pozostają zachowane. Workflow secondary canonical jest wyłączony.
+Nie przywracać sieci przez stare manifesty lub kolejki watchdog.
+Historia Supply/TVL sprzed 2026-09-19 zachowuje pierwotny zakres sieci;
+bieżące sumy dotyczą trzech aktywnych sieci.
+
+```
+Dolomite website/
+├── index.html              ← Loader (route-loader.js → dolo-preview.html)
+├── <route>/index.html      ← Loadery sekcji: statyczny head (meta/OG) +
+│                              loadDoloRoute(config); wspólna logika w route-loader.js
+├── *-preview.html          ← Właściwe strony sekcji (design tokens w tokens.css)
+├── dashboard-core.html     ← Markup Earn (0.3MB) + dashboard-core.css/.js
+├── route-loader.js         ← Wspólny loader tras (jedyne źródło mobile-nav assets)
+├── tokens.css              ← 25 wspólnych zmiennych Graphite+Gold
+├── rpc_client.py           ← Wspólny klient RPC (endpointy, rotacja, retry)
+│
+├── *.py                    ← Data pipeline scripts (Python)
+├── *.json                  ← Generated data files (fetched by HTML)
+│
+├── .github/workflows/      ← CI/CD (7 GH Actions pipelines)
+├── icons/                  ← Token SVG icons
+├── data/                   ← Static reference data
+│
+├── PROJECT_STATE.md        ← Ten plik
+└── lessons.md              ← Wzorce błędów i reguły (CZYTAJ NA STARCIE!)
+```
+
+## 📊 Kluczowe Strony
+
+| Strona | Plik | Co robi |
+|---|---|---|
+| **Main Dashboard** | `index.html` → `dolo-preview.html` | DOLO holders, flows, fresh wallets, dystrybucja w czasie |
+| **Liquidations/Borrow/Supply** | `liquidation/`, `borrow/`, `supply/` → `liquidation-preview.html` | Pozycje at-risk, health factor, E-Mode, historia likwidacji, supply markets |
+| **Earn** | `earn/` → `dashboard-core.html/.css/.js` | Earnings per wallet, supply/borrow positions, yield |
+| **Rewards** | `rewards/` → `rewards-preview.html` | Programy nagród (Merkl + oDOLO): APR, eligible TVL, daily rewards, efficiency |
+| **Pozostałe sekcje** | `vedolo/`, `odolo/`, `tvl/`, `revenue/`, `assets/`, `portfolio/`, `history/` | Dedykowane strony preview per temat |
+
+Zakładka TVL zawiera pod Token Composition kartę **Supply Pool Health** (`data/supply-health/latest.json`): per-asset liczba portfeli, koncentracja Top10/largest/Gini, trendy 7d/30d i ważony Supply Quality Score (A–F, propozycja społeczności 2026-06-29), z niezależnym filtrem sieci i wyszukiwarką assetów.
+
+Adresy kontraktowe protokołu: wspólna stopka (`protocol-footer.js`) na każdej stronie.
+
+## 🐍 Data Pipeline (Python Scripts)
+
+| Skrypt | Dane | Źródło |
+|---|---|---|
+| `update_data.py` | veDOLO holders, stats, expiry, DOLO price | Subgraph + RPC |
+| `generate_dolo_holders.py` | DOLO holder list | Subgraph |
+| `generate_dolo_flows.py` | DOLO transfer flows | Subgraph |
+| `generate_vedolo_flows.py` | veDOLO lock/unlock flows | Subgraph |
+| `generate_vedolo_early_unlock.py` | Early-unlock quotes per wallet/position → `vedolo_early_unlock.json` | Pinned-block RPC + onchain fee calculator |
+| `generate_odolo_flows.py` | oDOLO flows | Subgraph |
+| `generate_exercisers.py` | oDOLO→DOLO exercisers | Subgraph |
+| `fetch_early_exits.py` | Early exit transactions | Subgraph + RPC (z cache!) |
+| `fetch_liquidation_risk.py` | Pozycje at-risk | Subgraph + RPC (E-Mode) |
+| `fetch_defillama.py` | TVL i yield data | DefiLlama API |
+| `scan_earn_netflow.py` | Earn vault net flows | Subgraph |
+| `fetch_odolo_contract.py` | oDOLO contract metrics | RPC |
+| `calculate_avg_lock.py` | Średni czas locka veDOLO | Obliczenia lokalne |
+| `generate_supply_health.py` | Supply Pool Health (salda per portfel, koncentracja, quality score) → `data/supply-health/` | Subgraph (`marginAccountTokenValues`) |
+| `fetch_rewards_programs.py` | Programy nagród (Merkl + oDOLO) → `rewards_programs.json` | Merkl v4 API + Dolomite API |
+
+## 🚀 Deployment
+
+- **Hosting:** GitHub Pages z branch `master`
+- **CI/CD:** 7 GitHub Actions workflows (cron-based, co 6-24h)
+- **WAŻNE:** Nowe zmiany dashboardu pushujemy do remote `dolomite-dashboard` na branch `master`
+- **Cache:** `fetch_early_exits.py` używa `early_exits_cache.json` (GH Actions cache)
+
+## ⚠️ Kluczowe Reguły
+
+1. **Zawsze czytaj `lessons.md` na starcie sesji** — akumulacja bugów i fixów
+1a. **Ciężkie dane ładowane leniwie:** `dolo_holder_wallet_history.json`, `liquidation_history.json`, sharding `rowParts` w supply-activity — patrz sekcja "Audyt 2026-06-11/12" w `lessons.md`
+2. **CSS changes → verify via `getComputedStyle()` w browser console** — nie ufaj inline styles
+3. **Po zmianie kolumn tabeli → audyt WSZYSTKICH `nth-child` selektorów**
+4. **E-Mode:** Używaj `user.id` (nie `effectiveUser.id`) do `getAccountRiskOverride()`
+5. **GH Pages cache:** Dodaj `?v=timestamp` do URL przy weryfikacji deploymentu
+6. **Local testing:** `python3 -m http.server` (bo `file://` blokuje `fetch()`)

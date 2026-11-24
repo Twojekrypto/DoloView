@@ -1,0 +1,2530 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dolomite · TVL</title>
+<link rel="shortcut icon" href="favicon.ico" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-hover-tooltips.css?v=20260812-row-focusout">
+<script defer src="shared-hover-tooltips.js?v=20260812-row-focusout"></script>
+<link rel="stylesheet" href="tokens.css?v=tokens-20260611">
+<script src="dolomite-token-icons.generated.js?v=20260803-btccx"></script>
+<link rel="stylesheet" href="tvl/supply-health.css?v=20260803-table-system">
+<script defer src="tvl/supply-health.js?v=20260803-table-system-active-chains-20260919"></script>
+<style>
+/* ==========================================================================
+   DESIGN TOKENS — Graphite + Gold (shared with dolo / assets previews)
+   ========================================================================== */
+:root{
+  --up:#75b87b;
+  --up-wash:rgba(117,184,123,.10);
+  --down-wash:rgba(180,121,107,.10);
+  --yield:#8fb7c8;
+  --sh-card:0 1px 0 rgba(255,255,255,.02) inset, 0 1px 2px rgba(0,0,0,.4);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg-0);color:var(--fg-1);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+body{min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(1000px 600px at 80% -10%,rgba(201,162,39,.04),transparent 60%),
+             radial-gradient(800px 500px at -10% 110%,rgba(255,255,255,.02),transparent 60%);}
+.wrap{max-width:1320px;margin:0 auto;padding:40px 28px 96px}
+
+/* TOP — same banner + sticky nav as siblings */
+.site-top{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:40px}
+.site-brand{position:relative;display:flex;justify-content:center;align-items:center;width:100%;padding:18px 0 0;overflow:hidden}
+.site-brand::before{content:"";position:absolute;inset:-6% -12% 12% -12%;z-index:-1;pointer-events:none;filter:blur(20px);
+  background:radial-gradient(55% 55% at 50% 50%,rgba(201,162,39,.14) 0%,transparent 72%),
+             radial-gradient(90% 110% at 50% 100%,rgba(201,162,39,.05) 0%,transparent 65%);}
+.site-brand::after{content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(100%,820px);aspect-ratio:495/195;pointer-events:none;
+  background:radial-gradient(ellipse 78% 82% at center,transparent 42%,rgba(9,9,11,.55) 72%,var(--bg-0) 100%);}
+.site-brand img{max-width:820px;width:100%;height:auto;display:block;filter:saturate(.82) contrast(.92) brightness(.93) hue-rotate(-7deg);
+  -webkit-mask-image:radial-gradient(ellipse 78% 80% at center,#000 38%,rgba(0,0,0,.7) 62%,rgba(0,0,0,.25) 82%,transparent 98%);
+          mask-image:radial-gradient(ellipse 78% 80% at center,#000 38%,rgba(0,0,0,.7) 62%,rgba(0,0,0,.25) 82%,transparent 98%);
+  transition:filter .4s var(--ease),transform .4s var(--ease);}
+.site-brand img:hover{filter:saturate(.92) contrast(.96) brightness(.98) hue-rotate(-5deg);transform:translateY(-1px)}
+
+.site-nav-wrap{position:sticky;top:12px;z-index:30;display:flex;justify-content:center;pointer-events:none}
+.site-nav{pointer-events:auto;display:inline-flex;align-items:center;gap:2px;background:rgba(16,16,20,.72);
+  backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);
+  border:1px solid var(--line-2);padding:5px;border-radius:12px;
+  box-shadow:0 6px 24px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.03) inset;}
+.nav-item{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:500;color:var(--fg-2);cursor:pointer;
+  transition:color .15s var(--ease),background .15s var(--ease);-webkit-tap-highlight-color:transparent;}
+.nav-item img,.nav-item svg{width:15px;height:15px;flex-shrink:0;transition:opacity .15s var(--ease)}
+.nav-item img{border-radius:50%;background:var(--bg-3);object-fit:contain}
+.nav-item svg{color:var(--fg-3);opacity:.85}
+.nav-item:hover{color:var(--fg-1);background:var(--bg-3)}
+.nav-item:hover svg{color:var(--fg-1);opacity:1}
+.nav-item.active{color:var(--fg-1);background:var(--bg-3);box-shadow:inset 0 0 0 1px var(--gold-line)}
+.nav-item.active svg{color:var(--gold);opacity:1}
+.nav-item.active::after{content:"";width:4px;height:4px;border-radius:50%;background:var(--gold);margin-left:2px;box-shadow:0 0 6px var(--gold-line)}
+
+/* HERO — same shape as siblings, single big number + 4 stats */
+.hero{
+  position:relative;
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+  border:1px solid var(--line-2);border-radius:var(--r-xl);
+  padding:28px 32px 24px;margin-bottom:24px;overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--gold-line) 30%,var(--gold-line) 70%,transparent 100%);
+  opacity:.6;pointer-events:none;
+}
+.hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(720px 320px at 80% -30%,rgba(201,162,39,.08),transparent 65%);
+}
+.hero-brand{display:flex;align-items:center;gap:16px;margin-bottom:26px;position:relative;z-index:1;flex-wrap:wrap}
+.hero-token-logo{
+  width:52px;height:52px;border-radius:50%;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;overflow:hidden;flex-shrink:0;
+}
+.hero-token-logo svg{width:30px;height:30px;color:var(--gold)}
+.hero-token-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-token-title{font-size:24px;font-weight:800;color:var(--fg-1);letter-spacing:-.7px;line-height:1}
+.hero-token-sub{font-size:12.5px;color:var(--fg-3);font-weight:400;line-height:1.3}
+.hero-token-sub b{color:var(--fg-2);font-weight:500}
+.hero-meta{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.hero-live{font-size:11px;color:var(--fg-3);font-family:var(--mono);display:inline-flex;align-items:center;gap:6px}
+.hero-live .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+.hero-headline{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;padding-bottom:26px;position:relative;z-index:1}
+.hero-value{
+  font-family:var(--mono);font-size:clamp(44px,6vw,62px);
+  font-weight:700;letter-spacing:-2.5px;color:var(--fg-1);
+  line-height:1;font-variant-numeric:tabular-nums;
+}
+.hero-chg{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:10px;
+  font-family:var(--mono);font-weight:600;font-size:14px;letter-spacing:.2px;
+}
+.hero-chg.up{color:var(--up);background:var(--up-wash);border:1px solid rgba(117,184,123,.25)}
+.hero-chg.down{color:var(--down);background:var(--down-wash);border:1px solid rgba(180,121,107,.25)}
+.hero-chg.hero-value-chip{color:var(--gold-hi);background:var(--gold-wash);border:1px solid var(--gold-line)}
+.hero-chg svg{width:13px;height:13px}
+.hero-chg .lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;opacity:.75;margin-left:2px}
+
+.hero-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  padding-top:22px;border-top:1px solid var(--line-1);
+  position:relative;z-index:1;
+}
+.hero-card{padding:0 24px;border-left:1px solid var(--line-1);position:relative}
+.hero-card:first-child{border-left:0;padding-left:0}
+.hero-card .hc-label{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:var(--fg-3);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.hero-card .hc-label svg{width:11px;height:11px;color:var(--fg-3)}
+.hero-card .hc-value{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.6px;color:var(--fg-1);font-variant-numeric:tabular-nums;line-height:1}
+.hero-card .hc-value.gold{color:var(--gold)}
+.hero-card .hc-value.up{color:var(--up)}
+.hero-card .hc-value.down{color:var(--down)}
+.hero-card .hc-sub{font-size:11px;color:var(--fg-3);margin-top:8px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.hero-bar{margin-top:10px;height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden;border:1px solid var(--line-1)}
+.hero-bar > span{display:block;height:100%;background:var(--gold);border-radius:1px;transition:width .4s var(--ease)}
+
+/* CARD shell (same as siblings) */
+.card{background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-xl);box-shadow:var(--sh-card);overflow:visible;position:relative;margin-bottom:24px}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 18px;border-bottom:1px solid var(--line-1);gap:12px;flex-wrap:wrap}
+.card-title{display:flex;align-items:center;gap:10px}
+.card-title h2{font-size:16px;font-weight:600;letter-spacing:-.1px;color:var(--fg-1)}
+.card-title .count-badge{font-family:var(--mono);font-size:11px;color:var(--fg-2);background:var(--bg-3);border:1px solid var(--line-2);padding:3px 8px;border-radius:999px}
+.card-meta{font-size:11px;color:var(--fg-3);font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+/* Range pill switcher (TVL chart period) */
+.pill-switch{
+  position:relative;display:inline-flex;align-items:center;
+  background:var(--bg-3);border:1px solid var(--line-2);border-radius:8px;padding:3px;
+}
+.pill-switch .opt{
+  position:relative;z-index:1;
+  padding:5px 11px;font-family:var(--mono);font-size:11px;font-weight:600;
+  color:var(--fg-3);letter-spacing:.4px;cursor:pointer;border-radius:6px;
+  transition:color .2s var(--ease);
+}
+.pill-switch .opt.active{color:var(--bg-0)}
+.pill-switch .slider{
+  position:absolute;top:3px;left:3px;height:calc(100% - 6px);
+  background:var(--gold);border-radius:6px;
+  transition:transform .25s var(--ease),width .25s var(--ease);
+  z-index:0;
+}
+
+/* Protocol history metric switch — mirrors the DOLO holder chart control */
+.protocol-history-toolbar{display:flex;align-items:center;padding:14px 24px 0}
+.history-metric-mode{
+  display:inline-grid;grid-template-columns:repeat(2,minmax(128px,1fr));height:34px;gap:0;padding:3px;
+  border:1px solid rgba(255,255,255,.075);border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.012));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.026),0 8px 22px rgba(0,0,0,.08)
+}
+.history-metric-mode button{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:128px;height:28px;padding:0 14px;
+  border:0;border-radius:999px;background:transparent;color:var(--fg-3);appearance:none;
+  font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.36px;cursor:pointer;
+  transition:background .16s var(--ease),color .16s var(--ease),box-shadow .16s var(--ease)
+}
+.history-metric-mode button.active,
+.history-metric-mode button:hover,
+.history-metric-mode button:focus-visible{
+  background:linear-gradient(180deg,rgba(255,255,255,.062),rgba(201,162,39,.072));color:var(--fg-1);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.22),0 7px 16px rgba(0,0,0,.14)
+}
+.history-metric-mode button:focus-visible{outline:1px solid var(--gold);outline-offset:1px}
+.protocol-history-panel[hidden]{display:none}
+
+/* CHART */
+.chart-wrap{padding:24px 24px 22px;position:relative}
+.chart-svg{width:100%;height:340px;display:block;overflow:visible}
+.chart-grid line{stroke:var(--line-1);stroke-width:1}
+.chart-grid text{font-family:var(--mono);font-size:10px;fill:var(--fg-3);font-weight:500}
+.chart-line{fill:none;stroke:var(--gold);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round;
+  filter:drop-shadow(0 0 6px rgba(201,162,39,.25));}
+.chart-area{fill:var(--chart-area-fill,url(#chartGrad))}
+.chart-x text{font-family:var(--mono);font-size:10px;fill:var(--fg-3)}
+.chart-y text{font-family:var(--mono);font-size:10px;fill:var(--fg-3);text-anchor:end}
+.chart-hover-line{stroke:var(--fg-3);stroke-width:1;stroke-dasharray:3 3;opacity:0;pointer-events:none;transition:opacity .12s var(--ease)}
+.chart-hover-dot{fill:var(--gold);stroke:var(--bg-0);stroke-width:2;opacity:0;pointer-events:none;transition:opacity .12s var(--ease)}
+.chart-tip{
+  position:absolute;pointer-events:none;
+  background:rgba(15,15,17,.96);
+  border:1px solid var(--line-3);border-radius:8px;
+  padding:8px 11px;
+  font-family:var(--mono);font-size:11px;color:var(--fg-1);
+  box-shadow:var(--sh-hi);
+  opacity:0;transition:opacity .12s var(--ease);
+  white-space:nowrap;z-index:5;
+}
+.chart-tip .tt-date{color:var(--fg-3);font-size:10px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.chart-tip .tt-val{color:var(--gold);font-weight:600;font-size:14px}
+
+/* BRUSH navigator (mini chart for zoom) */
+.brush-wrap{position:relative;padding:6px 24px 18px;user-select:none}
+.brush-svg{
+  width:100%;height:56px;display:block;border-radius:8px;
+  border:1px solid var(--line-2);background:var(--bg-1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+  cursor:crosshair;
+}
+.brush-line{fill:none;stroke:var(--gold);stroke-width:1;opacity:.55}
+.brush-area{fill:var(--brush-area-fill,url(#brushGrad));opacity:.7}
+.brush-overlay{
+  position:absolute;top:6px;left:24px;right:24px;height:56px;
+  pointer-events:none;
+}
+.brush-dim{position:absolute;top:0;bottom:0;background:rgba(6,8,12,.55);pointer-events:none;border-radius:8px}
+.brush-dim.l{left:0;border-radius:8px 0 0 8px}
+.brush-dim.r{right:0;border-radius:0 8px 8px 0}
+.brush-window{
+  position:absolute;top:0;bottom:0;
+  border:1.5px solid var(--gold);border-radius:6px;
+  background:rgba(201,162,39,.06);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 0 0 1px rgba(201,162,39,.10);
+  cursor:grab;pointer-events:auto;
+  transition:background .15s var(--ease),border-color .15s var(--ease);
+}
+.brush-window:hover{background:rgba(201,162,39,.10)}
+.brush-window.dragging{cursor:grabbing;background:rgba(201,162,39,.14)}
+.brush-handle{
+  position:absolute;top:0;bottom:0;width:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:ew-resize;pointer-events:auto;border-radius:4px;
+  transition:background .15s var(--ease);
+}
+.brush-handle:hover{background:rgba(201,162,39,.10)}
+.brush-handle.l{left:-7px;border-radius:4px 0 0 4px}
+.brush-handle.r{right:-7px;border-radius:0 4px 4px 0}
+.brush-handle .grip{display:flex;gap:2px;pointer-events:none}
+.brush-handle .grip span{width:2px;height:18px;border-radius:2px;background:var(--gold);opacity:.85}
+.brush-handle .grip span:last-child{opacity:.45}
+.brush-label{
+  text-align:center;
+  font-family:var(--mono);font-size:11px;color:var(--fg-3);letter-spacing:.3px;
+  margin-top:6px;min-height:16px;
+}
+.brush-label .sep{color:var(--fg-4);margin:0 8px}
+.brush-label .v{color:var(--fg-2)}
+
+/* CHAIN BREAKDOWN — full-width supply bars (legacy layout, premium rebuild) */
+.chains-summary{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:14px 24px 6px;
+  border-bottom:1px solid var(--line-1);
+  background:transparent;
+}
+.chains-summary .stat{display:flex;align-items:center;gap:8px}
+.chains-summary .stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600}
+.chains-summary .stat .val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--fg-1);font-variant-numeric:tabular-nums}
+.chains-summary .stat .val.gold{color:var(--gold)}
+.chains-summary .stat .val.down{color:var(--down)}
+.chains-summary .sep{width:1px;height:18px;background:var(--line-2)}
+.chains-list{padding:14px 24px 18px;display:flex;flex-direction:column;gap:4px}
+.chain-row{
+  position:relative;display:flex;flex-direction:column;gap:8px;
+  padding:12px 14px;border-radius:var(--r-md);
+  border:1px solid transparent;
+  transition:background .2s var(--ease),border-color .2s var(--ease),transform .2s var(--ease);
+  cursor:default;
+}
+.chain-row:hover{background:rgba(201,162,39,.04);border-color:var(--gold-line);transform:translateY(-1px)}
+.chain-row .row-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.chain-row .id-side{display:flex;align-items:center;gap:11px;min-width:0;flex:1}
+.chain-row .chain-icon{
+  width:30px;height:30px;border-radius:50%;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;overflow:hidden;flex-shrink:0;
+}
+.chain-row .chain-icon img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+.chain-row .chain-name{font-size:14px;font-weight:600;color:var(--fg-1);letter-spacing:-.1px;line-height:1.1}
+.chain-row .chain-meta{font-family:var(--mono);font-size:10.5px;color:var(--fg-3);margin-top:3px;letter-spacing:.2px}
+.chain-row .num-side{display:flex;align-items:baseline;gap:8px;flex-shrink:0}
+.chain-row .num-supply{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--fg-1);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
+.chain-row .num-pct{font-family:var(--mono);font-size:11px;color:var(--fg-3);font-variant-numeric:tabular-nums}
+.chain-row:hover .num-pct{color:var(--gold)}
+/* Stacked supply bar — net (gold) + borrowed (down) overlay */
+.chain-bar{position:relative;height:8px;background:var(--bg-3);border:1px solid var(--line-1);border-radius:4px;overflow:hidden}
+.chain-bar .bar-supply{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--gold-lo),var(--gold));border-radius:3px;width:0;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.chain-bar .bar-borrow{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,rgba(180,121,107,.35),rgba(180,121,107,.65));border-radius:3px;width:0;transition:width .8s cubic-bezier(.4,0,.2,1) .15s;mix-blend-mode:screen}
+.chain-row .row-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.chain-row .foot-stat{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px}
+.chain-row .foot-stat .k{color:var(--fg-3);text-transform:uppercase;letter-spacing:.8px;font-size:9.5px;font-weight:600}
+.chain-row .foot-stat .v{color:var(--fg-2);font-weight:500;font-variant-numeric:tabular-nums}
+.chain-row .foot-stat.borrow .v{color:var(--down)}
+.chain-row .foot-stat.util .v{color:var(--up)}
+
+/* Legend dots used in foot stats */
+.dot-bar{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.dot-bar.supply{background:var(--gold)}
+.dot-bar.borrow{background:var(--down);opacity:.7}
+
+/* expand toggle */
+.chains-expand{overflow:hidden;max-height:0;transition:max-height .45s var(--ease)}
+.chains-toggle{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:calc(100% - 48px);margin:6px 24px 18px;
+  height:38px;border-radius:var(--r-md);
+  background:var(--bg-3);border:1px solid var(--line-2);
+  font-family:'Inter',sans-serif;font-size:12px;font-weight:500;color:var(--fg-2);letter-spacing:.3px;
+  cursor:pointer;
+  transition:border-color .2s var(--ease),color .2s var(--ease),background .2s var(--ease);
+}
+.chains-toggle:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.chains-toggle svg{width:11px;height:11px;transition:transform .25s var(--ease)}
+.chains-toggle.open svg{transform:rotate(180deg)}
+
+/* TOP TOKENS card — donut + interactive legend (legacy layout, premium) */
+.tokens-layout{display:grid;grid-template-columns:1.15fr 1fr;align-items:stretch}
+.tokens-legend-side{padding:18px 22px 22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.tokens-donut-side{
+  padding:24px;display:flex;align-items:center;justify-content:center;
+  border-left:1px solid var(--line-1);
+  background:radial-gradient(ellipse 70% 70% at center,rgba(201,162,39,.04),transparent 70%);
+}
+/* chain dropdown filter — same vocabulary as DOLO/assets dropdowns */
+.chain-filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chain-filter-row .filter-lbl{
+  font-size:10px;text-transform:uppercase;letter-spacing:1.4px;
+  color:var(--fg-3);font-weight:600;
+}
+.tvl-dd{position:relative;z-index:80;flex:0 0 auto}
+.tvl-dd-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  height:34px;padding:0 12px;
+  background:var(--bg-3);border:1px solid var(--line-2);border-radius:10px;
+  font-size:12.5px;color:var(--fg-1);font-weight:500;
+  cursor:pointer;
+  transition:border-color .2s var(--ease),background .2s var(--ease);
+  min-width:180px;
+}
+.tvl-dd-btn:hover{border-color:var(--line-3)}
+.tvl-dd-btn.open{border-color:var(--gold-line);background:var(--bg-4)}
+.tvl-dd-btn .icon{width:14px;height:14px;color:var(--fg-2);flex-shrink:0}
+.tvl-dd-btn img.icon{border-radius:50%;object-fit:cover;background:var(--bg-3);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.tvl-dd-btn .lbl{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tvl-dd-btn .count{font-family:var(--mono);font-size:10px;color:var(--fg-3);background:var(--bg-4);padding:2px 6px;border-radius:999px;border:1px solid var(--line-2);flex-shrink:0}
+.tvl-dd-btn .chev{width:10px;height:10px;color:var(--fg-3);flex-shrink:0;transition:transform .2s var(--ease)}
+.tvl-dd-btn.open .chev{transform:rotate(180deg)}
+.tvl-dd-btn.filtered{border-color:var(--gold-line);background:var(--bg-4)}
+.tvl-dd-btn.filtered .count{color:var(--gold);border-color:var(--gold-line)}
+.tvl-dd-panel{
+  position:absolute;top:calc(100% + 6px);left:0;
+  min-width:240px;max-width:300px;
+  background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-md);
+  box-shadow:var(--sh-hi);padding:6px;z-index:90;
+  opacity:0;transform:translateY(-4px);pointer-events:none;
+  transition:opacity .18s var(--ease),transform .18s var(--ease);
+}
+.tvl-dd-panel.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.tvl-dd-panel-head{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600;padding:8px 10px 6px}
+.tvl-dd-list{display:flex;flex-direction:column;max-height:340px;overflow-y:auto}
+.tvl-dd-list::-webkit-scrollbar{width:6px}
+.tvl-dd-list::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:3px}
+.tvl-dd-opt{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:6px;
+  font-size:13px;color:var(--fg-2);cursor:pointer;
+  transition:background .15s var(--ease),color .15s var(--ease);
+}
+.tvl-dd-opt + .tvl-dd-opt{border-top:1px solid var(--line-1)}
+.tvl-dd-opt:hover{background:var(--bg-3);color:var(--fg-1)}
+.tvl-dd-opt.active{background:rgba(201,162,39,.04);color:var(--fg-1)}
+.tvl-dd-opt img,.tvl-dd-opt .opt-ico{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  background:var(--bg-4);border:1px solid var(--line-2);
+  display:grid;place-items:center;object-fit:cover;
+  transition:border-color .15s var(--ease);
+}
+.tvl-dd-opt.active img,.tvl-dd-opt.active .opt-ico{border-color:var(--gold-line)}
+.tvl-dd-opt-name{flex:1;min-width:0}
+.tvl-dd-opt-count{font-family:var(--mono);font-size:10px;color:var(--fg-3);background:var(--bg-3);padding:2px 6px;border-radius:999px;border:1px solid var(--line-2);flex-shrink:0}
+.tvl-dd-opt.active .tvl-dd-opt-count{color:var(--gold);border-color:var(--gold-line)}
+.tvl-dd-opt.empty{opacity:.45;cursor:not-allowed}
+.tvl-dd-opt.empty:hover{background:transparent;color:var(--fg-2)}
+.tvl-dd-opt-check{
+  width:15px;height:15px;border-radius:4px;flex-shrink:0;
+  background:var(--bg-4);border:1.5px solid var(--line-3);
+  display:grid;place-items:center;
+  transition:background .15s var(--ease),border-color .15s var(--ease);
+}
+.tvl-dd-opt-check svg{width:9px;height:9px;color:var(--bg-0);opacity:0;transition:opacity .15s var(--ease)}
+.tvl-dd-opt.active .tvl-dd-opt-check{background:var(--gold);border-color:var(--gold)}
+.tvl-dd-opt.active .tvl-dd-opt-check svg{opacity:1}
+
+/* "All Chains" select-all row — visually distinct */
+.tvl-dd-opt.select-all{
+  background:linear-gradient(180deg,var(--bg-3),var(--bg-2));
+  border:1px solid var(--line-2);margin-bottom:4px;
+}
+.tvl-dd-opt.select-all .tvl-dd-opt-name{font-weight:600;color:var(--fg-1)}
+
+/* Clear button (X) inside the dd button — only shows when filter is active */
+.dd-clear{
+  display:none;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:4px;margin-left:-2px;
+  flex-shrink:0;color:var(--fg-3);cursor:pointer;
+  transition:color .15s var(--ease),background .15s var(--ease);
+}
+.tvl-dd-btn.filtered .dd-clear{display:inline-flex}
+.dd-clear:hover{background:rgba(201,162,39,.18);color:var(--gold)}
+.dd-clear svg{width:10px;height:10px;pointer-events:none}
+
+/* legend list */
+.tokens-legend{
+  display:flex;flex-direction:column;gap:2px;
+  max-height:430px;overflow-y:auto;padding-right:4px;
+  scrollbar-width:thin;scrollbar-color:var(--line-3) transparent;
+}
+.tokens-legend::-webkit-scrollbar{width:6px}
+.tokens-legend::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:3px}
+.tokens-legend::-webkit-scrollbar-track{background:transparent}
+.leg-row{
+  position:relative;
+  display:flex;align-items:center;gap:11px;
+  padding:9px 12px;border-radius:8px;
+  border-left:3px solid transparent;
+  transition:background .15s var(--ease),border-color .15s var(--ease),opacity .15s var(--ease),transform .15s var(--ease);
+  cursor:default;
+}
+.leg-row:hover,.leg-row.active{background:rgba(201,162,39,.05);border-left-color:var(--gold)}
+.leg-row.dim{opacity:.32;transform:scale(.985)}
+.leg-rank{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--fg-3);min-width:18px;text-align:right}
+.leg-row:hover .leg-rank,.leg-row.active .leg-rank{color:var(--gold)}
+.leg-icon{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;overflow:hidden;flex-shrink:0;
+  color:var(--gold);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:-.3px;
+}
+.leg-icon img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+.leg-icon.full-logo{border-radius:5px;background:transparent;border-color:transparent}
+.leg-icon.full-logo img{border-radius:0;object-fit:contain}
+.leg-icon img.grayscale{filter:grayscale(1) brightness(1.5)}
+.leg-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.leg-top{display:flex;align-items:center;justify-content:space-between;gap:8px;line-height:1.1}
+.leg-name{font-size:13px;font-weight:600;color:var(--fg-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.1px}
+.leg-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--fg-2);font-variant-numeric:tabular-nums}
+.leg-row:hover .leg-val,.leg-row.active .leg-val{color:var(--fg-1)}
+.leg-bot{display:flex;align-items:center;gap:8px}
+.leg-chain{display:inline-flex;align-items:center;gap:5px;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--fg-3);font-weight:500;flex-shrink:0}
+.leg-chain .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.leg-bar{flex:1;height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden}
+.leg-bar > span{display:block;height:100%;border-radius:2px;background:var(--leg-color,var(--gold));transition:width .5s var(--ease)}
+.leg-pct{font-family:var(--mono);font-size:10px;color:var(--fg-3);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.leg-row:hover .leg-pct,.leg-row.active .leg-pct{color:var(--leg-color,var(--gold))}
+
+/* DONUT */
+.donut-wrap{position:relative;width:100%;max-width:340px;aspect-ratio:1}
+.donut-svg{width:100%;height:100%;display:block;transform:rotate(-90deg)}
+.donut-arc{fill:none;stroke-width:32;transition:opacity .15s var(--ease),stroke-width .2s var(--ease);cursor:pointer}
+.donut-arc:hover{stroke-width:38}
+.donut-arc.dim{opacity:.18}
+.donut-arc.active{stroke-width:38}
+.donut-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  pointer-events:none;text-align:center;
+}
+.donut-center .dc-label{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:var(--fg-3);font-weight:600;margin-bottom:6px}
+.donut-center .dc-value{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--fg-1);font-variant-numeric:tabular-nums;letter-spacing:-.6px;line-height:1}
+.donut-center .dc-sub{font-family:var(--mono);font-size:11px;color:var(--fg-3);margin-top:6px}
+.donut-center .dc-token{font-size:13px;font-weight:600;color:var(--gold);margin-top:6px;letter-spacing:-.1px}
+
+/* chain dot colours — restrained, taken from assets-preview */
+.dot-berachain{background:#c9a227}
+.dot-arbitrum{background:#6b8aa8}
+.dot-ethereum{background:#8a8a9e}
+.dot-botanix{background:#b4796b}
+.dot-mantle{background:#6a7a6e}
+.dot-polygonzkevm{background:#8a6b9a}
+.dot-xlayer{background:#7a7a6b}
+.dot-other{background:#6f7480}
+
+/* PROTOCOL INFO CARD — matches assets sibling */
+.proto{margin-top:24px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-card);position:relative}
+.proto::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--gold-line) 30%,var(--gold-line) 70%,transparent 100%);
+  opacity:.6;pointer-events:none;
+}
+.proto-head{display:flex;flex-direction:column;align-items:flex-start;gap:16px;padding:22px 24px 20px;border-bottom:1px solid var(--line-1)}
+.proto-brand{display:flex;align-items:center;gap:14px}
+.proto-brand-mark{width:40px;height:40px;border-radius:50%;background:var(--bg-3);border:1px solid var(--line-2);display:grid;place-items:center;overflow:hidden;flex-shrink:0}
+.proto-brand-mark img{width:28px;height:28px;object-fit:contain}
+.proto-brand-text{display:flex;flex-direction:column;gap:2px}
+.proto-brand-name{font-size:15px;font-weight:600;color:var(--fg-1);letter-spacing:-.1px}
+.proto-brand-sub{font-size:12px;color:var(--fg-3)}
+.proto-links{display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px}
+.proto-links-group{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.proto-links-label{font-size:9.5px;text-transform:uppercase;letter-spacing:1.4px;font-weight:600;color:var(--fg-4);margin-right:4px}
+.proto-links-sep{width:1px;height:18px;background:var(--line-2);flex-shrink:0}
+.proto-pill{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;font-size:12px;color:var(--fg-2);
+  background:var(--bg-3);border:1px solid var(--line-2);border-radius:999px;
+  transition:border-color .2s var(--ease),color .2s var(--ease),background .2s var(--ease);}
+.proto-pill:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.proto-pill svg{width:13px;height:13px}
+
+/* Contract Addresses block — same as DOLO page */
+.proto-body{padding:20px 24px 24px}
+.proto-body-head{
+  font-size:11px;text-transform:uppercase;letter-spacing:1.6px;
+  color:var(--fg-2);font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.proto-body-head::after{content:"";flex:1;height:1px;background:var(--line-1)}
+.proto-addrs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.proto-addr{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 14px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:var(--r-md);
+  transition:border-color .2s var(--ease),background .2s var(--ease);
+  cursor:pointer;min-width:0;
+}
+.proto-addr:hover{border-color:var(--gold-line);background:rgba(201,162,39,.02)}
+.proto-addr-left{display:flex;align-items:center;gap:12px;min-width:0}
+.proto-token{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.proto-token img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-3);border:1px solid var(--line-2)}
+.proto-token-name{font-size:14px;font-weight:600;color:var(--fg-1);letter-spacing:-.1px}
+.proto-chain-chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--fg-2);padding:3px 8px;border-radius:4px;background:var(--bg-3);border:1px solid var(--line-2);font-weight:500}
+.proto-chain-chip .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;background-color:var(--bg-2);background-position:center;background-size:cover;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.proto-chain-chip .dot-ethereum{background-image:url("https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg")}
+.proto-chain-chip .dot-berachain{background-image:url("https://icons.llamao.fi/icons/chains/rsz_berachain.jpg");background-size:126%}
+.proto-addr-right{display:flex;align-items:center;gap:8px;min-width:0;flex:1;justify-content:flex-end}
+.proto-addr-hex{font-family:var(--mono);font-size:11px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.proto-copy,.proto-explore{
+  width:26px;height:26px;border-radius:6px;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;color:var(--fg-3);
+  flex-shrink:0;cursor:pointer;
+  transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease);
+}
+.proto-copy:hover,.proto-explore:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.proto-copy.copied{color:var(--up);border-color:var(--up)}
+.proto-copy svg,.proto-explore svg{width:12px;height:12px;pointer-events:none}
+
+/* footer small */
+.foot{margin-top:24px;text-align:center;font-size:11px;color:var(--fg-3);letter-spacing:.3px}
+
+/* responsive */
+@media (max-width:980px){
+  .tokens-layout{grid-template-columns:1fr}
+  .tokens-donut-side{border-left:0;border-top:1px solid var(--line-1);padding:18px}
+  .donut-wrap{max-width:280px}
+  .tokens-legend{max-height:none}
+  .proto-addrs{grid-template-columns:1fr}
+  .proto-addr-hex{max-width:140px}
+}
+@media (max-width:820px){
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .chains-summary{padding:14px 18px 6px}
+  .chain-row .chain-meta{display:none}
+  .proto-links-sep{display:none}
+  .proto-links{flex-direction:column;align-items:flex-start;gap:10px}
+}
+@media (max-width:640px){
+  .wrap{padding:24px 16px 48px}
+  .hero{padding:22px 18px}
+  .hero-grid{grid-template-columns:1fr}
+  .hero-card{border-left:0;border-top:1px solid var(--line-1);padding:14px 0 0}
+  .hero-card:first-child{border-top:0;padding-top:0}
+  .hero-meta{margin-left:0;width:100%}
+  .site-top{gap:10px;margin-bottom:32px}
+  .site-brand{padding:12px 0 0}
+  .site-brand img{max-width:460px}
+  .site-nav-wrap{width:100%;justify-content:center;overflow:hidden;padding-bottom:2px}
+  .site-nav{width:100%;justify-content:space-between}
+  .nav-item{width:40px;height:38px;padding:0;justify-content:center;gap:0}
+  .nav-item span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .nav-item.active::after{display:none}
+  .protocol-history-toolbar{padding:14px 16px 0}
+  .history-metric-mode{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .history-metric-mode button{width:100%;min-width:0;padding:0 8px}
+  .chart-svg{height:240px}
+}
+</style>
+<script src="count-up.js?v=20260821-smooth-resume-v1"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOP -->
+  <header class="site-top">
+    <div class="site-brand">
+      <img src="TwojeKrypto%20dashboard.webp" alt="Dolomite Dashboard · Powered by TwojeKrypto">
+    </div>
+    <div class="site-nav-wrap">
+      <nav class="site-nav">
+        <a class="nav-item" href="./portfolio/" data-tab="portfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M3 7l3-4h12l3 4"/><path d="M3 12h6a3 3 0 0 0 6 0h6"/></svg>
+          <span>Portfolio</span>
+        </a>
+        <a class="nav-item" href="./assets/" data-tab="assets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span>Assets</span>
+        </a>
+        <a class="nav-item active" href="./tvl/" data-tab="tvl">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 4 5-8"/></svg>
+          <span>TVL</span>
+        </a>
+        <a class="nav-item" href="./dolo/" data-tab="dolo">
+          <img src="dolo-logo.svg" alt="" onerror="this.style.display='none'">
+          <span>DOLO</span>
+        </a>
+        <a class="nav-item" href="./odolo/" data-tab="odolo">
+          <img src="odolo-logo-official.svg" alt="" onerror="this.style.display='none'">
+          <span>oDOLO</span>
+        </a>
+        <a class="nav-item" href="./vedolo/" data-tab="vedolo">
+          <img src="vedolo-logo.svg" alt="" onerror="this.style.display='none'">
+          <span>veDOLO</span>
+        </a>
+        <a class="nav-item" href="./earn/" data-tab="earn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+          <span>Earn</span>
+        </a>
+        <a class="nav-item" href="./borrow/" data-tab="borrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M12 13v4"/><path d="m9.5 15 2.5 2.5L14.5 15"/></svg>
+          <span>Borrow</span>
+        </a>
+        <a class="nav-item" href="./supply/" data-tab="supply">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Supply</span>
+        </a>
+        <a class="nav-item" href="./rewards/" data-tab="rewards">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+            <span>Rewards</span>
+        </a>
+        <a class="nav-item" href="./revenue/" data-tab="revenue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-7"/><path d="M16 7h3v3"/></svg>
+          <span>Revenue</span>
+        </a>
+        <a class="nav-item" href="./history/" data-tab="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/><path d="M12 7v5l3 2"/></svg>
+          <span>History</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-brand">
+      <div class="hero-token-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 4 5-8"/></svg>
+      </div>
+      <div class="hero-token-text">
+        <div class="hero-token-title">Total Supply</div>
+        <div class="hero-token-sub" id="heroChainSub"><b>Dolomite</b> · all user deposits across <b>3 active chains</b></div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-live" id="heroSource"><span class="dot"></span>Dolomite subgraphs</div>
+      </div>
+    </div>
+
+    <div class="hero-headline">
+      <div class="hero-value" id="heroSupply" data-count-value="0">$0.000</div>
+      <div class="hero-chg hero-value-chip up" id="heroChg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 14 12 8 18 14"/></svg>
+        <span>+0.000%</span>
+        <span class="lbl">7d change</span>
+      </div>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-card">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          Total Borrowed
+        </div>
+        <div class="hc-value down" id="heroBorrowed" data-count-value="0">$0.000</div>
+        <div class="hc-sub">across all markets</div>
+        <div class="hero-bar"><span id="heroBorrowedBar" style="width:37.6%;background:var(--down)"></span></div>
+      </div>
+      <div class="hero-card">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+          Net TVL
+        </div>
+        <div class="hc-value gold" id="heroNetTvl" data-count-value="0">$0.000</div>
+        <div class="hc-sub">supply − borrow</div>
+        <div class="hero-bar"><span id="heroNetBar" style="width:62.4%"></span></div>
+      </div>
+      <div class="hero-card">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M12 7v5l3 2"/></svg>
+          Utilization
+        </div>
+        <div class="hc-value" id="heroUtilization" data-count-value="0">0.000%</div>
+        <div class="hc-sub">borrow ÷ supply</div>
+        <div class="hero-bar"><span id="heroUtilBar" style="width:37.6%"></span></div>
+      </div>
+      <div class="hero-card">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          Active Chains
+        </div>
+        <div class="hc-value" id="heroChainCount" data-count-value="0">0</div>
+        <div class="hc-sub" id="heroMarketCount">142 token markets</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROTOCOL HISTORY CHART -->
+  <section class="card protocol-history-card" id="protocol-history-card">
+    <div class="card-head protocol-history-head">
+      <div class="card-title" title="Current scope: Ethereum, Berachain and Arbitrum. Values before 19 Sep 2026 retain their original network scope, including retired deployments.">
+        <h2>Dolomite Supply &amp; TVL</h2>
+        <span class="count-badge" id="protocolHistoryRangeBadge">All Time</span>
+      </div>
+      <div class="card-meta"><span class="pulse"></span>drag the window below to zoom</div>
+    </div>
+    <div class="protocol-history-toolbar">
+      <div class="history-metric-mode" id="protocol-history-metric" role="group" aria-label="Protocol history metric">
+        <button type="button" class="active" data-history-metric="supply" aria-pressed="true">TOTAL SUPPLY</button>
+        <button type="button" data-history-metric="tvl" aria-pressed="false">TVL</button>
+      </div>
+    </div>
+    <div class="protocol-history-panel" data-history-panel="supply" style="--chart-area-fill:url(#supplyChartGrad);--brush-area-fill:url(#supplyBrushGrad)">
+      <span id="supplyRangeBadge" hidden>All Time</span>
+    <div class="chart-wrap" id="supplyChartWrap">
+      <svg class="chart-svg" id="supplyChart" viewBox="0 0 1000 340" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="supplyChartGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c9a227" stop-opacity=".22"/>
+            <stop offset="55%" stop-color="#c9a227" stop-opacity=".06"/>
+            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g class="chart-grid" id="supplyChartGrid"></g>
+        <path class="chart-area" id="supplyChartArea" d=""/>
+        <path class="chart-line" id="supplyChartLine" d=""/>
+        <line class="chart-hover-line" id="supplyHoverLine" x1="0" x2="0" y1="0" y2="0"/>
+        <circle class="chart-hover-dot" id="supplyHoverDot" r="4" cx="0" cy="0"/>
+        <g class="chart-x" id="supplyChartX"></g>
+      </svg>
+      <div class="chart-tip" id="supplyChartTip">
+        <div class="tt-date">—</div>
+        <div class="tt-val">—</div>
+      </div>
+    </div>
+    <div class="brush-wrap" id="supplyBrushWrap">
+      <svg class="brush-svg" id="supplyBrushSvg" viewBox="0 0 1000 56" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="supplyBrushGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c9a227" stop-opacity=".30"/>
+            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="brush-area" id="supplyBrushArea" d=""/>
+        <path class="brush-line" id="supplyBrushLine" d=""/>
+      </svg>
+      <div class="brush-overlay" id="supplyBrushOverlay">
+        <div class="brush-dim l" id="supplyBrushDimL"></div>
+        <div class="brush-window" id="supplyBrushWindow">
+          <div class="brush-handle l" id="supplyBrushHandleL"><div class="grip"><span></span><span></span></div></div>
+          <div class="brush-handle r" id="supplyBrushHandleR"><div class="grip"><span></span><span></span></div></div>
+        </div>
+        <div class="brush-dim r" id="supplyBrushDimR"></div>
+      </div>
+      <div class="brush-label" id="supplyBrushLabel"></div>
+    </div>
+    </div>
+    <div class="protocol-history-panel" data-history-panel="tvl" hidden>
+      <span id="rangeBadge" hidden>All Time</span>
+    <div class="chart-wrap" id="chartWrap">
+      <svg class="chart-svg" id="chart" viewBox="0 0 1000 340" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c9a227" stop-opacity=".22"/>
+            <stop offset="55%" stop-color="#c9a227" stop-opacity=".06"/>
+            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <g class="chart-grid" id="chartGrid"></g>
+        <path class="chart-area" id="chartArea" d=""/>
+        <path class="chart-line" id="chartLine" d=""/>
+        <line class="chart-hover-line" id="hoverLine" x1="0" x2="0" y1="0" y2="0"/>
+        <circle class="chart-hover-dot" id="hoverDot" r="4" cx="0" cy="0"/>
+        <g class="chart-x" id="chartX"></g>
+      </svg>
+      <div class="chart-tip" id="chartTip">
+        <div class="tt-date">—</div>
+        <div class="tt-val">—</div>
+      </div>
+    </div>
+    <!-- BRUSH: mini chart navigator for zoom -->
+    <div class="brush-wrap" id="brushWrap">
+      <svg class="brush-svg" id="brushSvg" viewBox="0 0 1000 56" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="brushGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c9a227" stop-opacity=".30"/>
+            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="brush-area" id="brushArea" d=""/>
+        <path class="brush-line" id="brushLine" d=""/>
+      </svg>
+      <div class="brush-overlay" id="brushOverlay">
+        <div class="brush-dim l" id="brushDimL"></div>
+        <div class="brush-window" id="brushWindow">
+          <div class="brush-handle l" id="brushHandleL"><div class="grip"><span></span><span></span></div></div>
+          <div class="brush-handle r" id="brushHandleR"><div class="grip"><span></span><span></span></div></div>
+        </div>
+        <div class="brush-dim r" id="brushDimR"></div>
+      </div>
+      <div class="brush-label" id="brushLabel"></div>
+    </div>
+    </div>
+  </section>
+
+  <!-- CHAIN BREAKDOWN — supply bars (legacy layout, premium UX) -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <h2>Supply by Chain</h2>
+        <span class="count-badge" id="chainCountBadge">3 active chains</span>
+      </div>
+      <div class="card-meta"><span class="pulse"></span>onchain breakdown</div>
+    </div>
+    <div class="chains-summary">
+      <div class="stat"><span class="dot-bar supply"></span><span class="lbl">Total Supply</span><span class="val gold" id="summarySupply">$0.000</span></div>
+      <span class="sep"></span>
+      <div class="stat"><span class="dot-bar borrow"></span><span class="lbl">Borrowed</span><span class="val down" id="summaryBorrowed">$0.000</span></div>
+      <span class="sep"></span>
+      <div class="stat"><span class="lbl">Net TVL</span><span class="val" id="summaryNetTvl">$0.000</span></div>
+    </div>
+    <div class="chains-list" id="chainsListTop"></div>
+    <div class="chains-expand" id="chainsExpand"></div>
+    <button class="chains-toggle" id="chainsToggle" onclick="toggleChains()">
+      <span id="chainsToggleLbl">Show 4 more chains</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </section>
+
+  <!-- TOP TOKENS — donut + interactive legend (legacy layout, premium UX) -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <h2>Token Composition</h2>
+        <span class="count-badge" id="tokensCountBadge">All assets · Top 19 + Other</span>
+      </div>
+      <div class="card-meta"><span class="pulse"></span>aggregated by USD value</div>
+    </div>
+    <div class="tokens-layout">
+      <div class="tokens-legend-side">
+        <div class="chain-filter-row">
+          <div class="tvl-dd" id="ddChain">
+            <button class="tvl-dd-btn" id="ddChainBtn">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              <span class="lbl" id="ddChainLbl">All Chains</span>
+              <span class="count" id="ddChainCount">7</span>
+              <span class="dd-clear" id="ddChainClear" role="button" aria-label="Reset filter">
+                <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+              </span>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="tvl-dd-panel" id="ddChainPanel">
+              <div class="tvl-dd-panel-head">Chains</div>
+              <div class="tvl-dd-list" id="ddChainList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tokens-legend" id="tokensLegend"></div>
+      </div>
+      <div class="tokens-donut-side">
+        <div class="donut-wrap">
+          <svg class="donut-svg" id="donutSvg" viewBox="0 0 200 200"></svg>
+          <div class="donut-center" id="donutCenter">
+            <div class="dc-label">Total · All Assets</div>
+            <div class="dc-value" id="dcValue">$0</div>
+            <div class="dc-sub" id="dcSub">across 3 active chains</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card supply-health-card" id="supply-health-card">
+    <div class="card-head supply-health-header">
+      <div class="card-title supply-health-heading">
+        <h2>Supply Pool Health</h2>
+        <span class="count-badge" id="supply-health-count">Loading…</span>
+      </div>
+      <div class="supply-health-updated" id="supply-health-updated" aria-live="polite"></div>
+    </div>
+    <div class="supply-health-toolbar">
+      <div class="supply-health-filter-group">
+        <div class="supply-health-search-shell">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          <input id="supply-health-search" type="search" aria-label="Search asset" placeholder="Search asset" autocomplete="off" spellcheck="false">
+          <button type="button" class="supply-health-search-clear" id="supply-health-search-clear" aria-label="Clear asset search">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 2.5 7 7m0-7-7 7"></path></svg>
+          </button>
+        </div>
+        <div class="tvl-dd supply-health-chain-dropdown" id="supply-health-chain-dropdown">
+          <button class="tvl-dd-btn" id="supply-health-chain-filter" type="button" aria-expanded="false" aria-controls="supply-health-chain-panel">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"></path></svg>
+            <span class="lbl" id="supply-health-chain-label">All Chains</span>
+            <span class="count" id="supply-health-chain-count">5/5</span>
+            <span class="dd-clear" id="supply-health-chain-clear" role="button" aria-label="Reset network filter">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m2.5 2.5 7 7m0-7-7 7"></path></svg>
+            </span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          </button>
+          <div class="tvl-dd-panel" id="supply-health-chain-panel">
+            <div class="tvl-dd-panel-head">Chain</div>
+            <div class="tvl-dd-list" id="supply-health-chain-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="supply-health-scroll">
+      <div class="supply-health-state" id="supply-health-state">Loading pool health…</div>
+      <table class="supply-health-table" id="supply-health-table" hidden>
+        <thead>
+          <tr>
+            <th data-health-sort="chain"><span class="th-content">Chain <span class="sort-arrow"></span></span></th>
+            <th data-health-sort="symbol"><span class="th-content">Asset <span class="sort-arrow"></span></span></th>
+            <th class="num" data-health-sort="supplyUsd"><span class="th-content">Supply <span class="sort-arrow"></span></span></th>
+            <th class="num" data-health-sort="wallets"><span class="th-content">Suppliers <span class="sort-arrow"></span></span></th>
+            <th class="num" data-health-sort="top10Pct"><span class="th-content">Top 10 <span class="sort-arrow"></span></span></th>
+            <th class="num" data-health-sort="largestPct"><span class="th-content">Largest <span class="sort-arrow"></span></span></th>
+            <th class="num" data-health-sort="scoreTotal"><span class="th-content">Quality <span class="sort-arrow"></span></span></th>
+            <th class="supply-health-details-head">Details</th>
+          </tr>
+        </thead>
+        <tbody id="supply-health-table-body"></tbody>
+      </table>
+    </div>
+    <div class="supply-health-footer">
+      <div class="supply-health-page-range" id="supply-health-page-range">0–0 of 0</div>
+      <div class="supply-health-pagination" id="supply-health-pagination" aria-label="Supply pool health pages"></div>
+    </div>
+  </section>
+
+  <!-- PROTOCOL INFO — same shape as DOLO page -->
+  <section class="proto">
+    <div class="proto-head">
+      <div class="proto-brand">
+        <div class="proto-brand-mark">
+          <img src="dolo-logo.svg" alt="DOLO" onerror="this.outerHTML='<span style=&quot;color:var(--gold);font-weight:800;font-size:16px&quot;>◆</span>'">
+        </div>
+        <div class="proto-brand-text">
+          <div class="proto-brand-name">Dolomite</div>
+          <div class="proto-brand-sub" id="protoBrandSub">Lending &amp; margin · <b>3 active chains</b> · <b>142 markets</b></div>
+        </div>
+      </div>
+      <div class="proto-links">
+        <div class="proto-links-group">
+          <span class="proto-links-label">Community</span>
+          <a class="proto-pill" href="https://twitter.com/Dolomite_io" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Twitter</a>
+          <a class="proto-pill" href="https://t.me/dolomite_official" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Telegram</a>
+          <a class="proto-pill" href="https://discord.com/invite/uDRzrB2YgP" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037 19.736 19.736 0 00-4.885 1.515.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.955 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg>Discord</a>
+        </div>
+        <span class="proto-links-sep"></span>
+        <div class="proto-links-group">
+          <span class="proto-links-label">Resources</span>
+          <a class="proto-pill" href="https://dolomite.io" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>Website</a>
+          <a class="proto-pill" href="https://docs.dolomite.io/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Docs</a>
+          <a class="proto-pill" href="https://github.com/dolomite-exchange" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>GitHub</a>
+          <a class="proto-pill" href="https://docs.dolomite.io/security/audits" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Audits</a>
+        </div>
+      </div>
+    </div>
+    <div class="proto-body">
+      <div class="proto-body-head">Contract Addresses</div>
+      <div class="proto-addrs" id="proto-addrs"></div>
+    </div>
+  </section>
+
+  <div class="foot">TVL dashboard · onchain liquidity data · <span id="now"></span></div>
+</div>
+
+<script>
+/* ==========================================================================
+   DATA — live snapshot from /defillama_data.json + /dolomite_tvl.json
+   (frozen here so the local preview renders without network)
+   ========================================================================== */
+let SNAPSHOT_TS  = "2026-04-25T07:47:08Z";
+let TOTAL_TVL    = 518891685;
+let TOTAL_BORROW = 312426415;
+let TOTAL_SUPPLY = 831318100;
+
+let CHAINS = [
+  {key:"ethereum",    name:"Ethereum",      icon:"https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg",       tvl:448028353,   borrowed:262135769, tokens:19},
+  {key:"berachain",   name:"Berachain",     icon:"https://icons.llamao.fi/icons/chains/rsz_berachain.jpg",      tvl: 32252308,   borrowed:  3612065, tokens:43},
+  {key:"arbitrum",    name:"Arbitrum",      icon:"https://icons.llamao.fi/icons/chains/rsz_arbitrum.jpg",       tvl: 17808524,   borrowed:  7433094, tokens:57},
+  {key:"mantle",      name:"Mantle",        icon:"https://icons.llamao.fi/icons/chains/rsz_mantle.jpg",         tvl:     54271,   borrowed:    13256, tokens:15},
+  {key:"botanix",     name:"Botanix",       icon:"https://icons.llamao.fi/icons/chains/rsz_botanix.jpg",        tvl:     33597,   borrowed:    22920, tokens: 5},
+  {key:"polygonzkevm",name:"Polygon zkEVM", icon:"https://icons.llamao.fi/icons/chains/rsz_polygon%20zkevm.jpg",tvl:      5463,   borrowed:      134, tokens: 7},
+  {key:"xlayer",      name:"X Layer",       icon:"https://icons.llamao.fi/icons/chains/rsz_x%20layer.jpg",      tvl:       923,   borrowed:      180, tokens: 4},
+].filter(chain => ["ethereum", "berachain", "arbitrum"].includes(chain.key));
+
+let TOP_TOKENS = [
+  {sym:"WLFI",            chain:"ethereum",  usd:288857703, name:"WLFI"},
+  {sym:"USD1",            chain:"ethereum",  usd:244693167, name:"USD1"},
+  {sym:"USDC",            chain:"ethereum",  usd:129796797, name:"USDC"},
+  {sym:"ETH",             chain:"ethereum",  usd: 30118385, name:"ETH"},
+  {sym:"stBTC",           chain:"berachain", usd: 25741782, name:"stBTC"},
+  {sym:"weETH",           chain:"ethereum",  usd:  6844216, name:"weETH"},
+  {sym:"wstETH",          chain:"ethereum",  usd:  5634934, name:"wstETH"},
+  {sym:"USDC",            chain:"arbitrum",  usd:  4397492, name:"USDC"},
+  {sym:"WBTC",            chain:"arbitrum",  usd:  4094976, name:"WBTC"},
+  {sym:"ETH",             chain:"arbitrum",  usd:  4089574, name:"ETH"},
+  {sym:"savUSD",          chain:"berachain", usd:  3202232, name:"savUSD"},
+  {sym:"USDC",            chain:"berachain", usd:  2650375, name:"USDC"},
+  {sym:"mETH",            chain:"ethereum",  usd:  2543256, name:"mETH"},
+  {sym:"gmBTC-USD",       chain:"arbitrum",  usd:  2155034, name:"gmBTC-USD"},
+  {sym:"GLV-BTC",         chain:"arbitrum",  usd:  1973324, name:"GLV-BTC"},
+  {sym:"gmETH-USD",       chain:"arbitrum",  usd:  1619652, name:"gmETH-USD"},
+  {sym:"UNI",             chain:"arbitrum",  usd:  1131432, name:"UNI"},
+  {sym:"gmETH",           chain:"arbitrum",  usd:  1077129, name:"gmETH"},
+  {sym:"srUSD",           chain:"ethereum",  usd:   735841, name:"srUSD"},
+  {sym:"WBTC",            chain:"ethereum",  usd:   690012, name:"WBTC"},
+];
+let CHAIN_TOKEN_COMPOSITION = {};
+
+/* Compressed historical Total Supply fallback — [unix_seconds, totalLiquidityUSD] */
+let TOTAL_SUPPLY_HISTORY = [
+  [1665964800,1451419],[1666396800,1572042],[1666828800,1675977],[1667260800,1686656],[1667692800,1758383],[1668124800,1289923],[1668556800,1278808],[1668988800,1262680],[1669420800,1292627],[1669852800,1334466],[1670284800,1315229],[1670716800,1420922],[1671148800,1422021],[1671580800,1392333],[1672012800,1390294],[1672444800,1374171],[1672876800,1398164],[1673308800,1424820],[1673740800,1444034],[1674172800,1457522],[1674604800,1430028],[1675036800,1365068],[1675468800,1282450],[1675900800,1268300],[1676332800,1220492],[1676764800,1339901],[1677196800,1334484],[1677628800,1349916],[1678060800,1330458],[1678492800,1243002],[1678924800,1295547],[1679356800,1356299],[1679788800,1284120],[1680220800,1788439],[1680652800,2062904],[1681084800,2707213],[1681516800,2876735],[1681948800,2899344],[1682380800,2893479],[1682812800,3227299],[1683244800,3480433],[1683676800,3537383],[1684108800,3862224],[1684540800,3970214],[1684972800,4434067],[1685404800,5027980],[1685836800,5138346],[1686268800,5327698],[1686700800,5027198],[1687132800,5237048],[1687564800,5905309],[1687996800,6834626],[1688428800,7733155],[1688860800,7845946],[1689292800,8025874],[1689724800,7815295],[1690156800,8126860],[1690588800,8099704],[1691020800,7937510],[1691452800,7956773],[1691884800,7891260],[1692316800,7536181],[1692748800,7197595],[1693180800,7352593],[1693612800,7290425],[1694044800,7304967],[1694476800,6866011],[1694908800,7096865],[1695340800,6950734],[1695772800,6792589],[1696204800,7192606],[1696636800,7023463],[1697068800,6958280],[1697500800,6941526],[1697932800,7091562],[1698364800,7447793],[1698796800,7554993],[1699228800,8288016],[1699660800,11796311],[1700092800,14627785],[1700524800,14290351],[1700956800,15287829],[1701388800,15732845],[1701820800,17507935],[1702252800,19853938],[1702684800,23302619],[1703116800,24730377],[1703548800,27198694],[1703980800,30314488],[1704412800,34251331],[1704844800,35157762],[1705276800,38079058],[1705708800,37294506],[1706140800,36473107],[1706572800,37615235],[1707004800,34003646],[1707436800,32770785],[1707868800,35045224],[1708300800,38020085],[1708732800,38785120],[1709164800,45129063],[1709596800,48727703],[1710028800,57917985],[1710460800,67226074],[1710892800,58459068],[1711324800,65603854],[1711756800,65542239],[1712188800,60406579],[1712620800,69577257],[1713052800,56249501],[1713484800,57033246],[1713916800,64164386],[1714348800,62830747],[1714780800,57329724],[1715212800,56007997],[1715644800,55171022],[1716076800,62027455],[1716508800,76489823],[1716940800,81655733],[1717372800,81808568],[1717804800,82291196],[1718236800,71713180],[1718668800,71906782],[1719100800,73970182],[1719532800,67469895],[1719964800,66469767],[1720396800,60908927],[1720828800,64843735],[1721260800,71913499],[1721692800,76615582],[1722124800,76837502],[1722556800,75223305],[1722988800,63749221],[1723420800,61954116],[1723852800,63397383],[1724284800,63898740],[1724716800,65990534],[1725148800,63187819],[1725580800,60656793],[1726012800,62168536],[1726444800,62184016],[1726876800,69393351],[1727308800,69378535],[1727740800,61407159],[1728172800,65084151],[1728604800,62701529],[1729036800,63043198],[1729468800,67633351],[1729900800,65921518],[1730332800,66828729],[1730764800,62916182],[1731196800,79181080],[1731628800,100108079],[1732060800,100228638],[1732492800,113806934],[1732924800,115068820],[1733356800,124902244],[1733788800,122509154],[1734220800,130699317],[1734652800,112550093],[1735084800,120183603],[1735516800,116159274],[1735948800,125764873],[1736380800,113694037],[1736812800,108528068],[1737244800,110670033],[1737676800,114119174],[1738108800,99863946],[1738540800,86065176],[1738972800,396588741],[1739404800,579829833],[1739836800,626160579],[1740268800,863079584],[1740700800,921232368],[1741132800,929265968],[1741564800,901364466],[1741996800,755514385],[1742428800,792346694],[1742860800,803164082],[1743292800,754092616],[1743724800,767641571],[1744156800,674793302],[1744588800,718408884],[1745020800,707061198],[1745452800,813345658],[1745884800,819635575],[1746316800,831269490],[1746748800,643828041],[1747180800,401099898],[1747612800,371947662],[1748044800,371485025],[1748476800,296052269],[1748908800,258009344],[1749340800,221104621],[1749772800,218648682],[1750204800,209422763],[1750636800,192747173],[1751068800,194985641],[1751500800,191013385],[1751932800,195265179],[1752364800,194883313],[1752796800,219730279],[1753228800,229449334],[1753660800,251539235],[1754092800,237923762],[1754524800,264521954],[1754956800,286831850],[1755388800,303009339],[1755820800,297135516],[1756252800,313393014],[1756684800,310173593],[1757116800,315216257],[1757548800,347108380],[1757980800,349854076],[1758412800,344788233],[1758844800,312006311],[1759276800,315054617],[1759708800,276388270],[1760140800,232839183],[1760572800,227106138],[1761004800,225855160],[1761436800,221826848],[1761868800,216485912],[1762300800,192294366],[1762732800,188894945],[1763164800,168976724],[1763596800,162208746],[1764028800,155787754],[1764460800,158397952],[1764892800,150963435],[1765324800,151855985],[1765756800,142639476],[1766188800,137448383],[1766620800,137976971],[1767052800,137112502],[1767484800,142080603],[1767916800,139951592],[1768348800,189548450],[1768780800,309264957],[1769212800,456762272],[1769644800,470024786],[1770076800,433596297],[1770508800,431767445],[1770940800,455973395],[1771372800,466872490],[1771804800,474668139],[1772236800,461651567],[1772668800,468466832],[1773100800,465737625],[1773532800,466730463],[1773964800,477500940],[1774396800,476829315],[1774828800,469081310],[1775260800,466736034],[1775692800,454084426],[1776124800,451934164],[1776556800,478296755],[1776988800,453005867],[1777098059,444727075]
+];
+
+/* Compressed historical Net TVL fallback — sampled from defillama_data.json. */
+let TVL_HISTORY = [
+  [1665964800,1451419],[1666396800,1572042],[1666828800,1675977],[1667260800,1686656],[1667692800,1758383],[1668124800,1289923],[1668556800,1278808],[1668988800,1262680],[1669420800,1292627],[1669852800,1334466],
+  [1670284800,1315229],[1670716800,1420922],[1671148800,1422021],[1671580800,1392333],[1672012800,1390294],[1672444800,1374171],[1672876800,1398164],[1673308800,1424820],[1673740800,1444034],[1674172800,1457522],
+  [1674604800,1430028],[1675036800,1365068],[1675468800,1282450],[1675900800,1268300],[1676332800,1220492],[1676764800,1339901],[1677196800,1334484],[1677628800,1349916],[1678060800,1330458],[1678492800,1243002],
+  [1678924800,1295547],[1679356800,1356299],[1679788800,1284120],[1680220800,1597863],[1680652800,1713213],[1681084800,2075018],[1681516800,2313800],[1681948800,2243656],[1682380800,2231317],[1682812800,2462508],
+  [1683244800,2618513],[1683676800,2466639],[1684108800,2410751],[1684540800,2394178],[1684972800,2847128],[1685404800,3411077],[1685836800,3459065],[1686268800,3548871],[1686700800,3456429],[1687132800,3564773],
+  [1687564800,3881237],[1687996800,4525570],[1688428800,5066081],[1688860800,5198448],[1689292800,5344291],[1689724800,5198802],[1690156800,5339780],[1690588800,5303344],[1691020800,5224085],[1691452800,5422166],
+  [1691884800,5504588],[1692316800,5237696],[1692748800,5062483],[1693180800,5133526],[1693612800,5109953],[1694044800,5120525],[1694476800,4896931],[1694908800,5078361],[1695340800,4948933],[1695772800,4880959],
+  [1696204800,5157338],[1696636800,5034457],[1697068800,4958506],[1697500800,4979719],[1697932800,5107954],[1698364800,5282352],[1698796800,5347438],[1699228800,5716348],[1699660800,7803692],[1700092800,9030478],
+  [1700524800,8719071],[1700956800,9121734],[1701388800,9397075],[1701820800,10449287],[1702252800,12173989],[1702684800,12515670],[1703116800,13168625],[1703548800,14824632],[1703980800,16243898],[1704412800,18509651],
+  [1704844800,19495943],[1705276800,20800762],[1705708800,20109855],[1706140800,19617104],[1706572800,20611959],[1707004800,19459530],[1707436800,19162177],[1707868800,19656960],[1708300800,21138116],[1708732800,21629471],
+  [1709164800,28821464],[1709596800,31121917],[1710028800,36774716],[1710460800,42292074],[1710892800,37822412],[1711324800,41691056],[1711756800,42674878],[1712188800,39122922],[1712620800,44457564],[1713052800,35479993],
+  [1713484800,34396067],[1713916800,39914983],[1714348800,39777998],[1714780800,37314630],[1715212800,36065072],[1715644800,36746785],[1716076800,40423155],[1716508800,48246365],[1716940800,52099145],[1717372800,51833490],
+  [1717804800,50841640],[1718236800,45057888],[1718668800,44934987],[1719100800,46167210],[1719532800,44334368],[1719964800,44379924],[1720396800,41042041],[1720828800,43717636],[1721260800,46737359],[1721692800,50527793],
+  [1722124800,49901355],[1722556800,48063204],[1722988800,41412720],[1723420800,40810035],[1723852800,41396061],[1724284800,42542379],[1724716800,43670744],[1725148800,41304696],[1725580800,39275303],[1726012800,42685961],
+  [1726444800,41180295],[1726876800,44564323],[1727308800,44370280],[1727740800,41778338],[1728172800,41267808],[1728604800,40283307],[1729036800,42381627],[1729468800,44522170],[1729900800,42344335],[1730332800,44017345],
+  [1730764800,42709235],[1731196800,52627127],[1731628800,64210839],[1732060800,67643617],[1732492800,73031549],[1732924800,76007210],[1733356800,80089485],[1733788800,77342729],[1734220800,82663221],[1734652800,80206835],
+  [1735084800,87824644],[1735516800,83519695],[1735948800,86979625],[1736380800,78910200],[1736812800,76774995],[1737244800,77628519],[1737676800,72556456],[1738108800,67843069],[1738540800,59385687],[1738972800,370396406],
+  [1739404800,531942921],[1739836800,574731909],[1740268800,793319096],[1740700800,849688802],[1741132800,850271322],[1741564800,825649581],[1741996800,679317193],[1742428800,716312234],[1742860800,713328368],[1743292800,646752516],
+  [1743724800,660310802],[1744156800,578923318],[1744588800,610419183],[1745020800,592930091],[1745452800,694386677],[1745884800,702069495],[1746316800,708718911],[1746748800,537074736],[1747180800,295788982],[1747612800,275386400],
+  [1748044800,273422438],[1748476800,212227814],[1748908800,178445011],[1749340800,158393575],[1749772800,148685679],[1750204800,142270703],[1750636800,132947032],[1751068800,138724841],[1751500800,138920838],[1751932800,144892927],
+  [1752364800,148887324],[1752796800,164354222],[1753228800,170649541],[1753660800,176128217],[1754092800,166386740],[1754524800,178771229],[1754956800,194576627],[1755388800,206322931],[1755820800,201514056],[1756252800,217456564],
+  [1756684800,211917056],[1757116800,218093120],[1757548800,225367920],[1757980800,227447190],[1758412800,222313343],[1758844800,206401162],[1759276800,215104853],[1759708800,209715245],[1760140800,181849013],[1760572800,175767246],
+  [1761004800,174780226],[1761436800,175426863],[1761868800,171235640],[1762300800,150809880],[1762732800,149825774],[1763164800,134328247],[1763596800,129693839],[1764028800,124748601],[1764460800,127702606],[1764892800,120947194],
+  [1765324800,121206371],[1765756800,114036268],[1766188800,109863655],[1766620800,110399510],[1767052800,110065958],[1767484800,113382131],[1767916800,111794529],[1768348800,150704864],[1768780800,251964527],[1769212800,229043238],
+  [1769644800,231695419],[1770076800,200799363],[1770508800,188241567],[1770940800,197316268],[1771372800,206089735],[1771804800,194593240],[1772236800,185136322],[1772668800,195058304],[1773100800,197219788],[1773532800,199496599],
+  [1773964800,212851079],[1774396800,203197177],[1774828800,193243412],[1775260800,151216070],[1775692800,137883073],[1776124800,147371731],[1776556800,170171471],[1776988800,136332721],[1777420800,146679100],[1777852800,151009523],
+  [1778284800,173455519],[1778716800,164971323],[1779148800,166053814],[1779580800,170878958],[1780012800,154072284],[1780444800,143925090],[1780876800,126468370],[1781308800,124879024],[1781740800,153814893],[1782172800,182692274],
+  [1782604800,191813232],[1783036800,208490362],[1783468800,242152343],[1783900800,241159274],[1784332800,242270410],[1784764800,245772413],[1784796755,243877260]
+];
+
+const CHAIN_ICONS = {
+  "Ethereum": "https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg",
+  "Arbitrum": "https://icons.llamao.fi/icons/chains/rsz_arbitrum.jpg",
+  "Berachain": "https://icons.llamao.fi/icons/chains/rsz_berachain.jpg",
+  "Botanix": "https://icons.llamao.fi/icons/chains/rsz_botanix.jpg",
+  "Mantle": "https://icons.llamao.fi/icons/chains/rsz_mantle.jpg",
+  "Polygon zkEVM": "https://icons.llamao.fi/icons/chains/rsz_polygon%20zkevm.jpg",
+  "X Layer": "https://icons.llamao.fi/icons/chains/rsz_x%20layer.jpg",
+};
+const NON_CHAIN_KEYS = new Set(["borrowed", "staking", "pool2", "vesting", "offers", "treasury", "cex", "governance"]);
+
+// Official Dolomite app CDN and symbol map, matched to Assets Token Composition.
+const DOLO_CDN = "https://app.dolomite.io/static/media/";
+const SYMBOL_ICONS = {
+  // Stablecoins
+  "USDC": DOLO_CDN + "USDC.5f67b2404ca2e547fb00b70128d132cd.svg",
+  "USDC.e": DOLO_CDN + "USDC.5f67b2404ca2e547fb00b70128d132cd.svg",
+  "USDC.E": DOLO_CDN + "USDC.5f67b2404ca2e547fb00b70128d132cd.svg",
+  "USDT": "icons/usdt.png",
+  "USDT0": "icons/usdt.png",
+  "USD₮0": "icons/usdt.png",
+  "DAI": "icons/dai.svg",
+  "USDM": DOLO_CDN + "USDM.6c74738cd3a3499145fda4386f94cb8f.svg",
+  "wUSDM": DOLO_CDN + "wUSDM.91bedb44039233b7c172ff95ea112192.svg",
+  "USDe": DOLO_CDN + "USDe-alt.ce2f05f4bb09aa83c4dd5886a5a2886f.svg",
+  "sUSDe": DOLO_CDN + "sUSDe.60857af2b2de944764d31ffa3711252c.svg",
+  "USDa": DOLO_CDN + "USDa.d95d6e9683a87b9007323745861f6b74.svg",
+  "USDai": DOLO_CDN + "USDai.8c41c3dde0d91e5e38e1aafb27cf6e55.svg",
+  "sUSDa": DOLO_CDN + "sUSDa.dc563217493f063b521fe276283e0d51.svg",
+  "sUSDai": DOLO_CDN + "sUSDai.5a9e2565db913d6bbd950993cc04bcde.svg",
+  "savUSD": DOLO_CDN + "savUSD.a2df97177abb3f75f4313a7241aa5fb0.svg",
+  "rUSD": DOLO_CDN + "rUSD.9b373643ab772af9dab0807b476b9afb.svg",
+  "srUSD": DOLO_CDN + "srUSD.bef2b101351c2021e25a96dc70122077.svg",
+  "wsrUSD": DOLO_CDN + "srUSD.bef2b101351c2021e25a96dc70122077.svg",
+  "pol-rUSD": DOLO_CDN + "pol-rUSD.315d0412835066838a187ecd29acb7ca.svg",
+  "BYUSD": DOLO_CDN + "BYUSD.8c0a1d051c4192302d739dbae5928286.svg",
+  "NECT": DOLO_CDN + "NECT.61b2d550cd59933e77667c3d75f73f5a.svg",
+  "HONEY": DOLO_CDN + "HONEY.3f0a04d651c47e52fb627fd616a9b92e.svg",
+  "MIM": DOLO_CDN + "MIM.3926602167b2dc6b73725f1cbd641130.svg",
+  "GRAI": DOLO_CDN + "GRAI.34fe5f7729b8c43b63ff0ab77c7b2b51.svg",
+  "eUSD": DOLO_CDN + "eUSD.5785fe83caa38875ac585eda225c0d02.svg",
+  "USDS": DOLO_CDN + "USDs.106fa406e23ae22c8bb6120c2ed861f4.svg",
+  "sUSDS": DOLO_CDN + "sUSDs.788070a4e1bbf5ab8c6130d47bdf8108.svg",
+  "USD0": "icons/usd0.png",
+  "USD0++": "icons/usd0.png",
+  "deUSD": "icons/deusd.png",
+  "sdeUSD": "icons/deusd.png",
+  "USDY": DOLO_CDN + "USDY.56cf7a38e78550dd507090fe52a59b41.svg",
+  "USD1": DOLO_CDN + "USD1.b88613f468d884c0a044350162ec22c2.svg",
+  "cUSD": "icons/stcusd.png",
+  "stcUSD": "icons/stcusd.png",
+  // ETH & LSTs
+  "ETH": DOLO_CDN + "ETH.6a879eb637c89695e6c5f5dc65c8c927.svg",
+  "WETH": DOLO_CDN + "WETH.8f785563e47cbf373160.png",
+  "wstETH": DOLO_CDN + "wstETH.2e97640d284bbe78da3776549d27ec47.svg",
+  "savETH": DOLO_CDN + "savETH.1c28535854c4a65f2a4786a2f02ae499.svg",
+  "dsavETH": DOLO_CDN + "savETH.1c28535854c4a65f2a4786a2f02ae499.svg",
+  "weETH": DOLO_CDN + "weETH.ac3fd68b653520508855e997e756d116.svg",
+  "rETH": DOLO_CDN + "rETH.bab59070c249d5b359fa196fed62e60e.svg",
+  "dARB": DOLO_CDN + "oARB.a2c6c20bd4a19274b88e208e43f7ffa3.svg",
+  "rsETH": DOLO_CDN + "rsETH.2270aa7836bedfa00c1a1d2967df0c33.svg",
+  "ezETH": DOLO_CDN + "ezETH.23c954d818f85c10660e5c0a476ff398.svg",
+  "mETH": DOLO_CDN + "mETH.589d7c134eea64fa2033e80dced1e34d.svg",
+  "cmETH": DOLO_CDN + "cmETH.8cab59dd270fad4e153b008454f9f54e.svg",
+  "beraETH": DOLO_CDN + "beraETH.661651b3419b7bb331ab2ebcb427b21b.svg",
+  "WOETH": DOLO_CDN + "WOETH.d17df010b680ea8c9c3e74d49b8e2e07.svg",
+  "STONE": DOLO_CDN + "STONE-alt.bf62e30edc6330897c738a4f9f1f5179.svg",
+  "rswETH": DOLO_CDN + "rswETH.fc4bdb76a764bf110676766fd0185dfe.svg",
+  "tETH": DOLO_CDN + "tETH.77b0839567f787ef80a76c3e83b90293.svg",
+  "ETH+": DOLO_CDN + "ETH_plus.58a00bd8aa8caafbc3837b4dcd7a1786.svg",
+  "ETHx": DOLO_CDN + "ETH_plus.58a00bd8aa8caafbc3837b4dcd7a1786.svg",
+  "ylstETH": DOLO_CDN + "ylstETH.8b2fa7c2cee8860ed6acbc0fa174eba5.svg",
+  // BTC
+  "BTC": DOLO_CDN + "BTC.ccaa294316dc68d8ecb092ef90e2c07c.svg",
+  "WBTC": DOLO_CDN + "WBTC.f3c8718835179e7543b5.png",
+  "cbBTC": DOLO_CDN + "CBBTC.fb6f792430a130d980920b6e69857bce.svg",
+  "uniBTC": DOLO_CDN + "uniBTC.bac6fdc858f4d751e79211986782ddd1.svg",
+  "LBTC": DOLO_CDN + "LBTC.095d1662f9a83aea1c899fa1eeb84502.svg",
+  "tBTC": DOLO_CDN + "tBTC.2907801a7fa28c6583322ad3c2931333.svg",
+  "SolvBTC": DOLO_CDN + "solvBTC.326d594ebd54e4317f078b70f72a58b4.svg",
+  "SolvBTC.a": DOLO_CDN + "solvBTC.326d594ebd54e4317f078b70f72a58b4.svg",
+  "xSolvBTC": DOLO_CDN + "xSolvBTC.b2110d70dea973b20c4f1e6a137f2256.svg",
+  "solvBTCbbn": DOLO_CDN + "solvBTC.326d594ebd54e4317f078b70f72a58b4.svg",
+  "SolvBTC.BBN": DOLO_CDN + "solvBTC.326d594ebd54e4317f078b70f72a58b4.svg",
+  "dplvGLP": DOLO_CDN + "plvGLP.24551c9e68ef10245cc45fb0b96cfdff.svg",
+  "eBTC": DOLO_CDN + "eBTC.e48b2e6a0a78d4ffc09991510cb5792b.svg",
+  "FBTC": DOLO_CDN + "FBTC.f29f5d2839b1b765719121f8094c7f11.svg",
+  "PumpBTC": DOLO_CDN + "PumpBTC.aa48de36289e8439daf0456c4252dd27.svg",
+  "pumpBTC": DOLO_CDN + "PumpBTC.aa48de36289e8439daf0456c4252dd27.svg",
+  "pumpBTC.bera": DOLO_CDN + "PumpBTC.aa48de36289e8439daf0456c4252dd27.svg",
+  "pBTC": DOLO_CDN + "pBTC-2.33f92d1521de41c2fd041b11c9d77c7a.svg",
+  "stBTC": DOLO_CDN + "stBTC.3935aab6a35bd55630f244a1f56631ba.svg",
+  "SBTC": DOLO_CDN + "SBTC.42e2a04abe2a5a21904064d886e10804.svg",
+  "ylPumpBTC": DOLO_CDN + "ylPumpBTC.4ed846397580cd47e2ac1cc59dba2d56.svg",
+  "ylpumpBTC": DOLO_CDN + "ylPumpBTC.4ed846397580cd47e2ac1cc59dba2d56.svg",
+  "ylfBTC": DOLO_CDN + "WBTC.f3c8718835179e7543b5.png",
+  "ylBTCLRT": DOLO_CDN + "ylBTCLRT.de3276def7f8a795b2215806ce3776d6.svg",
+  "ylBTCLST": DOLO_CDN + "ylBTCLRT.de3276def7f8a795b2215806ce3776d6.svg",
+  "STONEBTC": DOLO_CDN + "STONEBTC.4ca9c1ebc2fca809154e406e9afa589b.svg",
+  // Berachain
+  "BERA": DOLO_CDN + "BERA.a24a9b40b3447dde7ea1d2cab4dd59e9.svg",
+  "WBERA": DOLO_CDN + "wBERA.4ca51f80e3cd585d5152483f427d0416.svg",
+  "iBERA": DOLO_CDN + "iBERA.10d1ede095601cbc9bb5bf3bcdcb22a1.svg",
+  "sWBERA": DOLO_CDN + "sWBERA.e2be8febc13f6552990168c4e232d62a.svg",
+  "wgBERA": DOLO_CDN + "wgBERA.e10d0909ba87a40264fe74050034b025.svg",
+  "iBGT": DOLO_CDN + "iBGT.88932437445efa66139716bca4a9c19b.svg",
+  "oriBGT": DOLO_CDN + "oriBGT.7f3393531bde0f56498780c803133999.svg",
+  "diBGT": DOLO_CDN + "iBGT.88932437445efa66139716bca4a9c19b.svg",
+  "BGT": DOLO_CDN + "BGT.59af0fc7aad30ed3de49e3115ee24d04.svg",
+  "PT-iBGT-25DEC2025": DOLO_CDN + "PT-iBGT.45a4b4c47be320270ac8d1ce32439d2a.svg",
+  // DeFi / Governance
+  "DOLO": "dolo-logo.svg",
+  "ARB": DOLO_CDN + "ARB.f8b26a91d3f23a571be6398aa1a1f119.svg",
+  "LINK": DOLO_CDN + "LINK.e6e8d688b54af33e1f99.png",
+  "GMX": DOLO_CDN + "GMX.b836adc14ee095fd9b7671e718878333.svg",
+  "GM": DOLO_CDN + "GMX.b836adc14ee095fd9b7671e718878333.svg",
+  "PENDLE": DOLO_CDN + "PENDLE.e4e3db03c3798bf15a6c384ab5de3fee.svg",
+  "AAVE": DOLO_CDN + "AAVE.a9c152c66f6bed5f3d0865b8d5ea0dba.svg",
+  "UNI": DOLO_CDN + "UNI.fbe3002e628fbf39d75525ae192d3665.svg",
+  "CRV": DOLO_CDN + "CRV.f927723690ec12fcc8381902a361c75e.svg",
+  "DPX": DOLO_CDN + "DPX.ac054aa02be296979160d68dbb594a39.svg",
+  "GRAIL": DOLO_CDN + "GRAIL.13f8e457ed0e3d6868b41f28eb431819.svg",
+  "JONES": DOLO_CDN + "JONES.3ce2e6a8fb1444d9d6439e5781e6c2c1.svg",
+  "PREMIA": DOLO_CDN + "PREMIA.6c5c2339f3179353bb163b4e53d8dfa1.svg",
+  "MAGIC": DOLO_CDN + "MAGIC.e86265b765bebd6be26b2485691ab714.svg",
+  "RDNT": DOLO_CDN + "RDNT.92d507e82611bb1e4353e8b8cae0a73a.svg",
+  "XAI": DOLO_CDN + "XAI.ed6137b5d4b6078ac5061beb0e9b78f5.svg",
+  "WLFI": DOLO_CDN + "WLFI.2c1e57c98e3cad7282c40941b36ee606.svg",
+  "OHM": DOLO_CDN + "OHM.2df913d6b9413f26311c1df9718d1461.svg",
+  "IR": DOLO_CDN + "IR.4f115e858cbe4dbe82da00a8443ab1af.svg",
+  "KDK": DOLO_CDN + "KDK.31acd6ac4abb4a8c30812380c009f685.svg",
+  "HENLO": DOLO_CDN + "HENLO.8d50b084294cb406094f0005d46c2c75.svg",
+  "oUSDT": "icons/usdt.png",
+  // Network / L2
+  "MNT": DOLO_CDN + "MNT.7e882ac93f636391a8f7d2e0841cad98.svg",
+  "WMNT": DOLO_CDN + "WMNT.a58988c614392a216cc8937be5ab96db.svg",
+  "OKB": DOLO_CDN + "OKB.dfac9609700af55b3d9ef4e0e5b28f01.svg",
+  "WOKB": DOLO_CDN + "WOKB.4a6ddee6f2dfa841dd0932eab45ae376.svg",
+  "POL": DOLO_CDN + "MATIC.dfc4843b6db6db48662b1db5f752f9f1.svg",
+  "MATIC": DOLO_CDN + "MATIC.dfc4843b6db6db48662b1db5f752f9f1.svg",
+  // Pendle PT tokens
+  "PT-GLP": DOLO_CDN + "PT-GLP.10ed789425b588fe57650640de551bed.svg",
+  "PT-rETH": DOLO_CDN + "PT-rETH.e2b8a22fc3817c3a51225d7ffb5e616b.svg",
+  "PT-wstETH": DOLO_CDN + "PT-wstETH.09d3f15856b64c9b4f64c8de1264db37.svg",
+  "PT-weETH": DOLO_CDN + "PT-weETH.24d74aa18d08440b7f662eba78dcc52c.svg",
+  "PT-eETH": DOLO_CDN + "PT-weETH.24d74aa18d08440b7f662eba78dcc52c.svg",
+  "PT-ezETH": DOLO_CDN + "PT-ezETH.d1ed194653ea88e9f3fe8c029064d654.svg",
+  "PT-rsETH": DOLO_CDN + "PT-rsETH.857e86584fe78053a1044b78df689b4d.svg",
+  "PT-mETH": DOLO_CDN + "PT-mETH.793642f12d4c303ecf771107c77ecfbb.svg",
+  "PT-cmETH": DOLO_CDN + "PT-cmETH.f49c697e967386e0fd082040501e92e0.svg",
+  "PT-USDe": DOLO_CDN + "PT-USDe.b5a8d24289b509fe4e6b4c702a790828.svg",
+  "PT-MNT": DOLO_CDN + "PT-MNT.19aa4a53e3aa4337407a1502ae89fc31.svg",
+  // GMX V2 / GLV market tokens from the official Dolomite Earn app
+  "gmARB-USD": DOLO_CDN + "ARB-GM.50df3ed4a1a52b938992cb5e08efbc36.svg",
+  "gmBTC-USD": DOLO_CDN + "WBTC-GM.6e7f69538bb02b42b881b86aea5c6d6e.svg",
+  "gmETH-USD": DOLO_CDN + "ETH-GM.0b7d447f3c11298af07411c926352c71.svg",
+  "gmLINK-USD": DOLO_CDN + "LINK-GM.7d4b33346ec9822f9dc7c22a393f7698.svg",
+  "gmBTC": DOLO_CDN + "WBTC-GM.6e7f69538bb02b42b881b86aea5c6d6e.svg",
+  "gmETH": DOLO_CDN + "ETH-GM.0b7d447f3c11298af07411c926352c71.svg",
+  "gmUNI-USD": DOLO_CDN + "UNI-GM.8a4dfd0dc79f5b60138039338d28a6c7.svg",
+  "gmAAVE-USD": DOLO_CDN + "gmAAVE.e032a2febd818f511cf782e09b12f212.svg",
+  "gmDOGE-USD": DOLO_CDN + "gmDOGE.36090e2ebcd305890c779e005d41d331.svg",
+  "gmGMX-USD": DOLO_CDN + "gmGMX.2c5cb2e0f1769629b38580607b77ecbc.svg",
+  "gmSOL-USD": DOLO_CDN + "gmSOL.73d56a4a2dcf3d39fc5c946b8c65c631.svg",
+  "gmWstETH-USD": DOLO_CDN + "wstETH.2e97640d284bbe78da3776549d27ec47.svg",
+  "gmGMX": DOLO_CDN + "gmGMX.2c5cb2e0f1769629b38580607b77ecbc.svg",
+  "gmPENDLE-USD": DOLO_CDN + "gmPENDLE.cd8acede00414f70056c0fb9aa2baa7c.svg",
+  "gmPEPE-USD": DOLO_CDN + "gmPEPE.966f4beb1b823729066c29c52921b664.svg",
+  "gmWIF-USD": DOLO_CDN + "gmWIF.8dfcfc27c0c56651a2e523e97c7fdcb4.svg",
+  "GLV-BTC": DOLO_CDN + "GLV-BTC.c576682a1343bbfde84710a572b5a68e.svg",
+  "GLV-ETH": DOLO_CDN + "GLV-ETH.092b4c8a9412efd58d3542d26bc5a522.svg",
+};
+Object.assign(SYMBOL_ICONS, globalThis.DOLOMITE_TOKEN_ICONS || {});
+const TOKEN_ICON_OVERRIDES = {
+  "arbitrum:0x2c799166c9f0dbf9efc5004cbce4c5a37fa39329": SYMBOL_ICONS["gmARB-USD"],
+  "arbitrum:0x1e8e8b7a2f827b3bc12b00ee402145061b7050ef": SYMBOL_ICONS["gmBTC-USD"],
+  "arbitrum:0x505582242757f16d72f8c4462a616e388ca1b074": SYMBOL_ICONS["gmETH-USD"],
+  "arbitrum:0x18cb14564fbb015bd3439220d177799355abc0e0": SYMBOL_ICONS["gmLINK-USD"],
+  "arbitrum:0xb15bbbfcff6c411410c66642306d1ffa7ecec4d8": SYMBOL_ICONS["gmBTC"],
+  "arbitrum:0x2d165a76dd3e552df3860789331ab73c5a3d7f92": SYMBOL_ICONS["gmETH"],
+  "arbitrum:0x20d51cb520c4622dcc3d7e35003dbab07d547e7e": SYMBOL_ICONS["gmUNI-USD"],
+  "arbitrum:0x24c9121c75c099b38d40020872b8a0d2c27c614d": SYMBOL_ICONS["gmAAVE-USD"],
+  "arbitrum:0x1beed3b7d1237b7773b5c4c249933e3ca5e027c1": SYMBOL_ICONS["gmDOGE-USD"],
+  "arbitrum:0x5c99f6cf6069698d234d50bf69ebd2f53e45ed1c": SYMBOL_ICONS["gmGMX-USD"],
+  "arbitrum:0x1ebb1c7023addbb2b6e30e6f4c8d4a4440bfd412": SYMBOL_ICONS["gmSOL-USD"],
+  "arbitrum:0xc587646f67b38739006ed0200e2e0a26fdb01c9b": SYMBOL_ICONS["gmWstETH-USD"],
+  "arbitrum:0xcf248baf933c7b1b876b997246f25021a65383b3": SYMBOL_ICONS["gmGMX"],
+  "arbitrum:0xe5d6fe410c69b44c357403a1936b3bfaddbe340b": SYMBOL_ICONS["gmPENDLE-USD"],
+  "arbitrum:0x6586f1db71513daf94b0431156d225a46c00f20b": SYMBOL_ICONS["gmPEPE-USD"],
+  "arbitrum:0xf5063b40fa66ab2fbda2e6807ac5759a41a1b0c3": SYMBOL_ICONS["gmWIF-USD"],
+  "arbitrum:0x7e584529bb40220a2bd5d0c13e3d65abd4a47f0e": SYMBOL_ICONS["GLV-BTC"],
+  "arbitrum:0x11f4532c05fb8ea6320b1dc155bfdc2498a5d8b4": SYMBOL_ICONS["GLV-ETH"],
+  "arbitrum:0x51fc0f6660482ea73330e414efd7808811a57fa2": SYMBOL_ICONS["PREMIA"],
+  "arbitrum:0x894134a25a5fac1c2c26f1d8fbf05111a3cb9487": SYMBOL_ICONS["GRAI"],
+  "arbitrum:0x12275dcb9048680c4be40942ea4d92c74c63b844": SYMBOL_ICONS["eUSD"],
+  "arbitrum:0x18c14c2d707b2212e17d1579789fc06010cfca23": SYMBOL_ICONS["ETH+"],
+  "berachain:0xe946dd7d03f6f5c440f68c84808ca88d26475fc5": SYMBOL_ICONS["ylfBTC"],
+  "berachain:0x1fcca65fb6ae3b2758b9b2b394cb227eae404e1e": SYMBOL_ICONS["pumpBTC.bera"],
+  "berachain:0x91a6af4c8cb1673ab0d776828b6b271ac3da9dcb": SYMBOL_ICONS["USD0"],
+  "berachain:0x30ea2d525ef7c234f8aa6e3a8909b88f71244cb0": SYMBOL_ICONS["USD0++"],
+  "berachain:0x7203fb920421170cc4da001d758fde8f391a0570": SYMBOL_ICONS["deUSD"],
+  "berachain:0xaf51434ac57f05e0bc397739c15cf653dbdbd86d": SYMBOL_ICONS["sdeUSD"],
+  "arbitrum:0x5c80ac681b6b0e7ef6e0751211012601e6cfb043": SYMBOL_ICONS["dplvGLP"],
+  "berachain:0xcc0966d8418d412c599a6421b760a847eb169a8c": SYMBOL_ICONS["SolvBTC.BBN"],
+};
+const TVL_TOKEN_ICON_ALIASES = {
+  "dGM": SYMBOL_ICONS["GM"],
+  "dGMX": SYMBOL_ICONS["GMX"],
+  "dGLV": SYMBOL_ICONS["GLV-BTC"],
+  "dGLV [WBTC-USDC]": SYMBOL_ICONS["GLV-BTC"],
+  "dGLV [WETH-USDC]": SYMBOL_ICONS["GLV-ETH"],
+};
+const normalizeTvlTokenSymbol = (sym) => {
+  const s = String(sym || "").trim();
+  if (/^dGLV/i.test(s) && /ETH/i.test(s)) return "dGLV [WETH-USDC]";
+  if (/^dGLV/i.test(s) && /(BTC|WBTC)/i.test(s)) return "dGLV [WBTC-USDC]";
+  if (/^dGMX$/i.test(s)) return "dGMX";
+  if (/^dGM$/i.test(s)) return "dGM";
+  return s;
+};
+const tokenIcon = (sym, row={}) => {
+  const addrKey = row.chain && row.addr ? `${row.chain}:${String(row.addr).toLowerCase()}` : "";
+  const s = normalizeTvlTokenSymbol(sym);
+  return TOKEN_ICON_OVERRIDES[addrKey]
+    || row.icon
+    || TVL_TOKEN_ICON_ALIASES[s]
+    || SYMBOL_ICONS[s]
+    || SYMBOL_ICONS[s.toUpperCase()]
+    || SYMBOL_ICONS[s.replace(/-\d{1,2}[A-Z]{3}\d{4}$/i, "")]
+    || "dolomite-logo.svg";
+};
+const GRAYSCALE_SYMBOLS = new Set(["CRV", "USD0", "USD0++", "deUSD", "sdeUSD", "MATIC", "POL", "stcUSD", "cUSD", "USDT", "cbBTC"]);
+const tokenIconClass = (sym) => GRAYSCALE_SYMBOLS.has(String(sym || "").trim()) ? "grayscale" : "";
+const FULL_LOGO_SYMBOL_PATTERN = /^(?:wstETH|ylstETH|(?:d?PT|d?YT)-|gm(?!x$)|dGM(?:$|[-\s])|d?GLV|(?:m|plv|dplv|dfs|magic|s)GLP)/i;
+const tokenIconFrameClass = sym => FULL_LOGO_SYMBOL_PATTERN.test(String(sym || "").trim()) ? "full-logo" : "";
+
+function chainKey(name){
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+async function fetchJson(path){
+  const response = await fetch(path, { cache: "no-cache" });
+  if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+  return response.json();
+}
+
+function buildHistory(rawHistory, currentValue, fallbackHistory){
+  const raw = Array.isArray(rawHistory) ? rawHistory : [];
+  const points = raw
+    .map(p => [Number(p.date), Number(p.totalLiquidityUSD)])
+    .filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]) && p[1] > 0)
+    .sort((a,b)=>a[0]-b[0]);
+
+  if (points.length < 2) return fallbackHistory;
+
+  // Preserve historical source values across active-network scope changes.
+  return points;
+}
+
+const TOKEN_DISPLAY_SYMBOLS = {
+  "USDC.E": "USDC.e",
+  "USDT0": "USD₮0",
+  "WEETH": "weETH",
+  "WSTETH": "wstETH",
+  "METH": "mETH",
+  "CMETH": "cmETH",
+  "STBTC": "stBTC",
+  "SRUSD": "srUSD",
+  "SAVUSD": "savUSD",
+  "ORIBGT": "oriBGT",
+  "PBTC": "pBTC",
+};
+
+function displayTokenSymbol(symbol){
+  const raw = String(symbol || "").trim();
+  return TOKEN_DISPLAY_SYMBOLS[raw] || raw;
+}
+
+function currentChainRows(current){
+  return Object.entries(current || {})
+    .filter(([name]) => ["ethereum", "berachain", "arbitrum"].includes(chainKey(name)))
+    .filter(([name, value]) => !String(name).includes("-") && !NON_CHAIN_KEYS.has(String(name).toLowerCase()) && Number(value) > 0)
+    .map(([name, value]) => ({ name, tvl: Number(value || 0) }));
+}
+
+function officialStaleChainKeys(officialData){
+  if (!officialData) return new Set();
+  const stale = new Set((officialData.staleChains || []).map(chainKey));
+  const maxAge = Number(officialData.freshnessMaxAgeSeconds || 21600);
+  const now = Date.now() / 1000;
+  Object.entries(officialData.chainMeta || {}).forEach(([chain, meta]) => {
+    const ts = Number(meta?.blockTimestamp || 0);
+    if (!ts || now - ts > maxAge) stale.add(chainKey(chain));
+  });
+  return new Set([...stale].filter(key => ["ethereum", "berachain", "arbitrum"].includes(key)));
+}
+
+const TVL_FALLBACK_MIN_SUPPLY_RATIO = 0.85;
+const TVL_FALLBACK_MATERIAL_TOKEN_USD = 1000000;
+const TVL_FALLBACK_MATERIAL_TOKEN_SHARE = 0.01;
+
+function chainSupplyFromCurrent(current, chain){
+  return Number(current?.[chain] || 0) + Number(current?.[`${chain}-borrowed`] || 0);
+}
+
+function hasMissingMaterialOfficialToken(officialTokens, fallbackTokens, officialSupply){
+  const materialUsd = Math.max(
+    TVL_FALLBACK_MATERIAL_TOKEN_USD,
+    Number(officialSupply || 0) * TVL_FALLBACK_MATERIAL_TOKEN_SHARE
+  );
+  return Object.entries(officialTokens || {}).some(([symbol, value]) => {
+    const usd = Number(value || 0);
+    return usd >= materialUsd && !(Number(fallbackTokens?.[symbol] || 0) > 0);
+  });
+}
+
+function fallbackSupplyIsMateriallyLower(chain, officialCurrent, fallbackCurrent){
+  const officialSupply = chainSupplyFromCurrent(officialCurrent, chain);
+  const fallbackSupply = chainSupplyFromCurrent(fallbackCurrent, chain);
+  if (!(officialSupply > 0) || !(fallbackSupply > 0)) return false;
+  return fallbackSupply / officialSupply < TVL_FALLBACK_MIN_SUPPLY_RATIO;
+}
+
+function shouldUseLlamaChainFallback(chain, officialData, llamaData, staleKeys){
+  if (!staleKeys.has(chainKey(chain))) return false;
+  const llamaCurrent = llamaData?.currentChainTvls || {};
+  if (!(Number(llamaCurrent[chain]) > 0)) return false;
+  return !fallbackSupplyIsMateriallyLower(chain, officialData?.currentChainTvls || {}, llamaCurrent);
+}
+
+function shouldUseLlamaTokenFallback(chain, officialData, llamaData, staleKeys){
+  if (!staleKeys.has(chainKey(chain))) return false;
+  const llamaTokens = llamaData?.chainTokensInUsd?.[chain];
+  if (!llamaTokens || !Object.keys(llamaTokens).length) return false;
+  const officialTokens = officialData?.chainTokensInUsd?.[chain] || {};
+  if (!Object.keys(officialTokens).length) return true;
+  const officialSupply = chainSupplyFromCurrent(officialData?.currentChainTvls || {}, chain);
+  if (fallbackSupplyIsMateriallyLower(chain, officialData?.currentChainTvls || {}, llamaData?.currentChainTvls || {})) return false;
+  if (hasMissingMaterialOfficialToken(officialTokens, llamaTokens, officialSupply)) return false;
+  return true;
+}
+
+function mergedChainTokens(llamaData, officialData, staleKeys){
+  const officialTokens = officialData?.chainTokensInUsd || {};
+  const llamaTokens = llamaData?.chainTokensInUsd || {};
+  const merged = {};
+  const chainNames = new Set([...Object.keys(officialTokens), ...Object.keys(llamaTokens)]);
+  chainNames.forEach(chain => {
+    if (!["ethereum", "berachain", "arbitrum"].includes(chainKey(chain))) return;
+    const useLlama = shouldUseLlamaTokenFallback(chain, officialData, llamaData, staleKeys);
+    const tokens = useLlama ? llamaTokens[chain] : (officialTokens[chain] || llamaTokens[chain]);
+    if (tokens && Object.keys(tokens).length) merged[chain] = tokens;
+  });
+  return merged;
+}
+
+function tokenMapFromChains(chainTokens){
+  const tokenMap = {};
+  Object.values(chainTokens || {}).forEach(tokens => {
+    Object.entries(tokens || {}).forEach(([symbol, value]) => {
+      const usd = Number(value || 0);
+      if (!Number.isFinite(usd) || usd <= 0) return;
+      tokenMap[symbol] = (tokenMap[symbol] || 0) + usd;
+    });
+  });
+  return tokenMap;
+}
+
+function buildTokenComposition(llamaData, officialData, staleKeys=new Set()){
+  const chainTokens = mergedChainTokens(llamaData, officialData, staleKeys);
+  const tokenSource = officialData?.tokensInUsd || llamaData?.tokensInUsd || [];
+  const latest = tokenSource[tokenSource.length - 1] || tokenSource[0] || {};
+  const tokenMap = Object.keys(chainTokens).length ? tokenMapFromChains(chainTokens) : (latest.tokens || {});
+  const tokenChain = {};
+
+  Object.entries(chainTokens).forEach(([chain, tokens]) => {
+    Object.entries(tokens || {}).forEach(([symbol, value]) => {
+      const usd = Number(value || 0);
+      if (!Number.isFinite(usd) || usd <= 0) return;
+      if (!tokenChain[symbol] || usd > tokenChain[symbol].usd) {
+        tokenChain[symbol] = { chain: chainKey(chain), usd };
+      }
+    });
+  });
+
+  return Object.entries(tokenMap)
+    .map(([symbol, value]) => {
+      const sym = displayTokenSymbol(symbol);
+      return {
+        sym,
+        chain: tokenChain[symbol]?.chain || "",
+        usd: Number(value || 0),
+        name: sym,
+      };
+    })
+    .filter(t => Number.isFinite(t.usd) && t.usd > 0)
+    .sort((a,b)=>b.usd-a.usd);
+}
+
+function buildChainTokenCompositions(llamaData, officialData, staleKeys=new Set()){
+  const chainTokens = mergedChainTokens(llamaData, officialData, staleKeys);
+  const byChain = {};
+  Object.entries(chainTokens).forEach(([chain, tokens]) => {
+    const key = chainKey(chain);
+    const rows = Object.entries(tokens || {})
+      .map(([symbol, value]) => {
+        const sym = displayTokenSymbol(symbol);
+        return { sym, chain: key, usd: Number(value || 0), name: sym };
+      })
+      .filter(t => Number.isFinite(t.usd) && t.usd > 0)
+      .sort((a,b)=>b.usd-a.usd);
+    if (rows.length) byChain[key] = rows;
+  });
+  return byChain;
+}
+
+function buildTvlSnapshot(llamaData, officialData, fullSupplyData=null){
+  const officialCurrent = officialData?.currentChainTvls || {};
+  const llamaCurrent = llamaData?.currentChainTvls || {};
+  const current = officialData ? officialCurrent : llamaCurrent;
+  const staleKeys = officialStaleChainKeys(officialData);
+  const chainNames = new Set([
+    ...currentChainRows(current).map(c => c.name),
+    ...currentChainRows(llamaCurrent).map(c => c.name),
+  ]);
+  const chainRows = [...chainNames]
+    .map(name => {
+      const key = chainKey(name);
+      const useLlama = shouldUseLlamaChainFallback(name, officialData, llamaData, staleKeys);
+      const source = useLlama ? llamaCurrent : current;
+      return {
+        name,
+        tvl: Number(source[name] || 0),
+        borrowed: Number(source[`${name}-borrowed`] || 0),
+        source: useLlama ? "defillama_fallback" : "dolomite_subgraph",
+      };
+    })
+    .filter(c => c.tvl > 0)
+    .sort((a,b)=>b.tvl-a.tvl);
+  const chainTokens = mergedChainTokens(llamaData, officialData, staleKeys);
+  const hasFallback = chainRows.some(c => c.source === "defillama_fallback");
+  const rowTvl = chainRows.reduce((sum,c)=>sum+c.tvl, 0);
+  const rowBorrowed = chainRows.reduce((sum,c)=>sum+c.borrowed, 0);
+  // Current totals have the same active-network scope as the visible rows.
+  // Keep archived chart series unchanged; never rescale them to this scope.
+  const totalTvl = rowTvl;
+  const totalBorrowed = rowBorrowed;
+  const supplyLiquidity = totalTvl + totalBorrowed;
+
+  const chains = chainRows.map(c => ({
+    key: chainKey(c.name),
+    name: c.name,
+    icon: CHAIN_ICONS[c.name] || "",
+    tvl: c.tvl,
+    borrowed: c.borrowed,
+    tokens: Object.values(chainTokens[c.name] || {}).filter(v => Number(v) > 0).length,
+  }));
+
+  const hasDistinctSupplyHistory = Array.isArray(llamaData?.totalSupply);
+  const llamaTvlHistory = buildHistory(
+    hasDistinctSupplyHistory ? llamaData?.tvl : null,
+    totalTvl,
+    TVL_HISTORY,
+  );
+  const history = buildHistory(
+    fullSupplyData?.tvl,
+    totalTvl,
+    llamaTvlHistory,
+  );
+  const llamaSupplyHistory = buildHistory(
+    hasDistinctSupplyHistory ? llamaData.totalSupply : llamaData?.tvl,
+    supplyLiquidity,
+    TOTAL_SUPPLY_HISTORY,
+  );
+  const supplyHistory = buildHistory(
+    fullSupplyData?.totalSupply,
+    supplyLiquidity,
+    llamaSupplyHistory,
+  );
+  const tokens = buildTokenComposition(llamaData, officialData, staleKeys);
+  const tokenCompositionByChain = buildChainTokenCompositions(llamaData, officialData, staleKeys);
+
+  return {
+    snapshotTs: officialData?.last_updated || llamaData?.last_updated || SNAPSHOT_TS,
+    totalTvl,
+    totalBorrowed,
+    totalSupply: supplyLiquidity,
+    chains,
+    tokens: tokens.length ? tokens : TOP_TOKENS,
+    tokenCompositionByChain,
+    history,
+    supplyHistory,
+    staleChains: [...staleKeys],
+  };
+}
+
+async function loadTvlSnapshot(){
+  let llamaData = null;
+  let officialData = null;
+  let fullSupplyData = null;
+  try { llamaData = await fetchJson("defillama_data.json"); } catch (error) { console.warn("TVL: DeFiLlama static data unavailable", error); }
+  try { officialData = await fetchJson("dolomite_tvl.json"); } catch (error) { console.warn("TVL: official Dolomite TVL data unavailable", error); }
+  try { fullSupplyData = await fetchJson("dolomite_total_supply_history.json"); } catch (error) { console.warn("TVL: full Total Supply history unavailable", error); }
+  if (!llamaData && !officialData) return null;
+  return buildTvlSnapshot(llamaData || {}, officialData || null, fullSupplyData);
+}
+
+function computeWindowChange(history, days){
+  if (!history || history.length < 2) return null;
+  const latest = history[history.length - 1];
+  const target = latest[0] - days * 86400;
+  let previous = history[0];
+  for (const point of history) {
+    if (point[0] <= target) previous = point;
+    else break;
+  }
+  if (!previous || !previous[1]) return null;
+  return (latest[1] - previous[1]) / Math.abs(previous[1]) * 100;
+}
+
+function setText(id, value){
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+function setMetricText(id, value){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(window.CountUpMetric) CountUpMetric.text(el, value);
+  else el.textContent = value;
+}
+
+function setBar(id, pct){
+  const el = document.getElementById(id);
+  if (el) el.style.width = `${Math.max(0, Math.min(100, pct)).toFixed(1)}%`;
+}
+
+function applyTvlSnapshot(snapshot){
+  if (!snapshot) return;
+  SNAPSHOT_TS = snapshot.snapshotTs;
+  TOTAL_TVL = snapshot.totalTvl;
+  TOTAL_BORROW = snapshot.totalBorrowed;
+  TOTAL_SUPPLY = snapshot.totalSupply;
+  CHAINS = snapshot.chains;
+  TOP_TOKENS = snapshot.tokens;
+  CHAIN_TOKEN_COMPOSITION = snapshot.tokenCompositionByChain || {};
+  TVL_HISTORY = snapshot.history;
+  TOTAL_SUPPLY_HISTORY = snapshot.supplyHistory;
+
+  const chainCount = CHAINS.length;
+  const marketCount = CHAINS.reduce((sum,c)=>sum+(c.tokens || 0), 0);
+  const utilPct = TOTAL_SUPPLY > 0 ? TOTAL_BORROW / TOTAL_SUPPLY * 100 : 0;
+  const netPct = TOTAL_SUPPLY > 0 ? TOTAL_TVL / TOTAL_SUPPLY * 100 : 0;
+  const change7d = computeWindowChange(TOTAL_SUPPLY_HISTORY, 7);
+
+  setMetricText("heroSupply", fmtUsd(TOTAL_SUPPLY));
+  setMetricText("heroBorrowed", fmtUsd(TOTAL_BORROW));
+  setMetricText("heroNetTvl", fmtUsd(TOTAL_TVL));
+  setMetricText("heroUtilization", `${utilPct.toFixed(1)}%`);
+  setMetricText("heroChainCount", String(chainCount));
+  setText("heroMarketCount", `${marketCount} token markets`);
+  setText("chainCountBadge", `${chainCount} chains`);
+  setText("summarySupply", fmtUsd(TOTAL_SUPPLY));
+  setText("summaryBorrowed", fmtUsd(TOTAL_BORROW));
+  setText("summaryNetTvl", fmtUsd(TOTAL_TVL));
+  setBar("heroBorrowedBar", utilPct);
+  setBar("heroNetBar", netPct);
+  setBar("heroUtilBar", utilPct);
+
+  const chainSub = document.getElementById("heroChainSub");
+  if (chainSub) chainSub.innerHTML = `<b>Dolomite</b> · all user deposits across <b>${chainCount} chains</b>`;
+  const protoSub = document.getElementById("protoBrandSub");
+  if (protoSub) protoSub.innerHTML = `Lending &amp; margin · <b>${chainCount} chains</b> · <b>${marketCount} markets</b>`;
+  const heroSource = document.getElementById("heroSource");
+  if (heroSource) {
+    heroSource.innerHTML = `<span class="dot"></span>${snapshot.staleChains?.length ? "Dolomite subgraphs + fallback" : "Dolomite subgraphs"}`;
+  }
+
+  const heroChg = document.getElementById("heroChg");
+  if (heroChg && Number.isFinite(change7d)) {
+    const isUp = change7d >= 0;
+    heroChg.className = `hero-chg hero-value-chip ${isUp ? "up" : "down"}`;
+    heroChg.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="${isUp ? "6 14 12 8 18 14" : "6 10 12 16 18 10"}"/></svg>
+      <span data-count-up></span>
+      <span class="lbl">7d change</span>`;
+    const changePart = heroChg.querySelector("[data-count-up]");
+    changePart.dataset.countValue = "0";
+    changePart.textContent = `${isUp ? "+" : ""}0.000%`;
+    if(window.CountUpMetric) CountUpMetric.text(changePart, fmtPct(change7d));
+    else changePart.textContent = fmtPct(change7d);
+  }
+}
+
+/* ==========================================================================
+   FORMATTERS
+   ========================================================================== */
+const fmtUsd = (v) => {
+  const a = Math.abs(v);
+  if (a >= 1e9) return "$" + (v/1e9).toFixed(2) + "B";
+  if (a >= 1e6) return "$" + (v/1e6).toFixed(2) + "M";
+  if (a >= 1e3) return "$" + (v/1e3).toFixed(1) + "K";
+  return "$" + v.toFixed(0);
+};
+const fmtPct = (v) => (v>=0?"+":"") + v.toFixed(2) + "%";
+const fmtDate= (ts) => {
+  const d = new Date(ts*1000);
+  return d.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"});
+};
+
+/* ==========================================================================
+   RENDER · CHAINS — supply bar per chain (top 3 + expand)
+   ========================================================================== */
+function chainRowHtml(c, i, totalSupplyAll){
+  const supply = c.tvl + c.borrowed;
+  const supplyPctOfTotal = totalSupplyAll>0 ? (supply/totalSupplyAll*100) : 0;
+  const borrowedPctOfSupply = supply>0 ? (c.borrowed/supply*100) : 0;
+  // Bar widths: supply bar relative to LARGEST chain (so dominant chain = 100%);
+  // borrow overlay is drawn relative to the SAME bar, scaled by borrow share.
+  const supplyWidth   = (supply/totalSupplyAll*100).toFixed(2);
+  const borrowWidthAbs= (c.borrowed/totalSupplyAll*100).toFixed(2);
+  return `
+    <div class="chain-row" data-key="${c.key}">
+      <div class="row-head">
+        <div class="id-side">
+          <div class="chain-icon"><img src="${c.icon}" alt="" onerror="this.style.display='none'"></div>
+          <div>
+            <div class="chain-name">${c.name}</div>
+            <div class="chain-meta">${c.tokens} markets</div>
+          </div>
+        </div>
+        <div class="num-side">
+          <div class="num-supply">${fmtUsd(supply)}</div>
+          <div class="num-pct">(${supplyPctOfTotal.toFixed(1)}%)</div>
+        </div>
+      </div>
+      <div class="chain-bar">
+        <div class="bar-supply" style="width:${supplyWidth}%"></div>
+        <div class="bar-borrow" style="width:${borrowWidthAbs}%"></div>
+      </div>
+      <div class="row-foot">
+        <div class="foot-stat"><span class="dot-bar supply"></span><span class="k">Net TVL</span><span class="v">${fmtUsd(c.tvl)}</span></div>
+        <div class="foot-stat borrow"><span class="dot-bar borrow"></span><span class="k">Borrowed</span><span class="v">${fmtUsd(c.borrowed)}</span></div>
+        <div class="foot-stat util"><span class="k">Util</span><span class="v">${borrowedPctOfSupply.toFixed(1)}%</span></div>
+      </div>
+    </div>
+  `;
+}
+function renderChains(){
+  const sorted = sortChainsByTotalSupply(CHAINS);
+  // Total = sum of supply across all chains (matches the legacy "supplyLiquidity" semantics)
+  const totalSupplyAll = sorted.reduce((s,c)=>s+c.tvl+c.borrowed,0);
+  const top3 = sorted.slice(0,3).map((c,i)=>chainRowHtml(c,i,totalSupplyAll)).join("");
+  const rest = sorted.slice(3).map((c,i)=>chainRowHtml(c,i+3,totalSupplyAll)).join("");
+  document.getElementById("chainsListTop").innerHTML = top3;
+  const exp  = document.getElementById("chainsExpand");
+  const lbl  = document.getElementById("chainsToggleLbl");
+  const btn  = document.getElementById("chainsToggle");
+  if (sorted.length > 3){
+    exp.innerHTML = `<div class="chains-list" style="padding-top:0">${rest}</div>`;
+    lbl.textContent = `Show ${sorted.length-3} more chains`;
+    btn.style.display = "flex";
+  } else {
+    exp.innerHTML = "";
+    btn.style.display = "none";
+  }
+}
+let chainsExpanded = false;
+function toggleChains(){
+  chainsExpanded = !chainsExpanded;
+  const exp = document.getElementById("chainsExpand");
+  const btn = document.getElementById("chainsToggle");
+  const lbl = document.getElementById("chainsToggleLbl");
+  if (chainsExpanded){
+    exp.style.maxHeight = exp.scrollHeight + "px";
+    btn.classList.add("open");
+    lbl.textContent = "Show less";
+  } else {
+    exp.style.maxHeight = "0";
+    btn.classList.remove("open");
+    const remaining = CHAINS.length - 3;
+    lbl.textContent = `Show ${remaining} more chains`;
+  }
+}
+
+/* ==========================================================================
+   RENDER · TOP TOKENS — donut + interactive legend (chain filter, hover sync)
+   ========================================================================== */
+// Per-token colour, gold-led, then warm/grey/blue/green for ranks 2..N.
+const TOKEN_PALETTE = [
+  "#c9a227","#e4c15a","#b87333","#8aa37b","#9ab7c2","#8a8a9e","#b4796b",
+  "#c8b178","#a89a6e","#7a96a0","#8a6b9a","#a37b56","#8aa392","#7d8aa3",
+  "#a37b8a","#9aa389","#7d96a3","#a39d7d","#8a9ea3","#a3897d"
+];
+const VISIBLE_TOKEN_LIMIT = 20;
+const INDIVIDUAL_TOKEN_LIMIT = VISIBLE_TOKEN_LIMIT - 1;
+const OTHER_COLOR = "#6f7480";
+// Multi-select chain filter: an empty Set means "All Chains"
+let tokenState = { chains: new Set(), focus: null };
+
+function chainTotalSupply(chain){
+  return Number(chain?.tvl || 0) + Number(chain?.borrowed || 0);
+}
+
+function sortChainsByTotalSupply(chains){
+  return [...(chains || [])].sort((a,b)=>chainTotalSupply(b)-chainTotalSupply(a));
+}
+
+function tokensForChain(chainKey){
+  const chainRows = CHAIN_TOKEN_COMPOSITION[chainKey] || [];
+  if (chainRows.length) return chainRows;
+  return TOP_TOKENS.filter(t => t.chain === chainKey);
+}
+
+function sourceTokens(){
+  return isAllChains()
+    ? TOP_TOKENS
+    : [...tokenState.chains]
+        .flatMap(chainKey => tokensForChain(chainKey))
+        .sort((a,b)=>b.usd-a.usd);
+}
+
+function collapseSmallTokens(tokens){
+  if (tokens.length <= VISIBLE_TOKEN_LIMIT) return tokens;
+  const visible = tokens.slice(0, INDIVIDUAL_TOKEN_LIMIT);
+  const hidden = tokens.slice(INDIVIDUAL_TOKEN_LIMIT);
+  const otherUsd = hidden.reduce((sum,t)=>sum+t.usd,0);
+  if (!(otherUsd > 0)) return visible;
+  return visible.concat({
+    sym: "Other",
+    chain: "__other",
+    usd: otherUsd,
+    name: "Other Assets",
+    isOther: true,
+    hiddenCount: hidden.length,
+  });
+}
+
+function chainCounts(){
+  const c = {};
+  CHAINS.forEach(chain => { c[chain.key] = tokensForChain(chain.key).length; });
+  c.all = sourceTokens().length;
+  return c;
+}
+function isAllChains(){
+  return tokenState.chains.size === 0 || tokenState.chains.size === CHAINS.length;
+}
+
+function visibleTokens(){
+  const ts = collapseSmallTokens(sourceTokens());
+  return ts.map((t,i)=>({
+    ...t,
+    _key: `${t.chain}:${t.sym}:${i}`,
+    _color: t.isOther ? OTHER_COLOR : TOKEN_PALETTE[i % TOKEN_PALETTE.length],
+  }));
+}
+
+/* Multi-select chain filter — checkbox-style rows like the assets page.
+   Default: All Chains selected, with individual chain rows unchecked.
+   "All Chains" row resets to the empty all-chain selection. Chain icons match
+   the rest of the page (icons.llamao.fi). Per-chain counts come from
+   chainTokensInUsd so small networks remain selectable. */
+const CHECK_SVG = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>';
+const TVL_CHAIN_GLOBE_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>';
+
+function setTvlChainTriggerIcon(chainKey){
+  const btn = document.getElementById("ddChainBtn");
+  const current = btn && btn.querySelector(".icon");
+  if(!current) return;
+  const chain = chainKey ? CHAINS.find(c => c.key === chainKey) : null;
+  if(chain && chain.icon){
+    const img = document.createElement("img");
+    img.className = "icon";
+    img.src = chain.icon;
+    img.alt = "";
+    img.onerror = function(){ this.outerHTML = TVL_CHAIN_GLOBE_SVG; };
+    current.replaceWith(img);
+  } else {
+    current.outerHTML = TVL_CHAIN_GLOBE_SVG;
+  }
+}
+
+function renderChainDropdown(){
+  const counts = chainCounts();
+  const list = document.getElementById("ddChainList");
+  const allActive = isAllChains();
+
+  // "All Chains" toggle row — same globe icon as the trigger button
+  const allRow = `
+    <div class="tvl-dd-opt select-all ${allActive?"active":""}" data-chain="__all">
+      <span class="tvl-dd-opt-check">${CHECK_SVG}</span>
+      <div class="opt-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;color:var(--fg-2)"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+      <span class="tvl-dd-opt-name">All Chains</span>
+      <span class="tvl-dd-opt-count">${counts.all||0}</span>
+    </div>`;
+
+  // Per-chain rows — every chain, sorted by total supply desc
+  const rows = sortChainsByTotalSupply(CHAINS)
+    .map(c=>{
+      const n = counts[c.key]||0;
+      const checked = !allActive && tokenState.chains.has(c.key);
+      // a chain with 0 tokens can still be in the set (no effect on filter),
+      // but visually we mark it as empty so users know there's nothing to show
+      const disabled = n===0;
+      return `
+        <div class="tvl-dd-opt ${checked?"active":""} ${disabled?"empty":""}" data-chain="${c.key}" ${disabled?'data-empty="1"':""}>
+          <span class="tvl-dd-opt-check">${CHECK_SVG}</span>
+          <img src="${c.icon}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'opt-ico'}))">
+          <span class="tvl-dd-opt-name">${c.name}</span>
+          <span class="tvl-dd-opt-count">${n}</span>
+        </div>`;
+    }).join("");
+
+  list.innerHTML = allRow + rows;
+
+  // Update trigger button label + count + filtered flag
+  const lbl = document.getElementById("ddChainLbl");
+  const cnt = document.getElementById("ddChainCount");
+  const btn = document.getElementById("ddChainBtn");
+  const totalChains = CHAINS.length;
+  const selectedChains = allActive ? totalChains : tokenState.chains.size;
+  if (allActive){
+    lbl.textContent = "All Chains";
+    cnt.textContent = `${totalChains}`;
+    btn.classList.remove("filtered");
+    setTvlChainTriggerIcon(null);
+  } else {
+    const sel = [...tokenState.chains];
+    if (sel.length === 1){
+      lbl.textContent = chainName(sel[0]);
+      setTvlChainTriggerIcon(sel[0]);
+    } else {
+      lbl.textContent = `${sel.length} chains`;
+      setTvlChainTriggerIcon(null);
+    }
+    cnt.textContent = `${selectedChains}/${totalChains}`;
+    btn.classList.add("filtered");
+  }
+
+  // Click handlers — keep dropdown open for multi-select
+  list.querySelectorAll(".tvl-dd-opt").forEach(opt=>{
+    opt.addEventListener("click", e=>{
+      e.stopPropagation();
+      const key = opt.dataset.chain;
+      if (key === "__all"){
+        tokenState.chains = new Set();
+      } else {
+        if (opt.dataset.empty === "1") return; // empty rows can't be toggled
+        if (isAllChains()) {
+          tokenState.chains = new Set([key]);
+        } else if (tokenState.chains.has(key)) {
+          tokenState.chains.delete(key);
+          if (tokenState.chains.size === 0) tokenState.chains = new Set();
+        } else {
+          tokenState.chains.add(key);
+        }
+      }
+      tokenState.focus = null;
+      renderTokens();   // re-renders dropdown via renderChainDropdown()
+    });
+  });
+}
+function openChainDropdown(){
+  document.getElementById("ddChainPanel").classList.add("show");
+  document.getElementById("ddChainBtn").classList.add("open");
+  renderChainDropdown();
+}
+function closeChainDropdown(){
+  document.getElementById("ddChainPanel").classList.remove("show");
+  document.getElementById("ddChainBtn").classList.remove("open");
+}
+function initChainDropdown(){
+  const btn = document.getElementById("ddChainBtn");
+  const clr = document.getElementById("ddChainClear");
+  btn.addEventListener("click", e=>{
+    if (e.target.closest("#ddChainClear")) return; // handled below
+    e.stopPropagation();
+    if (document.getElementById("ddChainPanel").classList.contains("show")) closeChainDropdown();
+    else openChainDropdown();
+  });
+  clr.addEventListener("click", e=>{
+    e.stopPropagation();
+    tokenState.chains = new Set();
+    tokenState.focus = null;
+    renderTokens();
+  });
+  document.addEventListener("click", e=>{
+    if (!document.getElementById("ddChain").contains(e.target)) closeChainDropdown();
+  });
+  document.addEventListener("keydown", e=>{ if (e.key === "Escape") closeChainDropdown(); });
+  renderChainDropdown();
+}
+
+function renderTokens(){
+  const source = sourceTokens();
+  const list = visibleTokens();
+  const total = list.reduce((s,t)=>s+t.usd,0);
+  const hasOther = list.some(t=>t.isOther);
+  // count badge
+  const allOn = isAllChains();
+  if (allOn) {
+    document.getElementById("tokensCountBadge").textContent =
+      `${source.length} assets · ${hasOther ? `Top ${INDIVIDUAL_TOKEN_LIMIT} + Other` : "all chains"}`;
+  } else {
+    const sel = [...tokenState.chains];
+    const lbl = sel.length === 1 ? chainName(sel[0]) : `${sel.length} chains`;
+    document.getElementById("tokensCountBadge").textContent =
+      `${source.length} assets · ${lbl}${hasOther ? ` · Top ${INDIVIDUAL_TOKEN_LIMIT} + Other` : ""}`;
+  }
+
+  // refresh dropdown (counts + active state)
+  renderChainDropdown();
+
+  // legend
+  const legend = document.getElementById("tokensLegend");
+  legend.innerHTML = list.map((t,i)=>{
+    const sharePct = total>0 ? (t.usd/total*100) : 0;
+    const initials = t.sym.replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase();
+    const iconUrl  = tokenIcon(t.sym, t);
+    const iconClass = tokenIconClass(t.sym);
+    const iconFrameClass = tokenIconFrameClass(t.sym);
+    const iconHtml = t.isOther
+      ? initials
+      : `<img class="${iconClass}" src="${iconUrl}" alt="${t.sym}" onerror="this.parentElement.textContent='${initials}'">`;
+    const chainHtml = t.isOther
+      ? `<span class="dot dot-other"></span>${t.hiddenCount} assets`
+      : `<span class="dot dot-${t.chain}"></span>${chainName(t.chain)}`;
+    const focused  = tokenState.focus === t._key;
+    const dimmed   = tokenState.focus && !focused;
+    return `
+      <div class="leg-row ${focused?"active":""} ${dimmed?"dim":""}" data-sym="${t.sym}" data-token-key="${t._key}" style="--leg-color:${t._color}">
+        <div class="leg-rank">${String(i+1).padStart(2,"0")}</div>
+        <div class="leg-icon ${iconFrameClass}">${iconHtml}</div>
+        <div class="leg-info">
+          <div class="leg-top">
+            <div class="leg-name">${t.sym}</div>
+            <div class="leg-val">${fmtUsd(t.usd)}</div>
+          </div>
+          <div class="leg-bot">
+            <div class="leg-chain">${chainHtml}</div>
+            <div class="leg-bar"><span style="width:${sharePct}%"></span></div>
+            <div class="leg-pct">${sharePct.toFixed(1)}%</div>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+  // hover/click sync
+  legend.querySelectorAll(".leg-row").forEach(row=>{
+    const key = row.dataset.tokenKey;
+    row.addEventListener("mouseenter", ()=>focus(key));
+    row.addEventListener("mouseleave", ()=>focus(null));
+    row.addEventListener("click", ()=>{
+      tokenState.focus = (tokenState.focus===key) ? null : key;
+      renderTokens();
+    });
+  });
+
+  // donut
+  renderDonut(list, total);
+}
+
+function chainName(key){
+  const c = CHAINS.find(x=>x.key===key);
+  return c ? c.name : key;
+}
+
+function focus(key){
+  // soft highlight without re-rendering full list (faster)
+  const center = document.getElementById("donutCenter");
+  document.querySelectorAll(".donut-arc").forEach(a=>{
+    if (!key){ a.classList.remove("dim","active"); return; }
+    if (a.dataset.tokenKey===key){ a.classList.add("active"); a.classList.remove("dim"); }
+    else { a.classList.add("dim"); a.classList.remove("active"); }
+  });
+  document.querySelectorAll(".leg-row").forEach(r=>{
+    if (!key){ r.classList.remove("dim","active"); return; }
+    if (r.dataset.tokenKey===key){ r.classList.add("active"); r.classList.remove("dim"); }
+    else { r.classList.add("dim"); r.classList.remove("active"); }
+  });
+  // Update center label
+  if (!key){
+    const list = visibleTokens();
+    const total = list.reduce((s,t)=>s+t.usd,0);
+    center.innerHTML = `
+      <div class="dc-label">${centerLabel()}</div>
+      <div class="dc-value">${fmtUsd(total)}</div>
+      <div class="dc-sub">${sourceTokens().length} assets</div>`;
+  } else {
+    const list = visibleTokens();
+    const total = list.reduce((s,t)=>s+t.usd,0);
+    const t = list.find(x=>x._key===key);
+    if (t){
+      const pct = total>0 ? (t.usd/total*100) : 0;
+      center.innerHTML = `
+        <div class="dc-label">${t.isOther ? `${t.hiddenCount} smaller assets` : chainName(t.chain)}</div>
+        <div class="dc-token">${t.sym}</div>
+        <div class="dc-value" style="color:${t._color}">${fmtUsd(t.usd)}</div>
+        <div class="dc-sub">${pct.toFixed(2)}% of view</div>`;
+    }
+  }
+}
+
+function renderDonut(list, total){
+  const svg = document.getElementById("donutSvg");
+  const cx=100, cy=100, r=72, sw=32;
+  // Background ring
+  let html = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="${sw}"/>`;
+  if (total<=0){ svg.innerHTML = html; return; }
+  const C = 2*Math.PI*r;
+  let offset = 0;
+  // Tiny gap between arcs (in px along circumference)
+  const gap = Math.min(2, C/(list.length*4));
+  list.forEach(t=>{
+    const frac = t.usd/total;
+    const len  = Math.max(0, frac*C - gap);
+    const dasharray = `${len} ${C-len}`;
+    html += `<circle class="donut-arc" data-sym="${t.sym}" data-token-key="${t._key}" cx="${cx}" cy="${cy}" r="${r}"
+      stroke="${t._color}" stroke-dasharray="${dasharray}" stroke-dashoffset="${-offset}"
+      pathLength="${C}"/>`;
+    offset += frac*C;
+  });
+  svg.innerHTML = html;
+
+  // Hover sync from arc → legend
+  svg.querySelectorAll(".donut-arc").forEach(a=>{
+    const key = a.dataset.tokenKey;
+    a.addEventListener("mouseenter", ()=>focus(key));
+    a.addEventListener("mouseleave", ()=>focus(null));
+    a.addEventListener("click", ()=>{
+      tokenState.focus = (tokenState.focus===key) ? null : key;
+      renderTokens();
+    });
+  });
+
+  // Initial center text
+  const center = document.getElementById("donutCenter");
+  center.innerHTML = `
+    <div class="dc-label">${centerLabel()}</div>
+    <div class="dc-value">${fmtUsd(total)}</div>
+    <div class="dc-sub">${sourceTokens().length} assets</div>`;
+}
+
+function centerLabel(){
+  if (isAllChains()) return "Total · All Assets";
+  const sel = [...tokenState.chains];
+  if (sel.length === 1) return chainName(sel[0]);
+  return `${sel.length} chains`;
+}
+
+/* ==========================================================================
+   HISTORY CHARTS · shared renderer with independent brush state
+   ========================================================================== */
+let protocolHistoryMetric = "supply";
+
+function syncProtocolHistoryRangeBadge(){
+  const visibleBadge = document.getElementById("protocolHistoryRangeBadge");
+  const sourceBadge = document.getElementById(protocolHistoryMetric === "tvl" ? "rangeBadge" : "supplyRangeBadge");
+  if (visibleBadge && sourceBadge) visibleBadge.textContent = sourceBadge.textContent;
+}
+
+function setProtocolHistoryMetric(metric){
+  protocolHistoryMetric = metric === "tvl" ? "tvl" : "supply";
+  document.querySelectorAll("[data-history-metric]").forEach(button => {
+    const active = button.dataset.historyMetric === protocolHistoryMetric;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  document.querySelectorAll("[data-history-panel]").forEach(panel => {
+    panel.hidden = panel.dataset.historyPanel !== protocolHistoryMetric;
+  });
+  syncProtocolHistoryRangeBadge();
+}
+
+function initProtocolHistoryMetric(){
+  document.querySelectorAll("[data-history-metric]").forEach(button => {
+    button.addEventListener("click", () => setProtocolHistoryMetric(button.dataset.historyMetric));
+  });
+  setProtocolHistoryMetric("supply");
+}
+
+const W = 1000, H = 340, P_L = 56, P_R = 18, P_T = 20, P_B = 28;
+const BW = 1000, BH = 56;
+
+function createHistoryChart(config){
+  const brushSel = { from: 0, to: 0 };
+  const byId = key => document.getElementById(config[key]);
+  const getHistory = () => {
+    const rows = config.history();
+    return Array.isArray(rows) ? rows : [];
+  };
+
+  function render(){
+    const all = getHistory();
+    if (all.length < 2) return;
+    const series = all.filter(p => p[0] >= brushSel.from && p[0] <= brushSel.to);
+    if (series.length < 2){
+      const found = all.findIndex(p => p[0] >= brushSel.from);
+      const start = Math.min(Math.max(0, found), all.length - 2);
+      renderChartFor(all.slice(start, start + 2));
+    } else {
+      renderChartFor(series);
+    }
+
+    const badge = byId("rangeBadge");
+    const total = all[all.length-1][0] - all[0][0];
+    const selected = brushSel.to - brushSel.from;
+    if (selected >= total * 0.99) badge.textContent = "All Time";
+    else {
+      const days = Math.round(selected/86400);
+      if (days >= 365) badge.textContent = `${(days/365).toFixed(1)}Y window`;
+      else if (days >= 60) badge.textContent = `${Math.round(days/30)}M window`;
+      else badge.textContent = `${days}D window`;
+    }
+    syncProtocolHistoryRangeBadge();
+  }
+
+  function renderChartFor(series){
+    const maxY = Math.max(...series.map(p=>p[1]));
+    const minX = series[0][0], maxX = series[series.length-1][0];
+    const xRange = maxX - minX || 1;
+    const yMin = 0;
+    const yMax = maxY * 1.08;
+    const xAt = t => P_L + (t - minX)/xRange * (W - P_L - P_R);
+    const yAt = v => P_T + (1 - (v - yMin)/(yMax - yMin)) * (H - P_T - P_B);
+
+    let line = "";
+    series.forEach((point,index)=>{
+      const x = xAt(point[0]), y = yAt(point[1]);
+      line += (index===0 ? "M" : "L") + x.toFixed(2) + " " + y.toFixed(2) + " ";
+    });
+    const x0 = xAt(series[0][0]).toFixed(2);
+    const xN = xAt(series[series.length-1][0]).toFixed(2);
+    const yBase = (H - P_B).toFixed(2);
+    const area = `M${x0} ${yBase} ` + line.replace(/^M/,"L") + ` L${xN} ${yBase} Z`;
+    byId("chartLine").setAttribute("d", line.trim());
+    byId("chartArea").setAttribute("d", area);
+
+    const grid = byId("chartGrid");
+    grid.innerHTML = "";
+    const ticks = 5;
+    for (let i=0; i<=ticks; i++){
+      const value = yMin + (yMax-yMin)*i/ticks;
+      const y = yAt(value);
+      grid.innerHTML += `<line x1="${P_L}" x2="${W-P_R}" y1="${y}" y2="${y}"/>`;
+      grid.innerHTML += `<text x="${P_L-10}" y="${y+3}" text-anchor="end">${fmtUsd(value)}</text>`;
+    }
+
+    const xAxis = byId("chartX");
+    xAxis.innerHTML = "";
+    const spanDays = (maxX-minX)/86400;
+    const formatDate = spanDays <= 90
+      ? date => date.toLocaleDateString("en-US",{month:"short",day:"numeric"})
+      : date => date.toLocaleDateString("en-US",{month:"short",year:"2-digit"});
+    const xTicks = 5;
+    for (let i=0; i<=xTicks; i++){
+      const timestamp = minX + xRange*i/xTicks;
+      const x = xAt(timestamp);
+      xAxis.innerHTML += `<text x="${x}" y="${H-8}" text-anchor="middle">${formatDate(new Date(timestamp*1000))}</text>`;
+    }
+    attachHover(series, xAt, yAt);
+  }
+
+  function attachHover(series, xAt, yAt){
+    const svg = byId("chart");
+    const wrap = byId("chartWrap");
+    const tip = byId("chartTip");
+    const hoverLine = byId("hoverLine");
+    const hoverDot = byId("hoverDot");
+    hoverLine.setAttribute("y1", P_T);
+    hoverLine.setAttribute("y2", H-P_B);
+
+    function leave(){
+      hoverLine.style.opacity = 0;
+      hoverDot.style.opacity = 0;
+      tip.style.opacity = 0;
+    }
+    svg.onmousemove = event => {
+      const rect = svg.getBoundingClientRect();
+      const pointerX = (event.clientX - rect.left) / rect.width * W;
+      if (pointerX < P_L || pointerX > W-P_R){ leave(); return; }
+      let nearest = series[0], best = Infinity;
+      for (const point of series){
+        const distance = Math.abs(xAt(point[0]) - pointerX);
+        if (distance < best){ best = distance; nearest = point; }
+      }
+      const x = xAt(nearest[0]), y = yAt(nearest[1]);
+      hoverLine.setAttribute("x1", x);
+      hoverLine.setAttribute("x2", x);
+      hoverLine.style.opacity = 1;
+      hoverDot.setAttribute("cx", x);
+      hoverDot.setAttribute("cy", y);
+      hoverDot.style.opacity = 1;
+
+      const wrapRect = wrap.getBoundingClientRect();
+      const screenX = rect.left - wrapRect.left + (x/W)*rect.width;
+      const screenY = rect.top - wrapRect.top + (y/H)*rect.height;
+      tip.querySelector(".tt-date").textContent = fmtDate(nearest[0]);
+      tip.querySelector(".tt-val").textContent = fmtUsd(nearest[1]);
+      tip.style.opacity = 1;
+      tip.style.left = "0px";
+      tip.style.top = "0px";
+      const left = Math.min(Math.max(screenX - tip.offsetWidth/2, 8), wrap.clientWidth - tip.offsetWidth - 8);
+      const top = Math.max(screenY - tip.offsetHeight - 12, 4);
+      tip.style.left = left + "px";
+      tip.style.top = top + "px";
+    };
+    svg.onmouseleave = leave;
+  }
+
+  function init(){
+    const all = getHistory();
+    if (all.length < 2) return;
+    const minX = all[0][0], maxX = all[all.length-1][0];
+    const maxY = Math.max(...all.map(p=>p[1]));
+    brushSel.from = minX;
+    brushSel.to = maxX;
+
+    const xAt = timestamp => (timestamp - minX)/(maxX-minX) * BW;
+    const yAt = value => BH - value/(maxY*1.05) * BH;
+    let line = "";
+    all.forEach((point,index)=>{
+      line += (index===0 ? "M" : "L") + xAt(point[0]).toFixed(1) + " " + yAt(point[1]).toFixed(1) + " ";
+    });
+    const x0 = xAt(all[0][0]).toFixed(1);
+    const xN = xAt(all[all.length-1][0]).toFixed(1);
+    const area = `M${x0} ${BH} ` + line.replace(/^M/,"L") + ` L${xN} ${BH} Z`;
+    byId("brushLine").setAttribute("d", line.trim());
+    byId("brushArea").setAttribute("d", area);
+
+    const overlay = byId("brushOverlay");
+    const windowEl = byId("brushWindow");
+    const dimL = byId("brushDimL");
+    const dimR = byId("brushDimR");
+    const handleL = byId("brushHandleL");
+    const handleR = byId("brushHandleR");
+    const label = byId("brushLabel");
+
+    function paintWindow(){
+      const totalSpan = maxX - minX;
+      const leftPct = (brushSel.from - minX) / totalSpan * 100;
+      const rightPct = (brushSel.to - minX) / totalSpan * 100;
+      windowEl.style.left = leftPct + "%";
+      windowEl.style.width = (rightPct - leftPct) + "%";
+      dimL.style.width = leftPct + "%";
+      dimR.style.width = (100 - rightPct) + "%";
+      label.innerHTML = `<span class="v">${fmtDate(brushSel.from)}</span><span class="sep">→</span><span class="v">${fmtDate(brushSel.to)}</span>`;
+    }
+    function pxToTime(px){
+      const ratio = Math.max(0, Math.min(1, px / overlay.clientWidth));
+      return Math.round(ratio * (maxX - minX) + minX);
+    }
+
+    let drag = null;
+    function onDown(kind){
+      return event => {
+        event.preventDefault();
+        event.stopPropagation();
+        drag = {
+          kind,
+          startX: event.clientX,
+          startFrom: brushSel.from,
+          startTo: brushSel.to,
+        };
+        windowEl.classList.add("dragging");
+        document.body.style.userSelect = "none";
+      };
+    }
+    function onMove(event){
+      if (!drag) return;
+      const totalSpan = maxX - minX;
+      const deltaTime = (event.clientX - drag.startX) / overlay.clientWidth * totalSpan;
+      const minWindow = totalSpan * 0.005;
+      if (drag.kind === "window"){
+        let from = drag.startFrom + deltaTime;
+        let to = drag.startTo + deltaTime;
+        const span = to - from;
+        if (from < minX){ from = minX; to = from + span; }
+        if (to > maxX){ to = maxX; from = to - span; }
+        brushSel.from = from;
+        brushSel.to = to;
+      } else if (drag.kind === "l"){
+        brushSel.from = Math.min(drag.startTo - minWindow, Math.max(minX, drag.startFrom + deltaTime));
+      } else {
+        brushSel.to = Math.max(drag.startFrom + minWindow, Math.min(maxX, drag.startTo + deltaTime));
+      }
+      paintWindow();
+      render();
+    }
+    function onUp(){
+      if (!drag) return;
+      drag = null;
+      windowEl.classList.remove("dragging");
+      document.body.style.userSelect = "";
+    }
+
+    windowEl.addEventListener("mousedown", onDown("window"));
+    handleL.addEventListener("mousedown", onDown("l"));
+    handleR.addEventListener("mousedown", onDown("r"));
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    byId("brushSvg").addEventListener("click", event=>{
+      const timestamp = pxToTime(event.clientX - overlay.getBoundingClientRect().left);
+      const span = brushSel.to - brushSel.from;
+      let from = timestamp - span/2, to = timestamp + span/2;
+      if (from < minX){ from = minX; to = from + span; }
+      if (to > maxX){ to = maxX; from = to - span; }
+      brushSel.from = from;
+      brushSel.to = to;
+      paintWindow();
+      render();
+    });
+
+    paintWindow();
+    render();
+  }
+
+  return { init, render, selection: brushSel };
+}
+
+const supplyHistoryChart = createHistoryChart({
+  history: ()=>TOTAL_SUPPLY_HISTORY,
+  rangeBadge: "supplyRangeBadge",
+  chartWrap: "supplyChartWrap",
+  chart: "supplyChart",
+  chartGrid: "supplyChartGrid",
+  chartArea: "supplyChartArea",
+  chartLine: "supplyChartLine",
+  hoverLine: "supplyHoverLine",
+  hoverDot: "supplyHoverDot",
+  chartX: "supplyChartX",
+  chartTip: "supplyChartTip",
+  brushSvg: "supplyBrushSvg",
+  brushArea: "supplyBrushArea",
+  brushLine: "supplyBrushLine",
+  brushOverlay: "supplyBrushOverlay",
+  brushWindow: "supplyBrushWindow",
+  brushDimL: "supplyBrushDimL",
+  brushDimR: "supplyBrushDimR",
+  brushHandleL: "supplyBrushHandleL",
+  brushHandleR: "supplyBrushHandleR",
+  brushLabel: "supplyBrushLabel",
+});
+
+const tvlHistoryChart = createHistoryChart({
+  history: ()=>TVL_HISTORY,
+  rangeBadge: "rangeBadge",
+  chartWrap: "chartWrap",
+  chart: "chart",
+  chartGrid: "chartGrid",
+  chartArea: "chartArea",
+  chartLine: "chartLine",
+  hoverLine: "hoverLine",
+  hoverDot: "hoverDot",
+  chartX: "chartX",
+  chartTip: "chartTip",
+  brushSvg: "brushSvg",
+  brushArea: "brushArea",
+  brushLine: "brushLine",
+  brushOverlay: "brushOverlay",
+  brushWindow: "brushWindow",
+  brushDimL: "brushDimL",
+  brushDimR: "brushDimR",
+  brushHandleL: "brushHandleL",
+  brushHandleR: "brushHandleR",
+  brushLabel: "brushLabel",
+});
+
+/* ==========================================================================
+   PROTOCOL · Contract Addresses (mirrors DOLO page)
+   ========================================================================== */
+const CONTRACTS = [
+  {token:"DOLO",   logo:"dolo-logo.svg",           chain:"Ethereum",  chainKey:"ethereum",  addr:"0x0F81001eF0A83ecCE5ccebf63EB302c70a39a654", explorer:"https://etherscan.io"},
+  {token:"DOLO",   logo:"dolo-logo.svg",           chain:"Berachain", chainKey:"berachain", addr:"0x0F81001eF0A83ecCE5ccebf63EB302c70a39a654", explorer:"https://berascan.com"},
+  {token:"oDOLO",  logo:"odolo-logo-official.svg", chain:"Berachain", chainKey:"berachain", addr:"0x02E513b5B54eE216Bf836ceb471507488fC89543", explorer:"https://berascan.com"},
+  {token:"veDOLO", logo:"vedolo-logo.svg",         chain:"Berachain", chainKey:"berachain", addr:"0xCB86B75EE6133d179a12D550b09FB3cdB1e141D4", explorer:"https://berascan.com"},
+];
+const COPY_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+const CHECK_ICO= '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const EXT_ICO  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+const shorten = a => a.slice(0,6) + "…" + a.slice(-4);
+
+function renderProto(){
+  const protoEl = document.getElementById("proto-addrs");
+  if (!protoEl) return; // legacy section replaced by shared protocol footer
+  protoEl.innerHTML = CONTRACTS.map((c,i)=>`
+    <div class="proto-addr" data-idx="${i}">
+      <div class="proto-addr-left">
+        <div class="proto-token">
+          <img src="${c.logo}" alt="${c.token}" onerror="this.style.display='none'">
+          <span class="proto-token-name">${c.token}</span>
+        </div>
+        <span class="proto-chain-chip"><span class="dot dot-${c.chainKey}"></span>${c.chain}</span>
+      </div>
+      <div class="proto-addr-right">
+        <span class="proto-addr-hex addr-tooltip-wrap" data-full-addr="${c.addr}">${shorten(c.addr)}</span>
+        <button class="proto-copy" data-copy="${c.addr}" aria-label="Copy address">${COPY_ICO}</button>
+        <button class="proto-explore" data-url="${c.explorer}/token/${c.addr}" aria-label="Open in explorer">${EXT_ICO}</button>
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".proto-addr").forEach(row=>{
+    const idx = +row.dataset.idx;
+    const c = CONTRACTS[idx];
+    row.addEventListener("click", e=>{
+      if (e.target.closest(".proto-copy") || e.target.closest(".proto-explore")) return;
+      window.open(`${c.explorer}/token/${c.addr}`, "_blank", "noopener");
+    });
+  });
+  document.querySelectorAll(".proto-explore").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      e.stopPropagation();
+      const url = btn.dataset.url;
+      if (url) window.open(url, "_blank", "noopener");
+    });
+  });
+  document.querySelectorAll(".proto-copy").forEach(btn=>{
+    btn.addEventListener("click", async e=>{
+      e.stopPropagation();
+      try { await navigator.clipboard.writeText(btn.dataset.copy); } catch(_) {}
+      btn.classList.add("copied");
+      btn.innerHTML = CHECK_ICO;
+      setTimeout(()=>{ btn.classList.remove("copied"); btn.innerHTML = COPY_ICO; }, 1400);
+    });
+  });
+}
+
+/* ==========================================================================
+   FOOTER timestamp
+   ========================================================================== */
+function setNow(){
+  const el = document.getElementById("now");
+  if (!el) return; // legacy footer replaced by shared protocol footer
+  const d  = new Date(SNAPSHOT_TS);
+  el.textContent = "snapshot " + d.toLocaleString("en-US");
+}
+
+/* ==========================================================================
+   BOOT
+   ========================================================================== */
+async function bootTvlDashboard(){
+  try {
+    applyTvlSnapshot(await loadTvlSnapshot());
+  } catch (error) {
+    console.warn("TVL: using embedded fallback snapshot", error);
+  }
+  tokenState = { chains: new Set(), focus: null };
+  chainsExpanded = false;
+  renderChains();
+  initChainDropdown();
+  renderTokens();
+  supplyHistoryChart.init();
+  tvlHistoryChart.init();
+  initProtocolHistoryMetric();
+  renderProto();
+  setNow();
+}
+
+bootTvlDashboard();
+</script>
+</body>
+</html>

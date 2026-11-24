@@ -1,0 +1,190 @@
+name: Refresh Ethereum Canonical EARN History
+
+on:
+  schedule:
+    - cron: '12,42 * * * *'  # Every 30 minutes; keeps Ethereum EARN history within the ~1h freshness target
+  workflow_dispatch:
+    inputs:
+      hot_limit:
+        description: 'Maximum Ethereum wallets to refresh in this checkpoint.'
+        required: false
+        default: '1000'
+      checkpoint_steps:
+        description: 'Polling steps before checkpointing this run.'
+        required: false
+        default: '1200'
+
+concurrency:
+  group: earn-ethereum-canonical-history
+  queue: max
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUNBUFFERED: '1'
+      CHAIN: ethereum
+      HOT_LIMIT: ${{ github.event.inputs.hot_limit || '1000' }}
+      CHECKPOINT_STEPS: ${{ github.event.inputs.checkpoint_steps || '1200' }}
+      CHECKPOINT_SLEEP_SECONDS: '2'
+      COMMAND_TIMEOUT_SECONDS: '600'
+      EARN_RPC_GETLOGS_TIMEOUT_SECONDS: '30'
+      # Never publish a completed checkpoint whose locked target is already
+      # outside the dashboard's two-hour Ethereum freshness window.
+      MAX_RESUME_TARGET_LAG_BLOCKS: '600'
+      # Full backfills use a provider-safe range and automatically reduce it
+      # if an RPC tightens its eth_getLogs limit.
+      MAX_DELTA_SCAN_BLOCKS_PER_TASK: '1000'
+      MAX_INCREMENTAL_SCAN_WORKER_RUNTIME_SECONDS: '300'
+      ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+      ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+      ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+      ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+      ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+      ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+      DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Restore Ethereum canonical runtime cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            data/earn-subaccount-history-events
+            data/earn-subaccount-history/.progress
+            data/earn-subaccount-history/.repair-plans
+            data/earn-subaccount-history/.incremental-plans
+            data/earn-subaccount-history/ethereum
+          key: earn-canonical-runtime-ethereum-${{ github.run_id }}
+          restore-keys: |
+            earn-canonical-runtime-ethereum-
+
+      # Keep pinned wallets first, then rotate the oldest existing histories.
+      # The separate coverage queue handles wallets without a published history.
+      - name: Select oldest existing Ethereum canonical wallets
+        run: |
+          set -euo pipefail
+          python3 select_earn_canonical_hot_addresses.py \
+            --chain "$CHAIN" \
+            --limit "$HOT_LIMIT" \
+            --priority-address-file config/earn_canonical_priority_addresses.txt \
+            --existing-history-only \
+            --prefer-stale-history \
+            --output "/tmp/earn-${CHAIN}-canonical-hot-addresses.txt" \
+            --metadata-output "/tmp/earn-${CHAIN}-canonical-hot-addresses.json"
+          cat "/tmp/earn-${CHAIN}-canonical-hot-addresses.json"
+
+      - name: Refresh Ethereum canonical history
+        id: refresh
+        run: |
+          set -euo pipefail
+          status_path="/tmp/earn-${CHAIN}-canonical-refresh.json"
+          python3 run_earn_canonical_history_refresh.py \
+            --chain "$CHAIN" \
+            --selection-address-file "/tmp/earn-${CHAIN}-canonical-hot-addresses.txt" \
+            --max-scan-workers 3 \
+            --max-materialize-workers 12 \
+            --max-incremental-scan-workers 3 \
+            --max-incremental-apply-workers 12 \
+            --max-new-backfill-workers 2 \
+            --max-steps "$CHECKPOINT_STEPS" \
+            --sleep-seconds "$CHECKPOINT_SLEEP_SECONDS" \
+            --command-timeout-seconds "$COMMAND_TIMEOUT_SECONDS" \
+            --max-resume-target-lag-blocks "$MAX_RESUME_TARGET_LAG_BLOCKS" \
+            --max-delta-scan-blocks-per-task "$MAX_DELTA_SCAN_BLOCKS_PER_TASK" \
+            --max-incremental-scan-worker-runtime-seconds "$MAX_INCREMENTAL_SCAN_WORKER_RUNTIME_SECONDS" \
+            --allow-checkpoint-incomplete \
+            --status-output "$status_path"
+          cat "$status_path"
+          complete="$(python3 - "$status_path" <<'PY'
+          import json
+          import sys
+          payload = json.load(open(sys.argv[1]))
+          print("true" if payload.get("complete") else "false")
+          PY
+          )"
+          skipped="$(python3 - "$status_path" <<'PY'
+          import json
+          import sys
+          payload = json.load(open(sys.argv[1]))
+          print("true" if payload.get("skipped") else "false")
+          PY
+          )"
+          echo "complete=${complete}" >> "$GITHUB_OUTPUT"
+          echo "skipped=${skipped}" >> "$GITHUB_OUTPUT"
+          if [ "$complete" != "true" ]; then
+            echo "Ethereum canonical history checkpoint saved; later scheduled runs will continue from cache."
+          fi
+
+      - name: Build Ethereum verified ledger cache
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        run: |
+          set -euo pipefail
+          python3 build_earn_resolved_interest_ledger.py \
+            --chain ethereum \
+            --address-file "/tmp/earn-${CHAIN}-canonical-hot-addresses.txt"
+          python3 build_earn_verified_ledger.py \
+            --chain ethereum \
+            --address-file "/tmp/earn-${CHAIN}-canonical-hot-addresses.txt"
+
+      - name: Publish Ethereum verified ledger shards
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        run: |
+          python3 build_earn_verified_ledger_shards.py \
+            --chain ethereum \
+            --address-file "/tmp/earn-${CHAIN}-canonical-hot-addresses.txt"
+
+      - name: Save Ethereum canonical runtime cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            data/earn-subaccount-history-events
+            data/earn-subaccount-history/.progress
+            data/earn-subaccount-history/.repair-plans
+            data/earn-subaccount-history/.incremental-plans
+            data/earn-subaccount-history/ethereum
+          key: earn-canonical-runtime-ethereum-${{ github.run_id }}
+
+      - name: Run EARN audit checks
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        run: python3 run_earn_audit_checks.py
+
+      - name: Commit and push refreshed canonical history
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/earn-subaccount-history/manifest.json data/earn-subaccount-history/ethereum
+          git add -f data/earn-resolved-interest-ledger/manifest.json
+          if [ -d data/earn-resolved-interest-ledger/ethereum ]; then
+            git add -f data/earn-resolved-interest-ledger/ethereum
+          fi
+          git add -f data/earn-verified-ledger/manifest.json data/earn-verified-ledger/ethereum
+          git add -f data/earn-verified-ledger-shards
+          bash scripts/commit_with_fresh_earn_status.sh "Refresh Ethereum canonical EARN history - $(date -u '+%Y-%m-%d %H:%M UTC')"

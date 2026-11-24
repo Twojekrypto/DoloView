@@ -1,0 +1,423 @@
+(function(){
+  const DOLO_ADDRESS_LABELS = {
+    "0xde58a963801e1ea49f54b45cd15fe6742bb9fa5a": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xde58a963801e1ea49f54b45cd15fe6742bb9fa5a", verifiedAt:"2026-11-17"},
+    "0xa5dd28e677a935734fda73b9fe028261057a111d": {"label":"Trading bot","type":"watch","source":"heuristic-flow-pattern","confidence":"potential","sourceUrl":"https://debank.com/profile/0xa5dd28e677a935734fda73b9fe028261057a111d/history","verifiedAt":"2026-11-15","labelDetail":"Unconfirmed","description":"Likely automated DEX/CEX trading. Operator and market-maker identity are unconfirmed.","evidenceTxs":["https://bscscan.com/tx/0x2c4a81428b71ea2bffa04aa87bba2d3efcc87ed3102f8fa370027f99e3773406","https://bscscan.com/tx/0x37dec8d5fdb9f795ae958fcbc1f4205ca420d25eb9c44fdd8184a4bbd8f39003","https://bscscan.com/tx/0x423697299016d3b91023f22aae9e394e4fa829383ae8e3b3500c9cc65cf3b1c2"]},
+    "0x2c762a0248e386d993361760fc7e9d34bc933a23": {"label":"Binance-linked","type":"watch","source":"heuristic-flow-pattern","confidence":"potential","sourceUrl":"https://berascan.com/address/0x2c762a0248e386d993361760fc7e9d34bc933a23","verifiedAt":"2026-11-15","labelDetail":"Unconfirmed","description":"Likely Binance operational wallet on Berachain. Repeated sweeps from labelled Binance deposit addresses; ownership is unconfirmed.","evidenceTxs":["https://berascan.com/tx/0x9526dcb659a74f837ab5aac04a19393f4fca21ad139e0d4f7d3dc9fa2c56cc42","https://berascan.com/tx/0x3309948144b8d06f271f0d8ebc8da287b7f1f2c7790b36d41590a0ea12f1eb2a","https://berascan.com/tx/0xc41e41a70b7f4dff6a13207a795516aaf2eacb99c4bbbf4f4a0e72a7030f5b80"]},
+    "0x690c3eebf6ee237f00fc96f9766282f096c191cc": {label:"Binance 151", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x690c3eebf6ee237f00fc96f9766282f096c191cc", verifiedAt:"2026-11-15"},
+    "0x4472d1271a3310b5d5782840b27ed30d75ca5b62": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x4472d1271a3310b5d5782840b27ed30d75ca5b62", verifiedAt:"2026-11-14"},
+    "0xf8d3360cc21a829c3cfc73c64cd51a6f8ee4ffd5": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xf8d3360cc21a829c3cfc73c64cd51a6f8ee4ffd5", verifiedAt:"2026-11-13"},
+    "0x6eec8b8c15cbdb20c75956551d16abdcbc041637": {label:"Bitrue", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x6eec8b8c15cbdb20c75956551d16abdcbc041637", verifiedAt:"2026-11-13"},
+    "0x5a52e96bacdabb82fd05763e25335261b270efcb": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x5a52e96bacdabb82fd05763e25335261b270efcb", verifiedAt:"2026-11-11"},
+    "0xf330cf5bfc9d60ddac0236723d95dd426120060e": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xf330cf5bfc9d60ddac0236723d95dd426120060e", verifiedAt:"2026-11-10"},
+    "0x6eb9fec1aa0e3053b3aba0cc320a87f724e284af": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x6eb9fec1aa0e3053b3aba0cc320a87f724e284af", verifiedAt:"2026-11-10"},
+    "0x857d9e9aadf406c579f9cf38741b327b0077bfdd": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x857d9e9aadf406c579f9cf38741b327b0077bfdd", verifiedAt:"2026-11-10"},
+    "0x670e862b82cbca8a9ecf5cbe28ddd85f93c7e2d0": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x670e862b82cbca8a9ecf5cbe28ddd85f93c7e2d0", verifiedAt:"2026-11-10"},
+    "0x35ea34834b3d53069d74353f9976b4348227e005": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x35ea34834b3d53069d74353f9976b4348227e005", verifiedAt:"2026-11-09"},
+    "0x0ba95f8b0d96ae5c7f69b5d02ea97c122d575c98": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0ba95f8b0d96ae5c7f69b5d02ea97c122d575c98", verifiedAt:"2026-11-09"},
+    "0x68dabe79b4cb57502a8771ca7ddca75050012852": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x68dabe79b4cb57502a8771ca7ddca75050012852", verifiedAt:"2026-11-07"},
+    "0x55423582c0903793f8a5b332c750e499047410ff": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x55423582c0903793f8a5b332c750e499047410ff", verifiedAt:"2026-11-07"},
+    "0x5a6c74c991129aee4431df7d259856b7a3ed5652": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x5a6c74c991129aee4431df7d259856b7a3ed5652", verifiedAt:"2026-11-05"},
+    "0x4d7a15dc073fa6ffd1c142ccde64f6f676166a73": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x4d7a15dc073fa6ffd1c142ccde64f6f676166a73", verifiedAt:"2026-11-05"},
+    "0xe91b373212f8ae32925cbcf39ab3a7b0763c27c9": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xe91b373212f8ae32925cbcf39ab3a7b0763c27c9", verifiedAt:"2026-11-05"},
+    "0xa95db7b23042fadf12e557b96f9bb9a8f36e6adc": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xa95db7b23042fadf12e557b96f9bb9a8f36e6adc", verifiedAt:"2026-11-03"},
+    "0xf0f82004a6088c8bd4c02ed4adc2bd220a5d2e21": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xf0f82004a6088c8bd4c02ed4adc2bd220a5d2e21", verifiedAt:"2026-11-02"},
+    "0x0f9f949a30b97c42ace87aae6f24ee2607003e37": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0f9f949a30b97c42ace87aae6f24ee2607003e37", verifiedAt:"2026-11-01"},
+    "0x9f2fa8543a0458c5e33c83693f5889237a8fec60": {label:"KuCoin", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x9f2fa8543a0458c5e33c83693f5889237a8fec60", verifiedAt:"2026-10-31"},
+    "0x0a367f918340d47d36b21c93e9a2b6853cc9d6f0": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0a367f918340d47d36b21c93e9a2b6853cc9d6f0", verifiedAt:"2026-10-31"},
+    "0x05cb186ab8ec85378a2cbf8a858568a8fb216b07": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x05cb186ab8ec85378a2cbf8a858568a8fb216b07", verifiedAt:"2026-10-31"},
+    "0xcffef0a2e9feee42fed0489fdd0d1ee5eed62cd8": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xcffef0a2e9feee42fed0489fdd0d1ee5eed62cd8", verifiedAt:"2026-10-31"},
+    "0xabe44baf180ac426565503bbc3ecf71a0459456e": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xabe44baf180ac426565503bbc3ecf71a0459456e", verifiedAt:"2026-10-31"},
+    "0xd0ec028a3d21533fdd200838f39c85b03679285d": {"label":"NEWT · Trapped DOLO","type":"contract","chain":"ethereum","source":"verified-contract-source-and-token-transfer","confidence":"confirmed","verifiedAt":"2026-10-30","sourceUrl":"https://etherscan.io/address/0x1F064066068F837598b35796ca9f177863915846#code","fundsStatus":"trapped","fundsStatusConfidence":"code-based-assessment","trappedToken":"0x0f81001ef0a83ecce5ccebf63eb302c70a39a654","description":"DOLO held by the NEWT token contract on Ethereum. Considered trapped: the current implementation has no foreign-token recovery function and rejects upgrades. This is not a DOLO burn; reported total supply is unchanged.","evidenceTxs":["https://etherscan.io/tx/0x8c1d319e12309bf85f4db72c35dc3374b7b3ba1ce2d4b27a96bc3d68aa470bd1"]},
+    "0x31a2ee8b5e84b969ecf70d637016ae3b74cdfdda": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x31a2ee8b5e84b969ecf70d637016ae3b74cdfdda", verifiedAt:"2026-10-30"},
+    "0xcc7b9a1d36e23e00292688eccf5b26f7ea2fb9da": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xcc7b9a1d36e23e00292688eccf5b26f7ea2fb9da", verifiedAt:"2026-10-30"},
+    "0xa0b540a12e5d3bc3af9b4780fa0b85d3cc2dc8d4": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xa0b540a12e5d3bc3af9b4780fa0b85d3cc2dc8d4", verifiedAt:"2026-10-30"},
+    "0xdd04f596569b09bb967ab9f20cdc1b7bc7495afd": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xdd04f596569b09bb967ab9f20cdc1b7bc7495afd", verifiedAt:"2026-10-30"},
+    "0xd4a2bb3554095d76eb12c34e61e898e4ceae775e": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xd4a2bb3554095d76eb12c34e61e898e4ceae775e", verifiedAt:"2026-10-30"},
+    "0x30402f800c8fe01d845b54ad3de13f00b64dedde": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x30402f800c8fe01d845b54ad3de13f00b64dedde", verifiedAt:"2026-10-30"},
+    "0x7919635d4b726d386ba8adaed76a36b7d0ef37ba": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x7919635d4b726d386ba8adaed76a36b7d0ef37ba", verifiedAt:"2026-10-29"},
+    "0x494e7adb618dbb9f640f1c7d65518af426336f1f": {label:"Bybit", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x494e7adb618dbb9f640f1c7d65518af426336f1f", verifiedAt:"2026-10-27"},
+    "0x03631c388fb01e0d929627b614eeb501c0ef9dce": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x03631c388fb01e0d929627b614eeb501c0ef9dce", verifiedAt:"2026-10-25"},
+    "0x5a1e5b56aa33c056ed7bb93b88b1774a456f6694": {"label":"Binance-linked","type":"watch","source":"manual-onchain-transfer-review","confidence":"unconfirmed","sourceUrl":"https://debank.com/profile/0x5a1e5b56aa33c056ed7bb93b88b1774a456f6694/history","verifiedAt":"2026-10-23","labelDetail":"Ownership unconfirmed","description":"Repeated multi-asset inflows from publicly labelled Binance wallets and a signed outgoing transfer to a labelled Binance deposit address. Exchange ownership and market-maker activity are unconfirmed.","evidenceTxs":["https://eth.blockscout.com/tx/0xc1f126e4a08231e48e9de1b4418e92b6d790e7395c5a8ca28eca8e00790fee44","https://eth.blockscout.com/tx/0x1838c818afca83dc26a4f26df79ea3c82b61fb4e6e1a105d661d1a3074d80943"]},
+    "0x62a73f7e2e56a69ddb68257c2a91df7b25c00eac": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x62a73f7e2e56a69ddb68257c2a91df7b25c00eac", verifiedAt:"2026-10-23"},
+    "0x4979f3e313e15609dc6ebcaf84b0a3d763de5df7": {label:"Gate.io", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x4979f3e313e15609dc6ebcaf84b0a3d763de5df7", verifiedAt:"2026-10-21"},
+    "0xe48ebd633200108085ab7413d38af7ac894bcb65": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xe48ebd633200108085ab7413d38af7ac894bcb65", verifiedAt:"2026-10-21"},
+    "0x945d895281bec1b78b63abe4e14714de7e36f285": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x945d895281bec1b78b63abe4e14714de7e36f285", verifiedAt:"2026-10-19"},
+    "0x271f95877f0de03e3718e7e440524d30f4cce47c": {label:"Bybit", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x271f95877f0de03e3718e7e440524d30f4cce47c", verifiedAt:"2026-10-18"},
+    "0x6906d4ac9236849a755d16b38945cdc44dc01d07": {label:"Bybit", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x6906d4ac9236849a755d16b38945cdc44dc01d07", verifiedAt:"2026-10-17"},
+    "0xa3222357a0eccf60c73606170be6c99adecb59b3": {label:"CA", type:"contract", chain:"ethereum", source:"blockscout-contract-metadata", confidence:"confirmed", sourceUrl:"https://eth.blockscout.com/address/0xa3222357a0eccf60c73606170be6c99adecb59b3", verifiedAt:"2026-10-15", description:"Smart contract on Ethereum. Source code is unverified; owner and protocol affiliation are unknown."},
+    "0x05cfc8d3ca36bc774963c3999efd8a1e38f5b40b": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x05cfc8d3ca36bc774963c3999efd8a1e38f5b40b", verifiedAt:"2026-10-15"},
+    "0xf3532f7efd9f7d9da8d6c345aecabd60e0d8ceaa": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xf3532f7efd9f7d9da8d6c345aecabd60e0d8ceaa", verifiedAt:"2026-10-14"},
+    "0x0b60c1ee6d01c3d5704eeae6c12552c7a63beead": {label:"Bybit", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0b60c1ee6d01c3d5704eeae6c12552c7a63beead", verifiedAt:"2026-10-14"},
+    "0x0051cc1d8bbf0b3373b02e22ea5a2fe483266cea": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0051cc1d8bbf0b3373b02e22ea5a2fe483266cea", verifiedAt:"2026-10-10"},
+    "0xab4d0bb9d3b3b4aebedc25070e5a1d767e3fc5f9": {label:"Bybit", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xab4d0bb9d3b3b4aebedc25070e5a1d767e3fc5f9", verifiedAt:"2026-10-08"},
+    "0xa8a7d1479661a2400b876561e20c632c50d825fe": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xa8a7d1479661a2400b876561e20c632c50d825fe", verifiedAt:"2026-10-06"},
+    "0x0303e4fe3d5a3d4f225e7690f038786648657b2b": {label:"Bitget", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x0303e4fe3d5a3d4f225e7690f038786648657b2b", verifiedAt:"2026-10-06"},
+    "0xd08ac16c29480b4495cc15f5e3055357ac9b0b88": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xd08ac16c29480b4495cc15f5e3055357ac9b0b88", verifiedAt:"2026-10-06"},
+    "0x83f4e25d2c434127974420eb45c0828352797ebe": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x83f4e25d2c434127974420eb45c0828352797ebe", verifiedAt:"2026-10-04"},
+    "0x9e9a8511bf786ad8951e946a2d358e9e12532176": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x9e9a8511bf786ad8951e946a2d358e9e12532176", verifiedAt:"2026-10-02"},
+    "0xdfb5ab629e29afdd1cd2604fb6926d0ce5013f41": {label:"Possible CEX/MM", type:"watch", source:"manual-behavioral-review", confidence:"potential", sourceUrl:"https://debank.com/profile/0xdfb5ab629e29afdd1cd2604fb6926d0ce5013f41/history", note:"Received multiple assets across chains from 0xfc89c020774524c9d03bd5de48fec149b10bdec3. Possible portfolio migration; common ownership and CEX/MM role are unconfirmed. No public exchange label found during review on 2026-09-29."},
+    "0xe6a204f973e95f9c2bff9fc9fa0dde89cb9e97db": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xe6a204f973e95f9c2bff9fc9fa0dde89cb9e97db", verifiedAt:"2026-09-29"},
+    "0x82a365858b4a82eed80e5473c6f698f93b48617f": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x82a365858b4a82eed80e5473c6f698f93b48617f", verifiedAt:"2026-09-28"},
+    "0x54380eb375ccaa30167f2f697627c984818dcf4c": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x54380eb375ccaa30167f2f697627c984818dcf4c", verifiedAt:"2026-09-25"},
+    "0x47bfa7161b9caa0b3fc4ad3969265b00f18c2cea": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x47bfa7161b9caa0b3fc4ad3969265b00f18c2cea", verifiedAt:"2026-09-24"},
+    "0x7deac793fdb95d279e9168de23590973f33ab579": {label:"Coinbase", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x7deac793fdb95d279e9168de23590973f33ab579", verifiedAt:"2026-09-23"},
+    "0x24ee5ff0f0ad7e6470cf340a86334bccca89609c": {label:"Binance", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x24ee5ff0f0ad7e6470cf340a86334bccca89609c", verifiedAt:"2026-09-21"},
+    "0x120051a72966950b8ce12eb5496b5d1eeec1541b": {label:"LBank", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0x120051a72966950b8ce12eb5496b5d1eeec1541b", verifiedAt:"2026-09-20"},
+    "0x15a3858d118001b07570ae41131a70c817f67d99": {label:"Bybit Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x15a3858d118001b07570ae41131a70c817f67d99", verifiedAt:"2026-09-13"},
+    "0xee845948e6806d12e966137caa07d49bbe632fe3": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0xee845948e6806d12e966137caa07d49bbe632fe3", verifiedAt:"2026-09-13"},
+    "0x43dfc508a7040eaffdc7668aacff562003b04711": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x43dfc508a7040eaffdc7668aacff562003b04711", verifiedAt:"2026-09-13"},
+    "0x6a8a830eb287e3af5cd609f9d277571de4e3a1b2": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x6a8a830eb287e3af5cd609f9d277571de4e3a1b2", verifiedAt:"2026-09-13"},
+    "0x14a8489a69ea53d1b90ba7cec4bfdfd31483d377": {label:"Bybit Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x14a8489a69ea53d1b90ba7cec4bfdfd31483d377", verifiedAt:"2026-09-13"},
+    "0x4f4d87162376e51194a6d03731eae0604f1a9c3c": {label:"Bybit Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x4f4d87162376e51194a6d03731eae0604f1a9c3c", verifiedAt:"2026-09-13"},
+    "0x6b80ffef7b4c948cfdf1f2dacd03cd8cf44d8033": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x6b80ffef7b4c948cfdf1f2dacd03cd8cf44d8033", verifiedAt:"2026-09-13"},
+    "0x09671d2a9a43bf70cd282318f75c9c9f122a0440": {label:"Bybit Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x09671d2a9a43bf70cd282318f75c9c9f122a0440", verifiedAt:"2026-09-13"},
+    "0x9fe9ebd56cd860085fc4741d064e449f754661f9": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x9fe9ebd56cd860085fc4741d064e449f754661f9", verifiedAt:"2026-09-13"},
+    "0x3155fb9fa39a4782f9cc58e4bedfedad1c9f882f": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x3155fb9fa39a4782f9cc58e4bedfedad1c9f882f", verifiedAt:"2026-09-13"},
+    "0x0000000000000000000000000000000000000000": {label:"Burn", type:"dead"},
+    "0x000000000000000000000000000000000000dead": {label:"Burn", type:"dead"},
+
+    "0x3e9b9a16743551da49b5e136c716bba7932d2cec": {label:"oDOLO Vester", type:"protocol", treasury:true},
+    "0x02e513b5b54ee216bf836ceb471507488fc89543": {label:"oDOLO Token", type:"protocol", source:"token-contract", confidence:"confirmed"},
+    "0x0f81001ef0a83ecce5ccebf63eb302c70a39a654": {label:"DOLO", type:"protocol", source:"token-contract", confidence:"confirmed"},
+    "0xcb86b75ee6133d179a12d550b09fb3cdb1e141d4": {label:"veDOLO", type:"protocol"},
+    "0x89576fce04dd73933f74bbcd4e6f0d9125118542": {label:"Borrow Position Proxy", type:"protocol", treasury:true},
+    "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d": {label:"Dolomite Margin", type:"protocol", treasury:true},
+    "0x06265db7ecd9c5724a97bd4909146625d2e2619c": {label:"Ecosystem Incentives 2", type:"protocol", treasury:true},
+    "0x000000000004444c5dc75cb358380d2e3de08a90": {label:"Uniswap V4 Pool Manager", type:"contract", source:"etherscan-public-label"},
+    "0x40e816361e9eceb4ded402def58cc77e9f097914": {label:"Dolomite: Enso Aggregator Trader", type:"contract", source:"etherscan-verified-contract", confidence:"confirmed"},
+    "0xbb317c75f7ca98f830dd6f7eb1981852ebe6f839": {label:"Bitkub 23", type:"cex", accountStructure:"BitGo Multisig", source:"etherscan-public-label", confidence:"confirmed"},
+    "0x33305665f69b4642d1275f4ce81c23651674d21c": {label:"Pendle V2", type:"contract", source:"debank-public-label", confidence:"confirmed"},
+    "0x1e411fb98d9a6273d5b63dedd09dac2fe7cf16ea": {label:"Definitive", type:"contract", source:"debank-public-label", confidence:"confirmed"},
+    "0x9008d19f58aabd9ed0d60971565aa8510560ab41": {label:"CoW Swap", type:"contract", source:"debank-public-label", confidence:"confirmed"},
+    "0x4be03f781c497a489e3cb0287833452ca9b9e80b": {label:"BEX", type:"contract", source:"debank-public-label", confidence:"confirmed"},
+    "0x4e6d3691a30b35a0a4fb714a14e4a9f752a9d5ad": {label:"Arbera", type:"contract", source:"debank-public-label", confidence:"confirmed"},
+    "0x344289238bc44f238cb0a16306c78c94aa3380f2": {label:"Argent Vault", type:"contract_wallet", accountStructure:"Argent Smart Wallet", source:"etherscan-public-label", confidence:"confirmed"},
+    "0x2f41d42de3eab9e75f3d417259f24421771fb700": {label:"Chainlink Rewards Claim", type:"protocol", treasury:true, source:"etherscan-buildclaim", confidence:"confirmed"},
+    "0x6e939bbaceb45159982a2cac3a1fcbf7e93cf682": {label:"Ecosystem Incentives 1", type:"protocol", treasury:true},
+    "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4": {label:"Dolomite Gnosis Safe", type:"protocol", treasury:true, safe:true, source:"dolomite-docs-core-proxies", confidence:"confirmed"},
+    "0xcfc30d38a47817363a98a46834acf7040b17d7b0": {label:"Admin Proxy", type:"protocol", treasury:true},
+    "0xd88f473832b0403c7736ef237af5aff8759b99ef": {label:"oDOLO Airdrop", type:"protocol", treasury:true},
+    "0x51b3116ef47073ab8a0353a2751dc533d4238527": {label:"Revenue Proxy", type:"protocol", treasury:true},
+    "0xa3f079292cc35ba64996fe0bce3049928a838bc9": {label:"Treasury Proxy", type:"protocol", treasury:true},
+    "0x6bd780e7fdf01d77e4d475c821f1e7ae05409072": {label:"Dolomite Margin", type:"contract"},
+    "0x9e7728077f753dfdf53c2236097e27c743890992": {label:"DEX Router", type:"protocol"},
+    "0x1b945a88c3fbc20ef67079184b45355c287a7920": {label:"Core Team Allocation Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0xd130bb68eab9129875ce883f0bcf2d11b4b91832": {label:"Core Team Allocation Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x62f41c4df81c9edd64bd74653f1a087fecd5a2c9": {label:"Revenue Routing Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x52256ef863a713ef349ae6e97a7e8f35785145de": {label:"Protocol Liquidity Router", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x93deb693b170d56bdde1b0a5222b14c0f885d976": {label:"Protocol Distribution Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x92f38ac995d15ba6dde0e294dd713aa96426120b": {label:"Ecosystem Incentives Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x964176ea8f0b10012fa44865d02717740ebef043": {label:"DEX Routing Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0xd90782f09e85de5b75dfd6c5fd7f18cbabe4c404": {label:"CEX Routing Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0x9d6a82c771e1133789b5d5b716ed11ca26219d31": {label:"Binance Routing Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+    "0xb9e0dcaa12726c663ecdacc4e0b2c5a12886c53f": {label:"Binance Routing Relay", type:"protocol", source:"flow-audit", confidence:"confirmed"},
+
+    "0x003896387666c5c11458eeb3f927b72a11b19783": {label:"Uniswap V3 DOLO/USDC", type:"lp"},
+    "0xd5980e98a89e2d2361b3be657e8a003c6d3514e3": {label:"Kodiak DOLO/WBERA", type:"lp"},
+    "0x8991017b74f9f8070bff5b322802dd26e05e0cc7": {label:"Bulla DOLO/HONEY LP Pool", type:"lp", chain:"berachain", source:"routescan-verified-algebra-pool", confidence:"confirmed"},
+    "0x16b3a5e95db753fe5195244fa208301e38beae2a": {label:"BrownFi DOLO/BUSD LP Pool", type:"lp", chain:"berachain", source:"berachain-onchain-pool-interface", confidence:"confirmed"},
+    "0x7e9f37bbe81d3e17ff61ac67f7f2e7aac8b5c453": {label:"Kodiak DOLO/USD₮0 LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x67fbb8a61d6d6433f3428d1f10cfb09babc1a4d5": {label:"BrownFi DOLO/BUSD LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x7447c8f55c41b100781485be12fae928d0fcba7c": {label:"Kodiak DOLO/WBERA LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x79cbe94f46ba64ce2258d9fcb733a82f83e13270": {label:"Kodiak DOLO/WBERA LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x9f88571c46b9b961ef1463d74dc29523056604f3": {label:"Kodiak oDOLO/DOLO LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x71355972c9e332f73ff6921f9b3a02f349ff9752": {label:"Kodiak oDOLO/DOLO LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+    "0x8194ed4d6701b7a1b40e48431de37047f0248b0b": {label:"Kodiak DOLO/USDC.e LP", type:"lp", source:"debank-public-label", confidence:"confirmed"},
+
+    "0x185000fb4d98acea1a771db3714a431f7fe51cac": {label:"Core Team 1", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0x882e6d630a8c70a6a8d29a4d33f960b1267aa3d1": {label:"Core Team 2", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0x6c97802a1815bc459004c686560244de28a2de75": {label:"Core Team 3", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0x665b3ce67daeb5b19d4d14bbdb6297da0ffa5bf1": {label:"Core Team 4", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0x5e42031946bfabaef3b3839f035066f11a9ce33e": {label:"Core Team 4 recipient", type:"protocol", treasury:true, source:"direct-core-team-funding", confidence:"potential", fundedBy:"0x665b3ce67daeb5b19d4d14bbdb6297da0ffa5bf1", sourceUrl:"https://berascan.com/address/0x5e42031946bfabaef3b3839f035066f11a9ce33e", verifiedAt:"2026-09-20", description:"Directly funded in DOLO by the confirmed Core Team 4 allocation wallet. The onchain relationship is verified; the real-world owner is not identified."},
+    "0x3f1f155949f32fa3e688093d176a1b5a72c488eb": {label:"Core Team 5", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0x871b0afcd3fd44f4c0071d4ade68ce40d0d6bbcc": {label:"Core Team 6", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0xf2b42104b5ac0b3145a5e18b84aa3fd76d0fdeec": {label:"Core Team 7", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    "0xb8ba44d5e46562ec011ade12603f353b18089a41": {label:"Core Team 8", type:"protocol", treasury:true, source:"coingecko-tokenomics", confidence:"confirmed"},
+    // Official long-term investor vesting contract. Recipient wallets are
+    // labeled by the shared claim-provenance pipeline.
+    "0x3a025c7fcf7632197ea82e64acd6ff53e1c06c07": {label:"Investor Claims", type:"protocol", treasury:true, source:"dolomite-docs-module-dolo", confidence:"confirmed"},
+    "0xbd225c09e4b032e41d5e8aea5f81efff45f20f7b": {label:"Advisor Claims", type:"protocol", treasury:true, source:"dolomite-docs-module-dolo", confidence:"confirmed"},
+    "0xbf3c4e55a444ed489736c3d856b0cd0533fc2edd": {label:"Investor 2", type:"investor", treasury:true},
+    "0x7efd088ae500598a19a242d6d48b9f7e0d061176": {label:"Strategic Investor Claims", type:"protocol", treasury:true, source:"dolomite-docs-module-dolo", confidence:"confirmed"},
+
+    "0xdfe8c48608db1dc34e057916dcb3deea0b7bfbf5": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0xdfe8c48608db1dc34e057916dcb3deea0b7bfbf5", verifiedAt:"2026-11-08"},
+    "0xe40d548eb4fa4d9188fd21723f2fd377456c0876": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0xe40d548eb4fa4d9188fd21723f2fd377456c0876", verifiedAt:"2026-11-08"},
+    "0x8f90008577d6b6be3972558143ec4163199b7aa3": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0x8f90008577d6b6be3972558143ec4163199b7aa3", verifiedAt:"2026-11-08"},
+    "0xf977814e90da44bfa03b6295a0616a897441acec": {label:"Binance Hot Wallet 20", type:"cex", source:"etherscan-public-label"},
+    "0x06fd4ba7973a0d39a91734bbc35bc2bcaa99e3b0": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed"},
+    "0x28c6c06298d514db089934071355e5743bf21d60": {label:"Binance 14", type:"cex", source:"etherscan-public-label"},
+    "0x21a31ee1afc51d94c2efccaa2092ad1028285549": {label:"Binance 15", type:"cex", source:"etherscan-public-label"},
+    "0xdfd5293d8e347dfe59e90efd55b2956a1343963d": {label:"Binance 16", type:"cex", source:"etherscan-public-label"},
+    "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8": {label:"Binance 7", type:"cex", source:"etherscan-public-label"},
+    "0x56eddb7aa87536c09ccc2793473599fd21a8b17f": {label:"Binance 17", type:"cex", source:"etherscan-public-label"},
+    "0x9696f59e4d72e237be84ffd425dcad154bf96976": {label:"Binance 18", type:"cex", source:"etherscan-public-label"},
+    "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43": {label:"Coinbase 10", type:"cex", source:"etherscan-public-label"},
+    "0x906bd3aff2700f0d1aaf937d9c8dbf6024102e19": {label:"Coinbase Wallet", type:"cex", source:"debank-public-label", confidence:"confirmed"},
+    "0xabfa4ad57e283758e9ec3e21147793745091c618": {label:"CoinEx Deposit Contract", type:"cex", accountStructure:"CoinEx deposit proxy", source:"etherscan-coinex-deposit-factory", confidence:"confirmed"},
+    "0x305833cadd13a6d7febc6619304a6943a9a1ed22": {label:"Binance Deposit", type:"cex"},
+    "0xb46a0f71fded6ceb00b1c9278e0ac7e22c242df5": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x43684d03d81d3a4c70da68febdd61029d426f042": {label:"Binance 117", type:"cex", source:"etherscan-public-label"},
+    "0x98adef6f2ac8572ec48965509d69a8dd5e8bba9d": {label:"Binance 93", type:"cex", source:"etherscan-public-label"},
+    "0x035ae7d933dcbfe617ffba194a88af0c2867b90c": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x8782163068c7cd74d2510768a61135c1e4eb07b3": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x0d0707963952f2fba59dd06f2b425ace40b492fe": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xe302dc0c3b74ae06da002fc66c2ee8a40cce256d": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x478271c960137418c9d90082dddbf68aa72e4367": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x753f43cca3dbd2bbe963609f8d25a833433a10c9": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xf89d7b9c864f589bbf53a82105107622b35eaa40": {label:"Bybit Hot Wallet", type:"cex", source:"etherscan-public-label"},
+    "0xdf3100ac6c20c4a9443ece6c639c4ee91d592062": {label:"Coinbase", type:"cex"},
+    "0xe337c67ee9077e31aab205b25e8593b0e1c00cc4": {label:"Coinbase", type:"cex"},
+    "0x38fc9e8c73ea02f3a7de1da0760e71277f1e5e24": {label:"Coinbase", type:"cex"},
+    "0xcd531ae9efcce479654c4926dec5f6209531ca7b": {label:"Coinbase Prime 1", type:"cex", source:"etherscan-public-label"},
+    "0xb180647d5ad76abeb6be0d363f6e182bd8df46d1": {label:"Coinbase", type:"cex"},
+    "0x9642b23ed1e01df1092b92641051881a322f5d4e": {label:"MEXC 16", type:"cex", source:"etherscan-public-label"},
+    "0xf61a30978ecb7cccb30eb97f9ba94b8b35675034": {label:"MEXC", type:"cex", source:"debank-public-label", confidence:"confirmed", sourceUrl:"https://debank.com/profile/0xf61a30978ecb7cccb30eb97f9ba94b8b35675034", verifiedAt:"2026-09-12"},
+    "0x1157a2076b9bb22a85cc2c162f20fab3898f4101": {label:"FalconX 1", type:"cex", source:"etherscan-public-label"},
+    "0x0529ea5885702715e83923c59746ae8734c553b7": {label:"Bitpanda 18", type:"cex", source:"etherscan-public-label"},
+    "0xd2dd7b597fd2435b6db61ddf48544fd931e6869f": {label:"Kraken 246", type:"cex", source:"etherscan-public-label"},
+    "0xb8001c3ec9aa1985f6c747e25c28324e4a361ec1": {label:"Cobo Custody 1", type:"cex", source:"etherscan-public-label"},
+    "0x2b3bf74b29f59fb8dda41cf3d6a8da28cf8e7921": {label:"BingX 29", type:"cex", source:"etherscan-public-label"},
+    "0xd97107064b8c7520aae6c6e6ca75bb2aa73b670d": {label:"BingX-linked", type:"cex"},
+    "0x1ab4973a48dc892cd9971ece8e01dcc7688f8f23": {label:"Bitget 6", type:"cex", source:"etherscan-public-label"},
+    "0x2933782b5a8d72f2754103d1489614f29bfa4625": {label:"KuCoin Wallet", type:"cex", source:"etherscan-public-label"},
+    "0xdb861e302ef7b7578a448e951aede06302936c28": {label:"Phemex 1", type:"cex", source:"etherscan-public-label"},
+    "0xf2067abfab8bc621211935431519d41825d2f344": {label:"Coinstore 3", type:"cex", source:"etherscan-public-label"},
+    "0x4ed6cf63bd9c009d247ee51224fc1c7041f517f1": {label:"Ceffu 6", type:"cex", source:"etherscan-public-label"},
+    "0xef7960eb0b732f70007f7c05daf6bb597aa742d6": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x7ff8bbf9c8ab106db589e7863fb100525f61cce5": {label:"BloFin Hot Wallet 1", type:"cex", source:"etherscan-public-label"},
+    "0x9b0c45d46d386cedd98873168c36efd0dcba8d46": {label:"Revolut 3", type:"cex", source:"etherscan-public-label"},
+    "0xb8dbf21f34761347ccf1ec0c3bd8cb3fd41e155f": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x5576132eb74518fb27de2123ed3e6b1d43e0dac7": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x3e6f0c06dcca325f8f9175c1802927073394c67c": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x039ac6fbcebf02b54259bc690e13540693d9eb8d": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xf6012b3d6e669f0fdb58d1f62c2e6fe56c1b1625": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0x850c198d2469b569091211fb5f62ff5d5627fbf0": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xb2655ac91bb3536bcfa0993069da6affabadc33d": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xb2b99d9879dd29b4b8590087ae991eaf3808984f": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label"},
+    "0xc17a40852e4bfe04bc81af355fdf132c539ba753": {label:"Binance Deposit", type:"cex", source:"etherscan-public-label"},
+
+    "0xd6f631c796a56a5d448dd88a01f15058c4a0be52": {label:"makeitback.eth", type:"eoa", source:"ens-reverse"},
+    "0x7bfee91193d9df2ac0bfe90191d40f23c773c060": {label:"7bfee.eth", type:"eoa", source:"ens-reverse"},
+    "0x224f590a8b58f83bd2673348d6ac75a7b27f9b54": {label:"mike-tyson.eth", type:"eoa", source:"ens-reverse"},
+    "0x87db27ac8459ab6602f7a6155b48f6b184065da0": {label:"atheon.eth", type:"eoa", source:"ens-reverse"},
+
+    "0x0fb6bac552b7a29a21b4e595b1ef5c371cda4f9d": {label:"Dolomite User", type:"eoa", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x399f2700ce8ba81d10fe43c1d077365dc41017d4": {label:"DOLO Whale", type:"eoa", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x6cb90ab6c7de4028af86f15ae97c4df2b954f84c": {label:"Active DeFi Trader", type:"eoa", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x8cb5e212e6a3b70229ac1edb56fe5e6db199dde4": {label:"coffinlol", type:"eoa", source:"debank-profile-id", confidence:"potential"},
+    "0xf5fcd3a63abc766ac5ada296b4a4e860dbf9ebb0": {label:"Dolomite Whale", type:"eoa", source:"behavioral-flow-audit", confidence:"potential"},
+
+    "0x478ae1099333e7535de2a3abed00b413e52914cb": {label:"Automated DEX Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x7a1d00de77c0162d55d84a051bdc6840852b4a60": {label:"Cross-Exchange Arbitrage", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x7bd27a0103e48e25acdb131cc190314562171fde": {label:"Cross-Chain DEX Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0x93ae9fe008636d2d6d7376198a54edb20367968f": {label:"Exchange Arbitrage", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xa8736d26162c74be3908d105594ab8c18ed25225": {label:"DEX / Bridge Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xcae214dcc97572152a667d7c9c06b39d7790efea": {label:"DEX / Bridge Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xefc662fe5c73e58bddfd97015a21726d6423b088": {label:"Automated DEX Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xf706d8831047dcb2b2614973390287742337f718": {label:"DEX Aggregator Trader", type:"bot", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xfc89c020774524c9d03bd5de48fec149b10bdec3": {label:"Probable Market Maker", type:"mm", source:"behavioral-flow-audit", confidence:"potential"},
+    "0xd5c342acbeedef81ab8e6072323bfda76172d05f": {label:"MEXC Wallet", type:"cex", source:"flow-audit", confidence:"confirmed"},
+    "0x38285671612d6f0ef7c3483f500d39fa71d66a1c": {label:"CEX Distributor", type:"cex", source:"flow-audit", confidence:"confirmed"},
+    "0xc882b111a75c0c657fc507c04fbfcd2cc984f071": {label:"Gate.io Deposit", type:"cex", source:"etherscan-public-label", confidence:"confirmed", sourceUrl:"https://etherscan.io/address/0xc882b111a75c0c657fc507c04fbfcd2cc984f071", verifiedAt:"2026-09-13"},
+
+    "0xb05ba67c11fc0b92a7bcb18e50cba87ce2d15109": {label:"Bot / MM", type:"bot"},
+    "0x5a6f918fcda24e9b5143f3a1b77e63df6de30f74": {label:"Bot / MM", type:"bot"},
+    "0x6a2383cff0d46d2b7d29759f17c26fba726f3ea3": {label:"Bot / MM", type:"bot"},
+    "0x601d9ad1b431577e3635a23b7eb3bcc46bcc648b": {label:"Bot / MM", type:"bot"},
+    "0xf10f81795b359f8a72682cc2a39444bf818ef4ca": {label:"Bot / MM", type:"bot"},
+    "0xbcccbff437ae872f869c2de48371d42960208209": {label:"Bot / MM", type:"bot"},
+    "0xbdb3ba9ffe392549e1f8658dd2630c141fdf47b6": {label:"MEV Bot", type:"bot", source:"debank-public-label", confidence:"confirmed"},
+    "0x1ff6b8e1192eb0369006bbad76da9068b68961b2": {label:"Liquidator", type:"liquidator"},
+    "0xb7131fc8cdc43060a6210257f537dba5fcae6aed": {label:"MEV / Liquidator Bot", type:"liquidator"},
+    "0x9cb677f2a8daa9511ae79c2ba56395552b5d030d": {label:"Active Trader/Bot", type:"bot"}
+  };
+
+  const LABEL_SOURCE_BY_TYPE = {
+    bot: "behavioral-label",
+    cex: "public-label",
+    contract: "dolomite-known-address",
+    dead: "standard-burn-address",
+    investor: "coingecko-tokenomics",
+    liquidator: "behavioral-label",
+    lp: "public-pool-label",
+    protocol: "dolomite-known-address",
+    watch: "heuristic-flow-pattern",
+  };
+  const ADDRESS_TYPE_ALIASES = {
+    trader: "bot",
+  };
+  const COINGECKO_LABEL_RE = /^(Core Team|Investor|Ecosystem Incentives)\b/;
+  const CONFIDENCE_BY_TYPE = { watch: "potential" };
+
+  function normalizeDoloAddressType(type){
+    const normalized = String(type || "").trim().toLowerCase();
+    return ADDRESS_TYPE_ALIASES[normalized] || normalized;
+  }
+
+  function normalizeDoloAddressLabels(labels){
+    return Object.fromEntries(Object.entries(labels).map(([address, info]) => {
+      const type = normalizeDoloAddressType(info.type);
+      const source = info.source || (COINGECKO_LABEL_RE.test(info.label || "") ? "coingecko-tokenomics" : LABEL_SOURCE_BY_TYPE[type] || "manual-review");
+      const confidence = info.confidence || CONFIDENCE_BY_TYPE[type] || "confirmed";
+      return [address.toLowerCase(), {...info, type, source, confidence}];
+    }));
+  }
+
+  const NORMALIZED_DOLO_ADDRESS_LABELS = normalizeDoloAddressLabels(DOLO_ADDRESS_LABELS);
+  const cloneLabels = () => JSON.parse(JSON.stringify(normalizeDoloAddressLabels(
+    window.DOLO_ADDRESS_LABELS || NORMALIZED_DOLO_ADDRESS_LABELS,
+  )));
+
+  function isDoloAddress(value){
+    return /^0x[a-f0-9]{40}$/.test(String(value || "").toLowerCase());
+  }
+
+  const GENERIC_WALLET_LABELS = new Set([
+    "wallet", "eoa", "smart contract", "smart contract / ca", "contract", "address", "unknown wallet",
+  ]);
+
+  function resolveDoloWalletIdentity(address, fallback = {}, labels){
+    const normalizedAddress = String(address || "").toLowerCase();
+    const sourceLabels = labels && typeof labels === "object"
+      ? labels
+      : window.DOLO_ADDR_LABELS || window.DOLO_ADDRESS_LABELS || NORMALIZED_DOLO_ADDRESS_LABELS;
+    const canonical = isDoloAddress(normalizedAddress) ? sourceLabels[normalizedAddress] : null;
+    const fallbackLabel = String(fallback?.label || "").trim();
+    const fallbackIsNamed = Boolean(
+      fallbackLabel
+      && !GENERIC_WALLET_LABELS.has(fallbackLabel.toLowerCase())
+      && (fallback?.confidence === "confirmed" || fallback?.source)
+    );
+    const identity = canonical || (fallbackIsNamed ? fallback : null);
+    return {
+      address: normalizedAddress,
+      known: Boolean(identity?.label),
+      label: identity?.label || "",
+      type: identity?.type || fallback?.type || "",
+      source: identity?.source || fallback?.source || "",
+      confidence: identity?.confidence || fallback?.confidence || "",
+      metadata: identity ? {...identity} : {},
+    };
+  }
+
+  function normalizeInvestorLabel(label){
+    if(label === "Early Investor") return "Strategic Investor";
+    if(label === "Investor") return "Long-term Investor";
+    return label;
+  }
+
+  function mergeDoloVestingLabels(targetLabels, payload){
+    const labels = targetLabels && typeof targetLabels === "object" ? targetLabels : {};
+    if(!payload || typeof payload !== "object" || Array.isArray(payload)) return {labels, changed:false, added:0};
+
+    const candidates = new Map();
+    const addCandidate = (address, label, claimSources = [], metadata = {}) => {
+      const key = String(address || "").toLowerCase();
+      const normalizedLabel = normalizeInvestorLabel(label);
+      if(!isDoloAddress(key) || !["Strategic Investor", "Long-term Investor", "Core Team"].includes(normalizedLabel)) return;
+      const previous = candidates.get(key);
+      const isStrategic = normalizedLabel === "Strategic Investor" || previous?.label === "Strategic Investor";
+      const sources = new Set([...(previous?.claimSources || []), ...(claimSources || [])]);
+      candidates.set(key, {
+        label:isStrategic ? "Strategic Investor" : normalizedLabel,
+        claimSources:Array.from(sources),
+        roundAttribution:metadata.roundAttribution || previous?.roundAttribution || null,
+        vestingSchedule:metadata.vestingSchedule || previous?.vestingSchedule || null,
+      });
+    };
+
+    (payload.wallets || []).forEach(row => {
+      if(!row || typeof row !== "object") return;
+      addCandidate(row.address, row.label, row.claimSources, row);
+    });
+    const strategicRows = Array.isArray(payload.strategic_investors)
+      ? payload.strategic_investors
+      : payload.early_investors || [];
+    strategicRows.forEach(address => addCandidate(address, "Strategic Investor", ["strategic_investor_claims"]));
+    (payload.investors || []).forEach(address => addCandidate(address, "Long-term Investor", ["investor_claims"]));
+
+    const investorSet = new Set((payload.investors || []).map(address => String(address || "").toLowerCase()));
+    const teamRows = (payload.team || []).map(address => String(address || "").toLowerCase());
+    const isLegacyInvestorDuplicate = investorSet.size > 0
+      && teamRows.length === investorSet.size
+      && teamRows.every(address => investorSet.has(address));
+    if(!isLegacyInvestorDuplicate){
+      teamRows.forEach(address => addCandidate(address, "Core Team", []));
+    }
+
+    let added = 0;
+    let changed = false;
+    candidates.forEach((candidate, address) => {
+      const existing = labels[address];
+      const canUpgradeInvestor = existing?.source === "official-claim-contract-transfer"
+        && existing?.type === "investor"
+        && candidate.label === "Strategic Investor";
+      if(existing && !canUpgradeInvestor) return;
+      const hasStrategic = candidate.label === "Strategic Investor";
+      const hasLongTerm = candidate.claimSources.includes("investor_claims");
+      const description = hasStrategic && hasLongTerm
+        ? "Received DOLO from the official Strategic Investor Claims contract and also received the long-term investor tranche."
+        : hasStrategic
+          ? "Received DOLO from the official Strategic Investor Claims contract."
+          : candidate.label === "Long-term Investor"
+            ? "Received DOLO from the official Investor Claims contract."
+            : "Verified Core Team allocation wallet.";
+      const roundAttribution = candidate.roundAttribution || (hasStrategic ? {
+        key:"2024-strategic-900k",
+        label:"2024 strategic round · $900K",
+        status:"high-confidence-onchain-attribution",
+      } : null);
+      labels[address] = {
+        ...(existing || {}),
+        label: candidate.label,
+        type: candidate.label === "Core Team" ? "protocol" : "investor",
+        treasury: candidate.label === "Core Team" || undefined,
+        source: candidate.label === "Core Team" ? "verified-team-allocation" : "official-claim-contract-transfer",
+        confidence: "confirmed",
+        claimSources: candidate.claimSources,
+        labelDetail: hasStrategic
+          ? roundAttribution.label
+          : candidate.label === "Long-term Investor"
+            ? candidate.vestingSchedule || "3-year vesting · 1-year cliff"
+            : undefined,
+        attributionStatus: hasStrategic ? roundAttribution.status : undefined,
+        roundAttribution: roundAttribution || undefined,
+        vestingSchedule: hasLongTerm
+          ? candidate.vestingSchedule || "3-year vesting · 1-year cliff"
+          : undefined,
+        alsoReceivedLongTermTranche: Boolean(hasStrategic && hasLongTerm),
+        description,
+      };
+      if(!existing) added += 1;
+      changed = true;
+    });
+    return {labels, changed, added};
+  }
+
+  let vestingPayloadPromise = null;
+  function loadDoloVestingLabels(targetLabels, options = {}){
+    const labels = targetLabels && typeof targetLabels === "object" ? targetLabels : window.DOLO_ADDR_LABELS || {};
+    const url = options.url || "vesting_investors.json";
+    if(!vestingPayloadPromise){
+      vestingPayloadPromise = fetch(url, {cache:"no-cache"}).then(response => {
+        if(!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+        return response.json();
+      });
+    }
+    return vestingPayloadPromise.then(payload => {
+      const result = mergeDoloVestingLabels(labels, payload);
+      if(result.changed && typeof window.dispatchEvent === "function" && typeof window.CustomEvent === "function"){
+        window.dispatchEvent(new CustomEvent("dolo:labels-updated", {detail:{added:result.added}}));
+      }
+      return result;
+    });
+  }
+
+  window.DOLO_ADDRESS_LABELS = NORMALIZED_DOLO_ADDRESS_LABELS;
+  window.cloneDoloAddressLabels = cloneLabels;
+  window.normalizeDoloAddressType = normalizeDoloAddressType;
+  window.mergeDoloVestingLabels = mergeDoloVestingLabels;
+  window.loadDoloVestingLabels = loadDoloVestingLabels;
+  window.resolveDoloWalletIdentity = resolveDoloWalletIdentity;
+  if(!window.DOLO_ADDR_LABELS) window.DOLO_ADDR_LABELS = cloneLabels();
+})();

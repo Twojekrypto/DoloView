@@ -1,0 +1,106 @@
+import unittest
+from unittest.mock import patch
+
+import scan_earn_subaccount_history_events as scanner
+from scan_earn_subaccount_history_events import (
+    _canonical_max_block_chunk,
+    _initial_rpc_index,
+    _should_fallback_to_single_topics,
+)
+
+
+class ScanEarnSubaccountHistoryEventsTest(unittest.TestCase):
+    def test_drpc_range_rejection_is_not_amplified_into_per_topic_queries(self):
+        error = RuntimeError('HTTP Error 400: ranges over 10000 blocks are not supported on free plan | HTTP Error 429: Monthly capacity limit exceeded')
+        with patch.object(scanner, 'get_logs', side_effect=error) as fetch:
+            with self.assertRaisesRegex(RuntimeError, 'ranges over 10000'):
+                scanner._get_logs_with_topic_fallback(['rpc'], [0], '0xContract', scanner.ALL_EVENTS, 1, 9999)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_block_span_limit_is_not_retried_once_per_topic(self):
+        error = RuntimeError('HTTP Error 400: block range greater than 100 max | HTTP Error 429: Too Many Requests')
+        with patch.object(scanner, 'get_logs', side_effect=error) as fetch:
+            with self.assertRaisesRegex(RuntimeError, 'block range greater than 100'):
+                scanner._get_logs_with_topic_fallback(['rpc'], [0], '0xContract', scanner.ALL_EVENTS, 1, 9999)
+        self.assertEqual(fetch.call_count, 1)
+
+    def test_berachain_canonical_scan_uses_provider_safe_chunk_limit(self):
+        config = scanner.CHAINS["berachain"]
+
+        self.assertEqual(9_999, config["canonical_max_block_chunk"])
+        self.assertEqual(9_999, _canonical_max_block_chunk(config))
+
+    def test_canonical_chunk_limit_falls_back_to_chain_and_global_limits(self):
+        self.assertEqual(1_800, _canonical_max_block_chunk({"max_block_chunk": 1_800}))
+        self.assertEqual(scanner.BLOCK_CHUNK, _canonical_max_block_chunk({}))
+
+    def test_initial_rpc_index_spreads_progress_keys_across_endpoints(self):
+        rpcs = ["rpc-a", "rpc-b", "rpc-c", "rpc-d"]
+
+        indexes = [_initial_rpc_index(rpcs, f"d{idx}of16") for idx in range(1, 17)]
+
+        self.assertTrue(all(0 <= idx < len(rpcs) for idx in indexes))
+        self.assertGreater(len(set(indexes)), 1)
+        self.assertEqual(indexes, [_initial_rpc_index(rpcs, f"d{idx}of16") for idx in range(1, 17)])
+
+    def test_initial_rpc_index_defaults_to_first_endpoint_without_progress_key(self):
+        self.assertEqual(_initial_rpc_index(["rpc-a", "rpc-b"], None), 0)
+        self.assertEqual(_initial_rpc_index([], "d1of4"), 0)
+
+    def test_initial_rpc_index_rotates_after_worker_restart(self):
+        rpcs = ["rpc-a", "rpc-b", "rpc-c", "rpc-d"]
+        initial = _initial_rpc_index(rpcs, "d1of4")
+
+        self.assertEqual((initial + 1) % len(rpcs), _initial_rpc_index(rpcs, "d1of4", 1))
+        self.assertEqual(initial, _initial_rpc_index(rpcs, "d1of4", len(rpcs)))
+
+    def test_topic_fallback_allows_mixed_bad_request_and_rate_limit_tail(self):
+        exc = RuntimeError(
+            "All RPCs failed after 9 attempts; recent errors: "
+            "RPC failed (https://alchemy.example): HTTP Error 400: Bad Request | "
+            "RPC failed (https://alchemy-2.example): HTTP Error 429: Too Many Requests"
+        )
+
+        self.assertTrue(_should_fallback_to_single_topics(exc))
+
+    def test_topic_fallback_does_not_expand_pure_rate_limit_tail(self):
+        exc = RuntimeError(
+            "All RPCs failed after 3 attempts; recent errors: "
+            "RPC failed (https://alchemy.example): HTTP Error 429: Too Many Requests | "
+            "RPC failed (https://alchemy-2.example): rate limited"
+        )
+
+        self.assertFalse(_should_fallback_to_single_topics(exc))
+
+    def test_get_logs_falls_back_to_single_topics_when_combined_topic_query_fails(self):
+        calls = []
+
+        def fake_get_logs(rpcs, rpc_idx, contract, topics, from_block, to_block):
+            calls.append(topics)
+            if topics == [scanner.ALL_EVENTS]:
+                raise RuntimeError("query returned more than 10000 results")
+            topic = topics[0][0]
+            return [{
+                "transactionHash": f"0x{len(calls):064x}",
+                "logIndex": "0x0",
+                "blockNumber": hex(from_block),
+                "topics": [topic],
+            }]
+
+        with patch.object(scanner, "get_logs", side_effect=fake_get_logs):
+            logs = scanner._get_logs_with_topic_fallback(
+                ["rpc-a"],
+                [0],
+                "0xContract",
+                scanner.ALL_EVENTS,
+                100,
+                124,
+            )
+
+        self.assertEqual(calls[0], [scanner.ALL_EVENTS])
+        self.assertEqual(calls[1:], [[[topic]] for topic in scanner.ALL_EVENTS])
+        self.assertEqual(len(logs), len(scanner.ALL_EVENTS))
+
+
+if __name__ == "__main__":
+    unittest.main()

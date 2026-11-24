@@ -1,0 +1,95 @@
+#unified-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 999999;
+  max-width: min(420px, calc(100vw - 24px));
+  background: rgba(20, 20, 23, .97);
+  color: var(--fg-1, #f4f3ef);
+  border: 1px solid var(--gold-line, rgba(201, 162, 39, .30));
+  border-radius: 8px;
+  box-shadow: var(--sh-hi, 0 8px 28px rgba(0, 0, 0, .45));
+  font-family: var(--mono, "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 7px 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  white-space: normal;
+  word-break: break-word;
+}
+
+#unified-tooltip.is-mono {
+  width: auto;
+  white-space: nowrap;
+}
+
+#unified-tooltip-arrow {
+  position: fixed;
+  z-index: 999999;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .55));
+}
+
+.addr-tooltip-wrap,
+[data-tooltip],
+[data-tip] {
+  cursor: help;
+}
+
+.addr-tooltip-wrap[data-full-addr] {
+  cursor: default;
+}
+
+a.addr-tooltip-wrap[data-full-addr] {
+  cursor: pointer;
+}
+
+table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-source,
+table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-peer {
+  border-radius: 4px;
+  transition: color .14s ease, background-color .14s ease, box-shadow .14s ease;
+}
+
+table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-source {
+  color: #e5c85d;
+  background-color: rgba(201, 162, 39, .22);
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, .92),
+    0 0 0 3px rgba(201, 162, 39, .12),
+    0 0 16px rgba(201, 162, 39, .24);
+}
+
+table:is(
+  #positions-table,
+  #liquidation-history-table,
+  #supply-activity-table,
+  #exits-table,
+  #locks-table,
+  #unlocks-table,
+  #claimable-table,
+  #tbl-latest-ex,
+  #tbl-latest-pair,
+  .sim-atrisk-table
+)[data-address-match-cells] tbody .addr-tooltip-wrap[data-full-addr].address-match-active.address-match-source {
+  color: #e5c85d !important;
+}
+
+table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-peer {
+  background-color: rgba(201, 162, 39, .12);
+  box-shadow:
+    0 0 0 1px rgba(201, 162, 39, .52),
+    0 0 8px rgba(201, 162, 39, .10);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-source,
+  table[data-address-match-cells] tbody .addr-tooltip-wrap.address-match-active.address-match-peer {
+    transition: none;
+  }
+}

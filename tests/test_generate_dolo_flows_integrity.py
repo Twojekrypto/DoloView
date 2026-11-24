@@ -1,0 +1,1756 @@
+import unittest
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import flow_tx_metadata
+import generate_dolo_flows as flows
+
+
+COINBASE_10 = "0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43"
+COINBASE = "0xdf3100ac6c20c4a9443ece6c639c4ee91d592062"
+SOURCE = "0xabe44baf180ac426565503bbc3ecf71a0459456e"
+SILENTLY_MISSED_BLOCK = 25_482_810
+UNLABELED_CONTRACT = "0xcccccccccccccccccccccccccccccccccccccccc"
+OUTSIDE = "0xdddddddddddddddddddddddddddddddddddddddd"
+RECIPIENT = "0x3e5041d44c9ad13f661bcb49bf37e44eca973c5d"
+DOLO_DEPOSIT_ROUTER = "0xf8b2c637a68cf6a17b1df9f8992eebeff63d2dff"
+SHARED_DOLOMITE_MARGIN = "0x003ca23fd5f0ca87d01f6ec6cd14a8ae60c2b97d"
+STRATEGIC_INVESTOR_CLAIMS = "0x7efd088ae500598a19a242d6d48b9f7e0d061176"
+INVESTOR_CLAIMS = "0x3a025c7fcf7632197ea82e64acd6ff53e1c06c07"
+EARLY_ONLY = "0x1111111111111111111111111111111111111111"
+INVESTOR_ONLY = "0x2222222222222222222222222222222222222222"
+OVERLAP = "0x3333333333333333333333333333333333333333"
+DOLOMITE_GNOSIS_SAFE = "0xa75c21c5be284122a87a37a76cc6c4dd3e55a1d4"
+CHAINLINK_REWARDS_CLAIM = "0x2f41d42de3eab9e75f3d417259f24421771fb700"
+ECOSYSTEM_INCENTIVES_2 = "0x06265db7ecd9c5724a97bd4909146625d2e2619c"
+CROSS_CHAIN_WALLET = "0x15762db764826c219f1385c028e7e043a27e1891"
+ENSO_AGGREGATOR_TRADER = "0x40e816361e9eceb4ded402def58cc77e9f097914"
+AUTOMATED_TRADER = "0x7bd27a0103e48e25acdb131cc190314562171fde"
+KNOWN_BERA_FLOW_SOURCE = "0x52256ef863a713ef349ae6e97a7e8f35785145de"
+KNOWN_BERA_FLOW_RECIPIENT = "0xb490d2a5d857c0357a8c2ac23c30ba0e6e02f909"
+KNOWN_BERA_FLOW_TX = "0xcc41fb29534dc8adb1440454087a6a738fdfbeaaa2d20880d2265edbbc8997b3"
+VERIFIED_USER_SAFE = "0x4cedf88d4fdefa1e460bbed10bdfef105c62fd68"
+BROWNFI_DOLO_BUSD_POOL = "0x16b3a5e95db753fe5195244fa208301e38beae2a"
+LEGACY_DOLO_USDC_V4_POOL = "0x330d0f19c6ef4559d2cbfaa48a2d18fe55efe642337257e3a4ebd62f5de56f18"
+KNOWN_TRADING_BOTS = {
+    "0x5a6f918fcda24e9b5143f3a1b77e63df6de30f74",
+    "0x6a2383cff0d46d2b7d29759f17c26fba726f3ea3",
+    "0x278d858f05b94576c1e6f73285886876ff6ef8d2",
+    "0xf10f81795b359f8a72682cc2a39444bf818ef4ca",
+}
+
+
+class GenerateDoloFlowsIntegrityTests(unittest.TestCase):
+    def test_holder_history_accumulator_accepts_transfer_metadata(self):
+        sender = "0x1111111111111111111111111111111111111111"
+        recipient = "0x2222222222222222222222222222222222222222"
+        raw_flows = {}
+        bridge_flows = {}
+
+        flows.add_transfer_to_running_flows(
+            raw_flows,
+            bridge_flows,
+            (
+                sender,
+                recipient,
+                5 * 10**18,
+                123,
+                "0x" + "a" * 64,
+                7,
+            ),
+        )
+
+        self.assertEqual(raw_flows[sender], -5)
+        self.assertEqual(raw_flows[recipient], 5)
+
+    def test_searchable_rows_keep_verified_wallets_below_leaderboard_cutoff(self):
+        flows_by_address = {
+            "0x1111111111111111111111111111111111111111": 100_000.0,
+            "0xa3aef439e6b69125cdbfd946ab1d8a9d012e1c46": 24_678.68,
+            "0x51b85c18b8a94081cd5af25cb3c4bce5750a0b19": 25_335.15,
+        }
+        build_rows = getattr(flows, "build_searchable_flow_rows", lambda *_: ([], []))
+        accumulators, sellers = build_rows(
+            flows_by_address,
+            {},
+            {},
+            set(),
+        )
+
+        self.assertEqual(
+            [row["address"] for row in accumulators],
+            [
+                "0x1111111111111111111111111111111111111111",
+                "0x51b85c18b8a94081cd5af25cb3c4bce5750a0b19",
+                "0xa3aef439e6b69125cdbfd946ab1d8a9d012e1c46",
+            ],
+        )
+        self.assertEqual(sellers, [])
+
+    def test_brownfi_pool_uses_the_shared_verified_lp_label(self):
+        label = flows.load_address_labels()[BROWNFI_DOLO_BUSD_POOL]
+
+        self.assertEqual(label["label"], "BrownFi DOLO/BUSD LP Pool")
+        self.assertEqual(label["type"], "lp")
+
+    def test_combined_ranking_happens_after_complete_chain_merge(self):
+        target = "0x9999999999999999999999999999999999999999"
+        eth = {
+            f"0x{index:040x}": float(10_000 - index)
+            for index in range(1, 102)
+        }
+        bera = {
+            f"0x{index + 1_000:040x}": float(10_000 - index)
+            for index in range(1, 102)
+        }
+        eth[target] = 9_000.0
+        bera[target] = 9_000.0
+
+        eth_top = flows.get_top(eth, {}, 100)
+        bera_top = flows.get_top(bera, {}, 100)
+        self.assertNotIn(target, {row["address"] for row in eth_top})
+        self.assertNotIn(target, {row["address"] for row in bera_top})
+
+        combined = flows.merge_chain_flow_maps({"eth": eth, "bera": bera})
+        combined_top = flows.get_top(combined, {}, 100)
+
+        self.assertEqual(combined_top[0]["address"], target)
+        self.assertEqual(combined_top[0]["net_flow"], 18_000.0)
+
+    def test_equal_opposing_chain_legs_cancel_before_combined_ranking(self):
+        eth = {CROSS_CHAIN_WALLET: -283_000.05056654825}
+        bera = {CROSS_CHAIN_WALLET: 283_000.05056654825}
+
+        combined = flows.merge_chain_flow_maps({"eth": eth, "bera": bera})
+
+        self.assertAlmostEqual(combined[CROSS_CHAIN_WALLET], 0)
+        self.assertEqual(flows.get_top(combined, {}, 100, "accumulator"), [])
+        self.assertEqual(flows.get_top(combined, {}, 100, "seller"), [])
+
+    def test_verified_safe_holder_contract_remains_visible_in_flows(self):
+        holder_rows = {
+            VERIFIED_USER_SAFE: {
+                "address": VERIFIED_USER_SAFE,
+                "balance": 20_000_000,
+                "is_contract": True,
+                "contract_wallet_type": "safe",
+            }
+        }
+        verified_user_contracts = flows.verified_user_contract_addresses(holder_rows)
+        excluded = flows.select_dynamic_flow_exclusions(
+            {VERIFIED_USER_SAFE},
+            {},
+            verified_user_contracts,
+        )
+
+        self.assertIn(VERIFIED_USER_SAFE, verified_user_contracts)
+        self.assertNotIn(VERIFIED_USER_SAFE, excluded)
+
+    def test_verified_smart_account_remains_visible_in_flows(self):
+        smart_account = "0xdaca2619d2d0dd76849689436867fccc158f20ce"
+        holder_rows = {
+            smart_account: {
+                "address": smart_account,
+                "balance": 1_895.6627,
+                "is_contract": True,
+                "contract_wallet_type": "smart_account",
+            }
+        }
+
+        verified_user_contracts = flows.verified_user_contract_addresses(holder_rows)
+        excluded = flows.select_dynamic_flow_exclusions(
+            {smart_account},
+            {},
+            verified_user_contracts,
+        )
+
+        self.assertIn(smart_account, verified_user_contracts)
+        self.assertNotIn(smart_account, excluded)
+        self.assertEqual(
+            flows.holder_distribution_type(smart_account, holder_rows, {}),
+            "eoa",
+        )
+
+    def test_known_trading_bots_remain_visible_to_the_trading_bots_filter(self):
+        labels = {address: {"type": "bot"} for address in KNOWN_TRADING_BOTS}
+        excluded = flows.select_dynamic_flow_exclusions(
+            KNOWN_TRADING_BOTS,
+            labels,
+            set(),
+        )
+
+        self.assertTrue(KNOWN_TRADING_BOTS.isdisjoint(flows.EXCLUDED_ADDRS))
+        self.assertEqual(excluded, set())
+
+    def test_verified_lp_activity_does_not_rewrite_flat_wallet_net(self):
+        wallet = "0xa8b4c7f8b3d91b324f815252da74884e68fb4c4c"
+        market_flows = {wallet: 0.31}
+        activities = {
+            wallet: {
+                "deposit": "1304943.547531365190891539",
+                "withdrawal": "0",
+                "latest": {
+                    "direction": "deposit",
+                    "amount": "1304943.547531365190891539",
+                    "pair": "DOLO/USDC",
+                    "adapter": "uniswap-v4",
+                    "confidence": "verified_same_tx",
+                    "tx_hash": "0x" + "b" * 64,
+                    "timestamp": 1_786_990_091,
+                    "chain": "ethereum",
+                },
+            }
+        }
+
+        classified, annotations = flows.classify_verified_lp_outflows(
+            market_flows,
+            activities,
+        )
+
+        self.assertEqual(classified[wallet], 0.31)
+        self.assertEqual(annotations[wallet]["flow_basis"], "wallet_net")
+        self.assertEqual(annotations[wallet]["market_net_flow"], 0.31)
+        self.assertEqual(
+            annotations[wallet]["latest_lp_activity"]["period_wallet_net_flow"],
+            0.31,
+        )
+
+    def test_verified_lp_deposit_does_not_replace_a_larger_real_outflow(self):
+        wallet = "0xa8b4c7f8b3d91b324f815252da74884e68fb4c4c"
+        classified, annotations = flows.classify_verified_lp_outflows(
+            {wallet: -2_490_986.19},
+            {
+                wallet: {
+                    "deposit": "1304943.547531365190891539",
+                    "withdrawal": "0",
+                    "latest": {
+                        "direction": "deposit",
+                        "amount": "1304943.547531365190891539",
+                        "confidence": "verified_same_tx",
+                    },
+                }
+            },
+        )
+
+        self.assertEqual(classified[wallet], -2_490_986.19)
+        self.assertEqual(annotations[wallet]["flow_basis"], "wallet_net")
+
+    def test_period_lp_totals_use_full_period_net_instead_of_latest_tx_amount(self):
+        wallet = "0xa8b4c7f8b3d91b324f815252da74884e68fb4c4c"
+        rows = [{
+            "address": wallet,
+            "net_flow": 2_490_986.19,
+            "latest_lp_activity": {
+                "direction": "deposit",
+                "amount": "1304943.547531365190891539",
+                "confidence": "verified_same_tx",
+            },
+        }]
+
+        flows.apply_period_lp_totals(rows, {
+            wallet: {
+                "deposit": "3795930.051008284105982345",
+                "withdrawal": "1304943.856999999999991187",
+            },
+        })
+
+        activity = rows[0]["latest_lp_activity"]
+        self.assertEqual(activity["period_lp_deposit"], "3795930.051008284105982345")
+        self.assertEqual(activity["period_lp_withdrawal"], "1304943.856999999999991187")
+        self.assertEqual(activity["period_net_lp_deposit"], "2490986.194008284105991158")
+
+    def test_period_lp_totals_attach_search_row_and_mark_neutral_rebalance(self):
+        wallet = "0xa8b4c7f8b3d91b324f815252da74884e68fb4c4c"
+        rows = [{"address": wallet, "net_flow": 0.31}]
+
+        flows.apply_period_lp_totals(rows, {
+            wallet: {
+                "deposit": "1304943.547531365190891539",
+                "withdrawal": "1304943.856999999999991187",
+                "latest": {
+                    "direction": "deposit",
+                    "amount": "1304943.547531365190891539",
+                    "pair": "DOLO/USDC",
+                    "adapter": "uniswap-v4",
+                    "confidence": "verified_same_tx",
+                    "tx_hash": "0x" + "b" * 64,
+                    "timestamp": 1_786_990_091,
+                    "chain": "ethereum",
+                },
+            },
+        })
+
+        activity = rows[0]["latest_lp_activity"]
+        self.assertEqual(activity["period_lp_deposit"], "1304943.547531365190891539")
+        self.assertEqual(activity["period_lp_withdrawal"], "1304943.856999999999991187")
+        self.assertEqual(activity["period_lp_rebalance"], "1304943.547531365190891539")
+        self.assertEqual(activity["period_net_lp_withdrawal"], "0.309468634809099648")
+        self.assertEqual(rows[0]["latest_tx_hash"], "0x" + "b" * 64)
+
+    def test_lp_period_scan_targets_only_rows_with_verified_latest_activity(self):
+        lp_wallet = "0x" + "1" * 40
+        ordinary_wallet = "0x" + "2" * 40
+        unverified_wallet = "0x" + "3" * 40
+
+        wallets = flows.lp_period_scan_wallets([
+            [
+                {
+                    "address": lp_wallet,
+                    "latest_lp_activity": {"confidence": "verified_same_tx"},
+                },
+                {"address": ordinary_wallet},
+            ],
+            [
+                {
+                    "address": unverified_wallet,
+                    "latest_lp_activity": {"confidence": "inferred"},
+                },
+            ],
+        ])
+
+        self.assertEqual(wallets, {lp_wallet})
+
+    def test_global_lp_candidates_propagate_from_long_period_to_search_periods(self):
+        wallet = "0x" + "1" * 40
+        output_periods = {
+            "30d": {
+                "all": {
+                    "accumulators": [{"address": wallet, "net_flow": 0.31}],
+                    "sellers": [],
+                },
+            },
+            "90d": {
+                "ethereum": {
+                    "accumulators": [],
+                    "sellers": [{
+                        "address": wallet,
+                        "latest_lp_activity": {"confidence": "verified_same_tx"},
+                    }],
+                },
+            },
+        }
+
+        self.assertEqual(flows.lp_global_candidate_wallets(output_periods), {wallet})
+
+    def test_liquidity_provider_candidates_use_beneficial_owner_not_custodian(self):
+        provider = "0x" + "1" * 40
+        custodian = "0x" + "2" * 40
+        closed_provider = "0x" + "3" * 40
+        payload = {
+            "activePositions": [{
+                "beneficialOwner": provider,
+                "custodian": custodian,
+            }],
+            "history": [{"beneficialOwner": closed_provider}],
+        }
+
+        self.assertEqual(
+            flows.lp_liquidity_provider_wallets(payload),
+            {provider, closed_provider},
+        )
+
+    def test_global_lp_candidates_include_liquidity_provider_index(self):
+        provider = "0x" + "4" * 40
+
+        self.assertEqual(
+            flows.lp_global_candidate_wallets({}, {provider}),
+            {provider},
+        )
+
+    def test_legacy_dolo_usdc_v4_pool_is_classified_from_shared_pool_manager(self):
+        wallet = "0x" + "1" * 40
+        amount_wei = 1_304_943_856999999999991187
+        registry = flows.load_liquidity_registry()
+        manager = registry["chains"]["ethereum"]["adapters"]["uniswap-v4"]["poolManager"]
+        position_manager = registry["chains"]["ethereum"]["adapters"]["uniswap-v4"]["positionManager"]
+
+        def topic_address(address):
+            return "0x" + "0" * 24 + address[2:].lower()
+
+        def word(value):
+            if value < 0:
+                value = (1 << 256) + value
+            return f"{value:064x}"
+
+        receipt = {
+            "status": "0x1",
+            "transactionHash": "0x" + "b" * 64,
+            "logs": [
+                {
+                    "address": flows.DOLO_CONTRACT,
+                    "topics": [
+                        flow_tx_metadata.TRANSFER_TOPIC,
+                        topic_address(wallet),
+                        topic_address(manager),
+                    ],
+                    "data": hex(amount_wei),
+                },
+                {
+                    "address": manager,
+                    "topics": [
+                        flow_tx_metadata.V4_MODIFY_LIQUIDITY_TOPIC,
+                        LEGACY_DOLO_USDC_V4_POOL,
+                        topic_address(position_manager),
+                    ],
+                    "data": "0x" + word(-100) + word(100) + word(99) + word(1),
+                },
+            ],
+        }
+
+        activity = flow_tx_metadata.classify_lp_receipt(
+            receipt,
+            wallet,
+            "ethereum",
+            registry,
+            flows.DOLO_CONTRACT,
+        )
+
+        self.assertEqual(activity["direction"], "deposit")
+        self.assertEqual(activity["pair"], "DOLO/USDC")
+        self.assertEqual(activity["amount"], "1304943.856999999999991187")
+
+    def test_bridge_audit_applies_only_canonical_cancellations(self):
+        exact = "0x1111111111111111111111111111111111111111"
+        legacy = "0x2222222222222222222222222222222222222222"
+        raw = {
+            "eth": {exact: 0.0, legacy: 0.0},
+            "bera": {exact: -100.0, legacy: 0.0},
+        }
+        bridge = {
+            "eth": {exact: 100.0, legacy: 75.0},
+            "bera": {exact: -100.0, legacy: -75.0},
+        }
+        adapter_outflows = {
+            "eth": {},
+            "bera": {exact: 100.0},
+        }
+
+        neutralized, audit, _cancellations = (
+            flows.neutralize_raw_and_bridge_flows_with_audit(
+                raw,
+                bridge,
+                adapter_outflows,
+            )
+        )
+
+        self.assertEqual(audit["canonicalAdapter"]["addressCount"], 1)
+        self.assertEqual(audit["canonicalAdapter"]["dolo"], 100.0)
+        self.assertEqual(audit["legacyHeuristic"], {"addressCount": 0, "dolo": 0.0})
+        self.assertEqual(
+            audit["legacyHeuristicObserved"],
+            {"addressCount": 1, "dolo": 75.0},
+        )
+        self.assertEqual(audit["total"]["addressCount"], 1)
+        self.assertEqual(audit["total"]["dolo"], 100.0)
+        self.assertEqual(neutralized["eth"][legacy], 0.0)
+        self.assertEqual(neutralized["bera"][legacy], 0.0)
+
+    def test_flow_snapshot_timestamp_uses_the_oldest_tracked_chain_head(self):
+        boundaries = {
+            "eth": {"all": {"endTimestamp": 1_700_000_000}},
+            "bera": {"all": {"endTimestamp": 1_700_000_041}},
+        }
+        snapshot_timestamp = getattr(
+            flows,
+            "flow_snapshot_timestamp",
+            lambda _boundaries: None,
+        )
+
+        self.assertEqual(
+            snapshot_timestamp(boundaries),
+            "2023-11-14T22:13:20Z",
+        )
+
+    def test_wallet_receipt_remains_market_inflow_after_ethereum_protocol_deposit(self):
+        amount = 283_000.05056654825
+        amount_wei = int(amount * 10**18)
+        transfers = [
+            (SOURCE, RECIPIENT, amount_wei, 25_806_192),
+            (RECIPIENT, DOLO_DEPOSIT_ROUTER, amount_wei, 25_806_203),
+            (DOLO_DEPOSIT_ROUTER, SHARED_DOLOMITE_MARGIN, amount_wei, 25_806_203),
+        ]
+        raw = flows.calculate_flows(transfers, set())
+        components = flows.calculate_flow_components(transfers)
+
+        market, market_components = flows.neutralize_protocol_custody_transfers(
+            raw,
+            components,
+            transfers,
+            "eth",
+        )
+
+        self.assertAlmostEqual(market[RECIPIENT], amount)
+        self.assertAlmostEqual(market[SOURCE], -amount)
+        self.assertAlmostEqual(market_components[RECIPIENT]["gross_inflow"], amount)
+        self.assertAlmostEqual(market_components[RECIPIENT]["gross_outflow"], 0)
+        self.assertAlmostEqual(market_components[RECIPIENT]["protocol_deposit"], amount)
+        self.assertAlmostEqual(market.get(DOLO_DEPOSIT_ROUTER, 0), 0)
+        self.assertAlmostEqual(market.get(SHARED_DOLOMITE_MARGIN, 0), 0)
+        self.assertAlmostEqual(sum(market.values()), 0)
+
+    def test_berachain_protocol_deposit_uses_the_same_verified_router(self):
+        amount_wei = 125_000 * 10**18
+        transfers = [
+            (RECIPIENT, DOLO_DEPOSIT_ROUTER, amount_wei, 25_000_000),
+            (DOLO_DEPOSIT_ROUTER, SHARED_DOLOMITE_MARGIN, amount_wei, 25_000_000),
+        ]
+        raw = flows.calculate_flows(transfers, set())
+        components = flows.calculate_flow_components(transfers)
+
+        market, market_components = flows.neutralize_protocol_custody_transfers(
+            raw,
+            components,
+            transfers,
+            "bera",
+        )
+
+        self.assertAlmostEqual(market.get(RECIPIENT, 0), 0)
+        self.assertAlmostEqual(market_components[RECIPIENT]["gross_outflow"], 0)
+        self.assertAlmostEqual(market_components[RECIPIENT]["protocol_deposit"], 125_000)
+        self.assertAlmostEqual(market.get(DOLO_DEPOSIT_ROUTER, 0), 0)
+        self.assertAlmostEqual(market.get(SHARED_DOLOMITE_MARGIN, 0), 0)
+        self.assertAlmostEqual(sum(market.values()), 0)
+
+    def test_protocol_withdrawal_does_not_create_a_false_market_accumulator(self):
+        amount_wei = 40_000 * 10**18
+        transfers = [
+            (SHARED_DOLOMITE_MARGIN, DOLO_DEPOSIT_ROUTER, amount_wei, 25_000_001),
+            (DOLO_DEPOSIT_ROUTER, RECIPIENT, amount_wei, 25_000_001),
+        ]
+        raw = flows.calculate_flows(transfers, set())
+        components = flows.calculate_flow_components(transfers)
+
+        market, market_components = flows.neutralize_protocol_custody_transfers(
+            raw,
+            components,
+            transfers,
+            "eth",
+        )
+
+        self.assertAlmostEqual(market.get(RECIPIENT, 0), 0)
+        self.assertAlmostEqual(market_components[RECIPIENT]["gross_inflow"], 0)
+        self.assertAlmostEqual(market_components[RECIPIENT]["protocol_withdrawal"], 40_000)
+        self.assertAlmostEqual(market.get(DOLO_DEPOSIT_ROUTER, 0), 0)
+        self.assertAlmostEqual(market.get(SHARED_DOLOMITE_MARGIN, 0), 0)
+        self.assertAlmostEqual(sum(market.values()), 0)
+
+    def test_dolomite_zap_trade_removes_consumed_dolo_from_market_flow(self):
+        wallet = "0x1e527e81047bbbea5e62a7bd112e45d2e646310e"
+        external_inflow = 176_012.95
+        deposited_and_sold = "187276.018964728141383393"
+        market = {wallet: external_inflow}
+        components = {
+            wallet: {
+                "gross_inflow": external_inflow,
+                "gross_outflow": 0.0,
+                "net_flow": external_inflow,
+                "protocol_deposit": 187_276.01896472814,
+            }
+        }
+        trade_rows = [{
+            "id": "0x" + "a" * 64 + "-119",
+            "takerEffectiveUser": {"id": wallet},
+            "makerEffectiveUser": None,
+            "takerToken": {"id": flows.DOLO_CONTRACT},
+            "makerToken": {"id": "0x" + "2" * 40},
+            "takerTokenDeltaWei": deposited_and_sold,
+            "makerTokenDeltaWei": "2695.470055",
+            "transaction": {
+                "id": "0x" + "a" * 64,
+                "timestamp": "1788289658",
+                "blockNumber": "25637471",
+            },
+        }]
+
+        adjustments = flows.calculate_dolomite_trade_adjustments(
+            trade_rows,
+            cutoff_block=24_446_005,
+        )
+        adjusted_market, adjusted_components = flows.apply_dolomite_trade_adjustments(
+            market,
+            components,
+            adjustments,
+        )
+
+        self.assertAlmostEqual(
+            adjusted_market[wallet],
+            -11_263.06896472814,
+            places=8,
+        )
+        self.assertAlmostEqual(
+            adjusted_components[wallet]["gross_outflow"],
+            187_276.01896472814,
+            places=8,
+        )
+        self.assertAlmostEqual(
+            adjusted_components[wallet]["dolomite_trade_outflow"],
+            187_276.01896472814,
+            places=8,
+        )
+        self.assertEqual(adjustments[wallet]["tx_count"], 1)
+        self.assertEqual(
+            adjustments[wallet]["latest_outflow"]["tx_hash"],
+            "0x" + "a" * 64,
+        )
+
+    def test_dolomite_trade_scan_reads_both_dolo_sides_at_the_pinned_block(self):
+        wallet = "0x1e527e81047bbbea5e62a7bd112e45d2e646310e"
+        peer = "0x" + "3" * 40
+        sale = {
+            "id": "sale-1",
+            "takerEffectiveUser": {"id": wallet},
+            "makerEffectiveUser": None,
+            "takerToken": {"id": flows.DOLO_CONTRACT},
+            "makerToken": {"id": "0x" + "2" * 40},
+            "takerTokenDeltaWei": "187276.018964728141383393",
+            "makerTokenDeltaWei": "2695.470055",
+            "transaction": {
+                "id": "0x" + "a" * 64,
+                "timestamp": "1788289658",
+                "blockNumber": "100",
+            },
+        }
+        purchase = {
+            "id": "purchase-1",
+            "takerEffectiveUser": {"id": peer},
+            "makerEffectiveUser": None,
+            "takerToken": {"id": "0x" + "2" * 40},
+            "makerToken": {"id": flows.DOLO_CONTRACT},
+            "takerTokenDeltaWei": "2500",
+            "makerTokenDeltaWei": "100000",
+            "transaction": {
+                "id": "0x" + "b" * 64,
+                "timestamp": "1788289700",
+                "blockNumber": "100",
+            },
+        }
+
+        def request_fn(_url, json, **_kwargs):
+            query = json["query"]
+            self.assertIn("block: { number: 100 }", query)
+            response = Mock(status_code=200)
+            response.json.return_value = {
+                "data": {
+                    "_meta": {"block": {"number": "100", "timestamp": None}},
+                    "trades": [sale] if "takerToken:" in query else [purchase],
+                }
+            }
+            return response
+
+        rows, metadata = flows.fetch_dolomite_dolo_trades(
+            "bera",
+            100,
+            block_timestamp=1_788_289_700,
+            request_fn=request_fn,
+            subgraphs={"bera": {"name": "Berachain", "url": "https://example.test"}},
+        )
+
+        self.assertEqual({row["id"] for row in rows}, {"sale-1", "purchase-1"})
+        self.assertEqual(metadata["status"], "complete")
+        self.assertEqual(metadata["blockNumber"], 100)
+        self.assertEqual(metadata["blockTimestamp"], 1_788_289_700)
+        self.assertEqual(metadata["eventCount"], 2)
+
+    def test_dolomite_trade_scan_fails_closed_on_malformed_event(self):
+        def request_fn(_url, json, **_kwargs):
+            response = Mock(status_code=200)
+            response.json.return_value = {
+                "data": {
+                    "_meta": {"block": {"number": "100", "timestamp": "200"}},
+                    "trades": [{"id": "", "transaction": None}],
+                }
+            }
+            return response
+
+        rows, metadata = flows.fetch_dolomite_dolo_trades(
+            "bera",
+            100,
+            request_fn=request_fn,
+            subgraphs={"bera": {"name": "Berachain", "url": "https://example.test"}},
+        )
+
+        self.assertEqual(rows, [])
+        self.assertEqual(metadata["status"], "unavailable")
+
+    def test_dolomite_trade_metadata_replaces_older_transfer_evidence(self):
+        wallet = "0x1e527e81047bbbea5e62a7bd112e45d2e646310e"
+        older_hash = "0x" + "1" * 64
+        zap_hash = "0x" + "a" * 64
+        rows = [{
+            "address": wallet,
+            "latest_tx_hash": older_hash,
+            "latest_tx_timestamp": 1_788_280_000,
+            "latest_tx_chain": "berachain",
+        }]
+        adjustments = {
+            wallet: {
+                "latest_outflow": {
+                    "tx_hash": zap_hash,
+                    "timestamp": 1_788_289_658,
+                    "block_number": 25_637_471,
+                }
+            }
+        }
+
+        flows.attach_dolomite_trade_metadata(
+            rows,
+            adjustments,
+            "outbound",
+            "berachain",
+        )
+
+        self.assertEqual(rows[0]["latest_tx_hash"], zap_hash)
+        self.assertEqual(rows[0]["latest_tx_timestamp"], 1_788_289_658)
+        self.assertEqual(rows[0]["latest_tx_chain"], "berachain")
+
+    def test_unknown_contract_transfer_remains_a_real_market_flow(self):
+        amount_wei = 5_000 * 10**18
+        transfers = [(RECIPIENT, UNLABELED_CONTRACT, amount_wei, 25_000_002)]
+        raw = flows.calculate_flows(transfers, set())
+        components = flows.calculate_flow_components(transfers)
+
+        market, market_components = flows.neutralize_protocol_custody_transfers(
+            raw,
+            components,
+            transfers,
+            "eth",
+        )
+
+        self.assertEqual(market[RECIPIENT], -5_000)
+        self.assertEqual(market[UNLABELED_CONTRACT], 5_000)
+        self.assertEqual(market_components[RECIPIENT]["gross_outflow"], 5_000)
+
+    def test_arbitrum_token_presence_is_not_treated_as_an_active_dolo_market(self):
+        self.assertEqual(flows.DOLO_MARKET_IDS, {"eth": 16, "bera": 35})
+        self.assertNotIn("arb", flows.CHAINS)
+
+    def test_berachain_ccip_bridge_then_ethereum_outflow_counts_once(self):
+        bridge_amount = 283_000.05056654825
+        prior_bera_inflow = 74_597.85219008963
+        other_bera_outflow = 877.0
+        peer = "0x4444444444444444444444444444444444444444"
+        bridge_adapter = flows.BERACHAIN_DOLO_CCIP_ADAPTER
+        transfers = {
+            "eth": [
+                (flows.ZERO, CROSS_CHAIN_WALLET, int(bridge_amount * 10**18), 200),
+                (CROSS_CHAIN_WALLET, peer, int(bridge_amount * 10**18), 201),
+            ],
+            "bera": [
+                (peer, CROSS_CHAIN_WALLET, int(prior_bera_inflow * 10**18), 90),
+                (CROSS_CHAIN_WALLET, peer, int(other_bera_outflow * 10**18), 95),
+                (CROSS_CHAIN_WALLET, bridge_adapter, int(bridge_amount * 10**18), 100),
+                (bridge_adapter, flows.ZERO, int(bridge_amount * 10**18), 100),
+            ],
+        }
+        raw_flows = {
+            chain: flows.calculate_flows(rows, flows.EXCLUDED_ADDRS)
+            for chain, rows in transfers.items()
+        }
+        bridge_flows = {
+            chain: flows.calculate_bridge_flows(rows)
+            for chain, rows in transfers.items()
+        }
+        adapter_outflows = {
+            chain: flows.calculate_bridge_adapter_outflows(rows)
+            for chain, rows in transfers.items()
+        }
+
+        neutralized = flows.neutralize_raw_and_bridge_flows(
+            raw_flows,
+            bridge_flows,
+            adapter_outflows,
+        )
+
+        self.assertAlmostEqual(neutralized["eth"][CROSS_CHAIN_WALLET], -bridge_amount)
+        self.assertAlmostEqual(
+            neutralized["bera"][CROSS_CHAIN_WALLET],
+            prior_bera_inflow - other_bera_outflow,
+        )
+        self.assertAlmostEqual(
+            sum(chain[CROSS_CHAIN_WALLET] for chain in neutralized.values()),
+            prior_bera_inflow - other_bera_outflow - bridge_amount,
+        )
+
+    def test_gross_outflow_excludes_the_neutralized_source_bridge_leg(self):
+        bridge_amount = 283_000.05056654825
+        other_bera_outflow = 877.0
+        peer = "0x4444444444444444444444444444444444444444"
+        bridge_adapter = flows.BERACHAIN_DOLO_CCIP_ADAPTER
+
+        transfers = {
+            "eth": [
+                (flows.ZERO, CROSS_CHAIN_WALLET, int(bridge_amount * 10**18), 200),
+            ],
+            "bera": [
+                (CROSS_CHAIN_WALLET, bridge_adapter, int(bridge_amount * 10**18), 100),
+                (bridge_adapter, flows.ZERO, int(bridge_amount * 10**18), 100),
+                (CROSS_CHAIN_WALLET, peer, int(other_bera_outflow * 10**18), 101),
+            ],
+        }
+        raw_flows = {
+            chain: flows.calculate_flows(rows, flows.EXCLUDED_ADDRS)
+            for chain, rows in transfers.items()
+        }
+        bridge_flows = {
+            chain: flows.calculate_bridge_flows(rows)
+            for chain, rows in transfers.items()
+        }
+        adapter_outflows = {
+            chain: flows.calculate_bridge_adapter_outflows(rows)
+            for chain, rows in transfers.items()
+        }
+        _, _, _, cancellations = flows.neutralize_raw_and_bridge_flows_with_stats(
+            raw_flows,
+            bridge_flows,
+            adapter_outflows,
+        )
+        components = flows.apply_bridge_outflow_cancellations(
+            {
+                chain: flows.calculate_flow_components(rows)
+                for chain, rows in transfers.items()
+            },
+            cancellations,
+        )
+
+        self.assertAlmostEqual(
+            components["bera"][CROSS_CHAIN_WALLET]["gross_outflow"],
+            other_bera_outflow,
+        )
+
+    def test_bridge_to_a_different_recipient_remains_a_source_wallet_outflow(self):
+        amount = 251_764.0
+        source_wallet = "0x70c69520eb6595d102bfd8aed8fc58428489c4e4"
+        destination_wallet = "0x26c2448c0038874f68cc0d388d96f8d218af3bdf"
+        bridge_adapter = flows.BERACHAIN_DOLO_CCIP_ADAPTER
+        transfers = {
+            "eth": [
+                (flows.ZERO, destination_wallet, int(amount * 10**18), 200),
+            ],
+            "bera": [
+                (source_wallet, bridge_adapter, int(amount * 10**18), 100),
+                (bridge_adapter, flows.ZERO, int(amount * 10**18), 100),
+            ],
+        }
+        raw_flows = {
+            chain: flows.calculate_flows(rows, flows.EXCLUDED_ADDRS)
+            for chain, rows in transfers.items()
+        }
+        bridge_flows = {
+            chain: flows.calculate_bridge_flows(rows)
+            for chain, rows in transfers.items()
+        }
+        adapter_outflows = {
+            chain: flows.calculate_bridge_adapter_outflows(rows)
+            for chain, rows in transfers.items()
+        }
+
+        neutralized = flows.neutralize_raw_and_bridge_flows(
+            raw_flows,
+            bridge_flows,
+            adapter_outflows,
+        )
+
+        self.assertAlmostEqual(neutralized["bera"][source_wallet], -amount)
+
+    def test_holder_audience_includes_team_and_investors_in_balance_ranges(self):
+        balances = {
+            EARLY_ONLY: 2_000_000,
+            INVESTOR_ONLY: 700_000,
+            OUTSIDE: 200_000,
+        }
+        labels = {
+            EARLY_ONLY: {"label": "Core Team 1", "type": "protocol"},
+            INVESTOR_ONLY: {"label": "Long-term Investor", "type": "investor"},
+        }
+        model = flows.build_bucket_model(
+            balances, {}, {}, labels, flows.HOLDER_BUCKET_GROUPS["whales"],
+            include_allocations=True, audience="holders",
+        )
+
+        self.assertEqual(model["trackedWallets"], 3)
+        self.assertEqual(model["allocationWallets"], 2)
+        self.assertEqual(model["teamWallets"], 1)
+        self.assertEqual(model["investorWallets"], 1)
+        self.assertEqual(model["buckets"][0]["teamWallets"], 1)
+        self.assertEqual(model["buckets"][1]["investorWallets"], 1)
+
+    def test_team_linked_recipient_is_grouped_with_team_allocations(self):
+        recipient = "0x5e42031946bfabaef3b3839f035066f11a9ce33e"
+        labels = flows.load_address_labels()
+
+        self.assertEqual(
+            flows.holder_distribution_type(recipient, {}, labels),
+            "team",
+        )
+
+        model = flows.build_bucket_model(
+            {recipient: 1_511_101.13},
+            {},
+            {},
+            labels,
+            flows.HOLDER_BUCKET_GROUPS["whales"],
+            include_allocations=True,
+            audience="holders",
+        )
+        self.assertEqual(model["allocationWallets"], 1)
+        self.assertEqual(model["teamWallets"], 1)
+        self.assertEqual(model["buckets"][0]["teamWallets"], 1)
+
+    def test_holder_total_exposure_buckets_add_protocol_supply_without_changing_wallet_view(self):
+        wallet_balances = {OUTSIDE: 900_000}
+        protocol_balances = {OUTSIDE: 200_000}
+        buckets = flows.HOLDER_BUCKET_GROUPS["whales"]
+
+        wallet_only = flows.build_bucket_model(
+            wallet_balances, {}, {}, {}, buckets,
+            include_allocations=True, audience="holders",
+        )
+        total_exposure = flows.build_bucket_model(
+            wallet_balances, {}, {}, {}, buckets,
+            include_allocations=True, audience="holders",
+            protocol_balances=protocol_balances,
+        )
+
+        self.assertEqual(wallet_only["trackedTotal"], 900_000)
+        self.assertEqual(wallet_only["buckets"][0]["wallets"], 0)
+        self.assertEqual(wallet_only["buckets"][1]["wallets"], 1)
+        self.assertEqual(total_exposure["trackedTotal"], 1_100_000)
+        self.assertEqual(total_exposure["trackedProtocol"], 200_000)
+        self.assertEqual(total_exposure["buckets"][0]["wallets"], 1)
+        self.assertEqual(total_exposure["buckets"][0]["protocol"], 200_000)
+
+    def test_holder_history_emits_wallet_and_total_exposure_series_through_now(self):
+        base_ts = 1_777_248_000
+        points = [
+            {"key": "hist_20260830", "timestamp": "2026-08-30T00:00:00Z", "ts": base_ts - 86_400},
+            {"key": "now", "timestamp": "2026-08-31T00:00:00Z", "ts": base_ts},
+        ]
+        holder_rows = {
+            OUTSIDE: {"balance": 900_000, "balance_eth": 900_000, "balance_bera": 0},
+        }
+        historical_protocol = {
+            "hist_20260830": {OUTSIDE: {"eth": 200_000, "bera": 0, "total": 200_000}},
+        }
+        current_protocol = {OUTSIDE: {"eth": 300_000, "bera": 0, "total": 300_000}}
+
+        with patch.object(flows, "load_current_holder_rows", return_value=holder_rows), \
+             patch.object(flows, "load_address_labels", return_value={}), \
+             patch.object(flows, "load_current_vedolo_locks", return_value={}), \
+             patch.object(flows, "load_current_vedolo_positions", return_value={}), \
+             patch.object(flows, "load_vedolo_flow_events", return_value={"locks": [], "unlocks": []}):
+            history, wallet_history = flows.calculate_holder_bucket_history(
+                {"eth": [], "bera": []},
+                points,
+                {"eth": 2_000, "bera": 4_000},
+                base_ts,
+                dolomite_history=historical_protocol,
+                current_dolomite_balances=current_protocol,
+            )
+
+        self.assertEqual([row["key"] for row in history], ["hist_20260830", "now"])
+        old = history[0]
+        now = history[1]
+        self.assertEqual(old["liquid"]["holders"]["whales"]["trackedTotal"], 900_000)
+        self.assertEqual(old["total_exposure"]["holders"]["whales"]["trackedTotal"], 1_100_000)
+        self.assertEqual(now["total_exposure"]["holders"]["whales"]["trackedTotal"], 1_200_000)
+        self.assertEqual(set(wallet_history["hist_20260830"]["liquid"]), {"holders"})
+        self.assertEqual(set(wallet_history["hist_20260830"]["total_exposure"]), {"holders"})
+        liquid_wallet = wallet_history["hist_20260830"]["liquid"]["holders"]["whales"][0]
+        self.assertNotIn("in_dolomite", liquid_wallet)
+        historical_wallet = wallet_history["hist_20260830"]["total_exposure"]["holders"]["whales"][0]
+        self.assertEqual(historical_wallet["in_dolomite"], 200_000)
+        self.assertEqual(historical_wallet["balance"], 1_100_000)
+
+    def test_holder_wallet_details_use_authoritative_cross_chain_liquid_total(self):
+        address = "0x1111111111111111111111111111111111111111"
+        rows = flows.build_bucket_wallet_history_rows(
+            {
+                "eth": {address: 125_000},
+                "bera": {address: 25_000},
+            },
+            {},
+            {address: {"balance": 100_000}},
+            {},
+            flows.HOLDER_BUCKET_GROUPS["whales"],
+            audience="holders",
+            liquid_balances={address: 100_000},
+        )
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["liquid"], 100_000)
+        self.assertEqual(rows[0]["balance_eth"], 83_333.333333)
+        self.assertEqual(rows[0]["balance_bera"], 16_666.666667)
+        self.assertEqual(rows[0]["balance"], 100_000)
+
+    def test_exact_latest_flow_metadata_uses_direction_and_last_log_index(self):
+        wallet = "0x1111111111111111111111111111111111111111"
+        peer = "0x2222222222222222222222222222222222222222"
+        rows = [{"address": wallet, "net_flow": 10}]
+        transfers = [
+            (peer, wallet, 1, 100),
+            (wallet, peer, 1, 101),
+            (peer, wallet, 1, 102),
+        ]
+        logs = [
+            {"from": peer, "to": wallet, "transactionHash": "0x" + "a" * 64, "logIndex": "0x1"},
+            {"from": peer, "to": wallet, "transactionHash": "0x" + "b" * 64, "logIndex": "0x2"},
+        ]
+
+        flows.attach_latest_flow_metadata(
+            rows, transfers, "inbound", "ethereum",
+            lambda blocks: {102: {"timestamp": 1_786_406_400, "logs": logs}},
+        )
+
+        self.assertEqual(rows[0]["latest_tx_hash"], "0x" + "b" * 64)
+        self.assertEqual(rows[0]["latest_tx_timestamp"], 1_786_406_400)
+        self.assertEqual(rows[0]["latest_tx_chain"], "ethereum")
+
+    def test_incomplete_latest_flow_evidence_fails_closed(self):
+        wallet = "0x1111111111111111111111111111111111111111"
+        peer = "0x2222222222222222222222222222222222222222"
+        rows = [{"address": wallet, "net_flow": -10}]
+        transfers = [(wallet, peer, 1, 100)]
+
+        flows.attach_latest_flow_metadata(
+            rows, transfers, "outbound", "berachain",
+            lambda blocks: {100: {"timestamp": 0, "logs": []}},
+        )
+
+        self.assertNotIn("latest_tx_hash", rows[0])
+        self.assertNotIn("latest_tx_timestamp", rows[0])
+        self.assertNotIn("latest_tx_chain", rows[0])
+
+    def test_vesting_investors_are_classified_by_official_claim_contract(self):
+        payload = flows.extract_vesting_investors({
+            "eth": [
+                (STRATEGIC_INVESTOR_CLAIMS, OUTSIDE, 99 * 10**18, 101),
+            ],
+            "bera": [
+                (STRATEGIC_INVESTOR_CLAIMS, EARLY_ONLY, 2 * 10**18, 102),
+                (INVESTOR_CLAIMS, INVESTOR_ONLY, 3 * 10**18, 103),
+                (STRATEGIC_INVESTOR_CLAIMS, OVERLAP, 4 * 10**18, 201),
+                (INVESTOR_CLAIMS, OVERLAP, 5 * 10**18, 202),
+                (STRATEGIC_INVESTOR_CLAIMS, OVERLAP, 10**18 // 2, 203),
+                (STRATEGIC_INVESTOR_CLAIMS, DOLOMITE_GNOSIS_SAFE, 166_667 * 10**18, 204),
+                (INVESTOR_CLAIMS, DOLOMITE_GNOSIS_SAFE, 806_667 * 10**18, 205),
+            ],
+        })
+
+        self.assertEqual(payload["schemaVersion"], 3)
+        self.assertEqual(payload["strategic_investors"], [EARLY_ONLY, OVERLAP])
+        self.assertEqual(payload["early_investors"], [EARLY_ONLY, OVERLAP])
+        self.assertEqual(payload["investors"], [INVESTOR_ONLY, OVERLAP])
+        self.assertEqual(payload["team"], [])
+        self.assertNotIn(OUTSIDE, payload["early_investors"])
+        self.assertNotIn(DOLOMITE_GNOSIS_SAFE, payload["early_investors"])
+        self.assertNotIn(DOLOMITE_GNOSIS_SAFE, payload["investors"])
+
+        records = {row["address"]: row for row in payload["wallets"]}
+        self.assertNotIn(DOLOMITE_GNOSIS_SAFE, records)
+        self.assertEqual(records[EARLY_ONLY]["label"], "Strategic Investor")
+        self.assertEqual(records[EARLY_ONLY]["sourceChains"], ["bera"])
+        self.assertEqual(
+            records[EARLY_ONLY]["roundAttribution"],
+            {
+                "key": "2024-strategic-900k",
+                "label": "2024 strategic round · $900K",
+                "status": "high-confidence-onchain-attribution",
+            },
+        )
+        self.assertIsNone(records[EARLY_ONLY]["vestingSchedule"])
+        self.assertEqual(records[INVESTOR_ONLY]["label"], "Long-term Investor")
+        self.assertEqual(
+            records[INVESTOR_ONLY]["vestingSchedule"],
+            "3-year vesting · 1-year cliff",
+        )
+        self.assertEqual(records[OVERLAP]["label"], "Strategic Investor")
+        self.assertEqual(
+            records[OVERLAP]["claimSources"],
+            ["strategic_investor_claims", "investor_claims"],
+        )
+        self.assertEqual(records[OVERLAP]["transferCount"], 3)
+        self.assertEqual(records[OVERLAP]["firstTransferBlock"], 201)
+        self.assertEqual(records[OVERLAP]["lastTransferBlock"], 203)
+        self.assertEqual(records[OVERLAP]["receivedDolo"], "9.5")
+        self.assertTrue(records[OVERLAP]["alsoReceivedLongTermTranche"])
+
+    def test_investor_claim_recipients_are_never_derived_as_core_team(self):
+        payload = flows.extract_vesting_investors({
+            "eth": [],
+            "bera": [(INVESTOR_CLAIMS, INVESTOR_ONLY, 10**18, 300)],
+        })
+
+        self.assertEqual(payload["investors"], [INVESTOR_ONLY])
+        self.assertEqual(payload["team"], [])
+        self.assertEqual(payload["methodology"]["team"], "not-derived-from-investor-claims")
+        self.assertEqual(payload["methodology"]["overlapPriority"], "strategic-investor")
+
+    def test_single_block_range_still_has_scan_work(self):
+        self.assertTrue(hasattr(flows, "block_range_has_work"))
+        self.assertTrue(flows.block_range_has_work(100, 100))
+        self.assertTrue(flows.block_range_has_work(100, 101))
+        self.assertFalse(flows.block_range_has_work(101, 100))
+
+    def test_recent_authoritative_rescan_covers_silent_coinbase_block(self):
+        self.assertTrue(hasattr(flows, "incremental_refresh_start"))
+        last_block = 25_500_000
+
+        refresh_start = flows.incremental_refresh_start(
+            last_block,
+            21_500_000,
+            50_000,
+        )
+
+        self.assertEqual(refresh_start, 25_450_001)
+        self.assertLessEqual(refresh_start, SILENTLY_MISSED_BLOCK)
+
+    def test_berachain_authoritative_rescan_uses_bounded_verified_overlap(self):
+        last_block = 25_238_666
+        cutoff = flows.CHAINS["bera"]["deploy_block"]
+
+        refresh_start = flows.incremental_refresh_start(
+            last_block,
+            cutoff,
+            flows.RECENT_RESCAN_BLOCKS["bera"],
+        )
+
+        self.assertEqual(refresh_start, last_block + 1 - 100_000)
+
+    def test_failed_quorum_refresh_cannot_replace_active_cache(self):
+        cached = [(SOURCE, COINBASE_10, 10**18, 100)]
+        partial = [(SOURCE, OUTSIDE, 2 * 10**18, 100)]
+
+        with self.assertRaises(flows.TransferLogQuorumError):
+            flows.merge_verified_transfer_scan(
+                cached,
+                partial,
+                100,
+                110,
+                failed_chunks=1,
+            )
+
+        self.assertEqual(cached, [(SOURCE, COINBASE_10, 10**18, 100)])
+
+    def test_verified_scan_staging_resumes_without_touching_active_cache(self):
+        state = {
+            "bera_transfers": [[SOURCE, COINBASE_10, 10**18, 90]],
+            "bera_last_block": 90,
+            "verified_scan_staging": {
+                "bera": {
+                    "startBlock": 100,
+                    "endBlock": 200,
+                    "nextBlock": 151,
+                    "transfers": [[SOURCE, OUTSIDE, 2 * 10**18, 120]],
+                    "verification": "independent-rpc-exact-quorum",
+                }
+            },
+        }
+
+        transfers, next_block = flows.load_verified_scan_staging(
+            state, "bera", 100, 200
+        )
+
+        self.assertEqual(transfers, [(SOURCE, OUTSIDE, 2 * 10**18, 120)])
+        self.assertEqual(next_block, 151)
+        self.assertEqual(state["bera_last_block"], 90)
+        self.assertEqual(state["bera_transfers"], [[SOURCE, COINBASE_10, 10**18, 90]])
+
+    def test_verified_scan_staging_resumes_when_chain_tip_advances(self):
+        state = {
+            "verified_scan_staging": {
+                "eth": {
+                    "startBlock": 100,
+                    "endBlock": 200,
+                    "nextBlock": 151,
+                    "transfers": [[SOURCE, OUTSIDE, 2 * 10**18, 120]],
+                    "verification": "independent-rpc-exact-quorum",
+                }
+            },
+        }
+
+        transfers, next_block = flows.load_verified_scan_staging(
+            state, "eth", 100, 250
+        )
+
+        self.assertEqual(transfers, [(SOURCE, OUTSIDE, 2 * 10**18, 120)])
+        self.assertEqual(next_block, 151)
+
+    def test_completed_verified_chain_can_resume_during_full_backfill(self):
+        deploy_block = flows.CHAINS["eth"]["deploy_block"]
+        last_block = deploy_block + 1_000
+        state = {
+            "flow_log_integrity": {
+                "version": flows.FLOW_LOG_INTEGRITY_VERSION,
+                "status": "building",
+                "verification": "independent-rpc-exact-quorum",
+                "unresolvedGapCount": 0,
+                "chains": {
+                    "eth": {
+                        "deployBlock": deploy_block,
+                        "coverageStartBlock": deploy_block,
+                        "verifiedThroughBlock": last_block,
+                        "lastPublishedBlock": last_block,
+                        "verification": "independent-rpc-exact-quorum",
+                        "lastVerificationProof": {
+                            "minimumMatchingProviderFamilies": 2,
+                        },
+                    },
+                },
+            },
+            "eth_history_start_block": deploy_block,
+            "eth_last_block": last_block,
+            "eth_transfers": [[SOURCE, OUTSIDE, 2 * 10**18, deploy_block + 10]],
+        }
+
+        resumable = flows.completed_verified_backfill_chains(state)
+
+        self.assertEqual(resumable, {"eth"})
+
+    def test_incomplete_or_unproven_chain_is_not_resumed_as_verified(self):
+        deploy_block = flows.CHAINS["eth"]["deploy_block"]
+        state = {
+            "flow_log_integrity": {
+                "version": flows.FLOW_LOG_INTEGRITY_VERSION,
+                "status": "building",
+                "verification": "independent-rpc-exact-quorum",
+                "unresolvedGapCount": 0,
+                "chains": {
+                    "eth": {
+                        "deployBlock": deploy_block,
+                        "coverageStartBlock": deploy_block,
+                        "verifiedThroughBlock": deploy_block + 1_000,
+                        "lastPublishedBlock": deploy_block + 1_000,
+                        "verification": "independent-rpc-exact-quorum",
+                        "lastVerificationProof": {
+                            "minimumMatchingProviderFamilies": 1,
+                        },
+                    },
+                },
+            },
+            "eth_history_start_block": deploy_block,
+            "eth_last_block": deploy_block + 1_000,
+            "eth_transfers": [[SOURCE, OUTSIDE, 2 * 10**18, deploy_block + 10]],
+        }
+
+        self.assertEqual(flows.completed_verified_backfill_chains(state), set())
+
+    def test_failed_quorum_checkpoints_all_verified_chunks_before_stopping(self):
+        state = {}
+        log = {
+            "address": flows.DOLO_CONTRACT,
+            "topics": [
+                flows.TRANSFER_TOPIC,
+                "0x" + "0" * 24 + SOURCE[2:],
+                "0x" + "0" * 24 + OUTSIDE[2:],
+            ],
+            "data": hex(2 * 10**18),
+            "blockNumber": hex(100),
+            "transactionHash": "0x" + "a" * 64,
+            "logIndex": "0x0",
+        }
+        chain = {
+            "eth": {
+                "name": "Ethereum",
+                "rpcs": ["https://rpc-one.example", "https://rpc-two.example"],
+                "chunk_size": 1,
+                "deploy_block": 1,
+            }
+        }
+
+        with patch.object(flows, "CHAINS", chain), patch.object(
+            flows,
+            "_request_transfer_logs",
+            side_effect=[[log], [log], None, None],
+        ), patch.object(flows, "save_state"), patch.object(flows.time, "sleep"):
+            _transfers, failed, _attempted = flows.fetch_transfer_logs(
+                "eth", 100, 101, state=state
+            )
+
+        self.assertEqual(failed, 1)
+        staged = state["verified_scan_staging"]["eth"]
+        self.assertEqual(staged["nextBlock"], 101)
+        self.assertEqual(staged["transfers"], [[
+            SOURCE,
+            OUTSIDE,
+            2 * 10**18,
+            100,
+            "0x" + "a" * 64,
+            0,
+        ]])
+
+    def test_verified_coverage_requires_full_baseline_then_advances_incrementally(self):
+        state = {}
+
+        with self.assertRaises(flows.TransferLogQuorumError):
+            flows.mark_verified_chain_coverage(
+                state, "bera", 25_000_000, 25_100_000, full_baseline=False
+            )
+
+        flows.mark_verified_chain_coverage(
+            state,
+            "bera",
+            flows.CHAINS["bera"]["deploy_block"],
+            25_000_000,
+            full_baseline=True,
+        )
+        flows.mark_verified_chain_coverage(
+            state, "bera", 24_900_000, 25_100_000, full_baseline=False
+        )
+
+        coverage = state["flow_log_integrity"]["chains"]["bera"]
+        self.assertEqual(coverage["coverageStartBlock"], flows.CHAINS["bera"]["deploy_block"])
+        self.assertEqual(coverage["verifiedThroughBlock"], 25_100_000)
+        self.assertEqual(coverage["verification"], "independent-rpc-exact-quorum")
+        self.assertFalse(flows.has_complete_verified_baseline(state))
+
+        flows.mark_verified_chain_coverage(
+            state,
+            "eth",
+            flows.CHAINS["eth"]["deploy_block"],
+            25_500_000,
+            full_baseline=True,
+        )
+        self.assertTrue(flows.has_complete_verified_baseline(state))
+
+    def test_flow_workflow_exposes_explicit_full_verified_backfill(self):
+        workflow = (
+            Path(__file__).resolve().parents[1]
+            / ".github"
+            / "workflows"
+            / "update-dolo-flows.yml"
+        ).read_text()
+
+        self.assertIn("full_verified_backfill:", workflow)
+        self.assertIn("DOLO_FLOWS_FULL_VERIFIED_BACKFILL:", workflow)
+
+    def test_authoritative_refresh_replaces_overlap_without_duplicates(self):
+        self.assertTrue(hasattr(flows, "replace_transfer_range"))
+        before = (SOURCE, OUTSIDE, 1 * 10**18, 99)
+        stale = (SOURCE, COINBASE_10, 2 * 10**18, 105)
+        after = (COINBASE_10, OUTSIDE, 3 * 10**18, 111)
+        authoritative = (SOURCE, COINBASE_10, 12_500_000 * 10**18, 105)
+
+        replaced = flows.replace_transfer_range(
+            [before, stale, after],
+            [authoritative],
+            100,
+            110,
+        )
+
+        self.assertEqual(replaced, [before, authoritative, after])
+
+    def test_transfer_metadata_coverage_refresh_replaces_legacy_rows_once(self):
+        tx_hash = "0x" + "a" * 64
+        legacy = (SOURCE, COINBASE_10, 10**18, 105)
+        enriched = (SOURCE, COINBASE_10, 10**18, 105, tx_hash, 7)
+        state = {}
+        fetcher = Mock(return_value=([enriched], 0, 1))
+
+        migrated = flows.ensure_transfer_metadata_coverage(
+            "eth",
+            [legacy],
+            state,
+            100,
+            120,
+            fetcher=fetcher,
+        )
+
+        self.assertEqual(migrated, [enriched])
+        self.assertEqual(state["transfer_metadata_coverage"]["eth"], {
+            "version": 1,
+            "startBlock": 100,
+            "endBlock": 120,
+        })
+        fetcher.assert_called_once_with("eth", 100, 120)
+
+        fetcher.reset_mock()
+        unchanged = flows.ensure_transfer_metadata_coverage(
+            "eth",
+            migrated,
+            state,
+            100,
+            120,
+            fetcher=fetcher,
+        )
+
+        self.assertEqual(unchanged, migrated)
+        fetcher.assert_not_called()
+
+    def test_scan_tip_cannot_rewind_when_rpc_is_unavailable_or_stale(self):
+        self.assertTrue(hasattr(flows, "validated_scan_end"))
+        self.assertEqual(flows.validated_scan_end("eth", 25_500_010, 5, 25_500_000), 25_500_005)
+        with self.assertRaisesRegex(RuntimeError, "current block"):
+            flows.validated_scan_end("eth", 0, 5, 25_500_000)
+        with self.assertRaisesRegex(RuntimeError, "rewind"):
+            flows.validated_scan_end("eth", 25_499_000, 5, 25_500_000)
+
+    def test_labeled_cex_contract_remains_visible_in_flow_rows(self):
+        self.assertTrue(hasattr(flows, "select_dynamic_flow_exclusions"))
+
+        excluded = flows.select_dynamic_flow_exclusions(
+            {COINBASE_10, UNLABELED_CONTRACT},
+            {COINBASE_10: {"label": "Coinbase 10", "type": "cex"}},
+        )
+
+        self.assertNotIn(COINBASE_10, excluded)
+        self.assertIn(UNLABELED_CONTRACT, excluded)
+
+    def test_contract_detection_candidates_include_balanced_custody_intermediary(self):
+        amount_wei = 1_041_767 * 10**18
+        transfers = [
+            (SOURCE, ENSO_AGGREGATOR_TRADER, amount_wei, 100),
+            (ENSO_AGGREGATOR_TRADER, SHARED_DOLOMITE_MARGIN, amount_wei, 100),
+        ]
+        raw_flows = flows.calculate_flows(transfers, set())
+
+        candidates = flows.contract_detection_candidates(
+            transfers,
+            "eth",
+            raw_flows,
+            top_n=1,
+        )
+
+        self.assertAlmostEqual(raw_flows.get(ENSO_AGGREGATOR_TRADER, 0), 0)
+        self.assertIn(ENSO_AGGREGATOR_TRADER, candidates)
+
+    def test_verified_enso_aggregator_is_always_excluded_from_market_flows(self):
+        self.assertIn(ENSO_AGGREGATOR_TRADER, flows.EXCLUDED_ADDRS)
+
+        amount_wei = 1_041_767 * 10**18
+        transfers = [
+            (SOURCE, ENSO_AGGREGATOR_TRADER, amount_wei, 100),
+            (ENSO_AGGREGATOR_TRADER, SHARED_DOLOMITE_MARGIN, amount_wei, 100),
+        ]
+        raw = flows.calculate_flows(transfers, flows.EXCLUDED_ADDRS)
+        components = flows.calculate_flow_components(transfers)
+        market, _ = flows.neutralize_protocol_custody_transfers(
+            raw,
+            components,
+            transfers,
+            "eth",
+        )
+
+        rows = (
+            flows.get_top(market, {}, 10, "accumulator", flows.EXCLUDED_ADDRS)
+            + flows.get_top(market, {}, 10, "seller", flows.EXCLUDED_ADDRS)
+        )
+        self.assertNotIn(ENSO_AGGREGATOR_TRADER, {row["address"] for row in rows})
+
+    def test_protocol_transfer_keeps_both_visible_flow_sides(self):
+        excluded = flows.select_dynamic_flow_exclusions(
+            {CHAINLINK_REWARDS_CLAIM, ECOSYSTEM_INCENTIVES_2},
+            {
+                CHAINLINK_REWARDS_CLAIM: {
+                    "label": "Chainlink Rewards Claim",
+                    "type": "protocol",
+                },
+                ECOSYSTEM_INCENTIVES_2: {
+                    "label": "Ecosystem Incentives 2",
+                    "type": "protocol",
+                },
+            },
+        )
+        net = flows.calculate_flows(
+            [(
+                CHAINLINK_REWARDS_CLAIM,
+                ECOSYSTEM_INCENTIVES_2,
+                2_213_363 * 10**18,
+                100,
+            )],
+            excluded,
+        )
+
+        sellers = flows.get_top(net, {}, 10, "seller", excluded)
+        accumulators = flows.get_top(net, {}, 10, "accumulator", excluded)
+
+        self.assertEqual(
+            [row["address"] for row in sellers],
+            [CHAINLINK_REWARDS_CLAIM],
+        )
+        self.assertEqual(
+            [row["address"] for row in accumulators],
+            [ECOSYSTEM_INCENTIVES_2],
+        )
+
+    def test_directional_components_reconcile_coinbase_net_flow(self):
+        self.assertTrue(hasattr(flows, "calculate_flow_components"))
+        transfers = [
+            (SOURCE, COINBASE_10, 12_500_000 * 10**18, 100),
+            (COINBASE_10, COINBASE, 6_284_454 * 10**18, 101),
+        ]
+
+        components = flows.calculate_flow_components(transfers)[COINBASE_10]
+
+        self.assertEqual(components["gross_inflow"], 12_500_000)
+        self.assertEqual(components["gross_outflow"], 6_284_454)
+        self.assertEqual(components["net_flow"], 6_215_546)
+
+    def test_successful_gap_repair_replaces_range_and_clears_gap(self):
+        self.assertTrue(hasattr(flows, "repair_skipped_ranges"))
+        old_in_gap = (SOURCE, COINBASE_10, 1 * 10**18, 105)
+        outside_gap = (SOURCE, OUTSIDE, 2 * 10**18, 99)
+        repaired = (SOURCE, COINBASE_10, 12_500_000 * 10**18, 105)
+        state = {"skipped_ranges_eth": [[100, 110]]}
+
+        with patch.object(
+            flows,
+            "fetch_transfer_logs",
+            return_value=([repaired], 0, 1),
+        ) as fetch:
+            transfers, unresolved, repaired_count = flows.repair_skipped_ranges(
+                "eth",
+                [outside_gap, old_in_gap],
+                state,
+                90,
+                120,
+            )
+
+        fetch.assert_called_once_with("eth", 100, 110)
+        self.assertEqual(transfers, [outside_gap, repaired])
+        self.assertEqual(unresolved, [])
+        self.assertEqual(repaired_count, 1)
+        self.assertEqual(state["skipped_ranges_eth"], [])
+
+    def test_failed_gap_repair_discards_partial_rows_and_keeps_gap(self):
+        self.assertTrue(hasattr(flows, "repair_skipped_ranges"))
+        outside_gap = (SOURCE, OUTSIDE, 2 * 10**18, 99)
+        partial = (SOURCE, COINBASE_10, 3 * 10**18, 105)
+        state = {"skipped_ranges_eth": [[100, 110]]}
+
+        with patch.object(
+            flows,
+            "fetch_transfer_logs",
+            return_value=([partial], 1, 2),
+        ):
+            transfers, unresolved, repaired_count = flows.repair_skipped_ranges(
+                "eth",
+                [outside_gap],
+                state,
+                90,
+                120,
+            )
+
+        self.assertEqual(transfers, [outside_gap])
+        self.assertEqual(unresolved, [[100, 110]])
+        self.assertEqual(repaired_count, 0)
+        self.assertEqual(state["skipped_ranges_eth"], [[100, 110]])
+
+    def test_unresolved_history_gap_blocks_publication(self):
+        self.assertTrue(hasattr(flows, "require_complete_flow_history"))
+
+        with self.assertRaisesRegex(RuntimeError, "Ethereum.*100-110"):
+            flows.require_complete_flow_history({"eth": [[100, 110]], "bera": []})
+
+        flows.require_complete_flow_history({"eth": [], "bera": []})
+
+    def test_rate_limit_waits_before_retrying_the_same_log_range(self):
+        rate_limited = Mock(
+            status_code=429,
+            headers={"Retry-After": "3"},
+        )
+        rate_limited.json.return_value = {"error": {"message": "rate limit"}}
+        success = Mock(status_code=200, headers={})
+        success.json.return_value = {
+            "result": [{
+                "address": flows.DOLO_CONTRACT,
+                "topics": [
+                    flows.TRANSFER_TOPIC,
+                    "0x" + "0" * 24 + SOURCE[2:],
+                    "0x" + "0" * 24 + COINBASE_10[2:],
+                ],
+                "data": hex(10**18),
+                "blockNumber": hex(100),
+                "transactionHash": "0x" + "a" * 64,
+                "logIndex": "0x0",
+            }]
+        }
+        chain = {
+            "eth": {
+                "name": "Ethereum",
+                "rpcs": ["https://rpc-one.example", "https://rpc-two.example"],
+                "chunk_size": 1_000,
+                "deploy_block": 1,
+            }
+        }
+
+        with patch.object(flows, "CHAINS", chain), patch.object(
+            flows.requests, "post", side_effect=[rate_limited, success, success]
+        ), patch.object(flows.time, "sleep") as sleep:
+            transfers, failed, _ = flows.fetch_transfer_logs("eth", 100, 100)
+
+        self.assertEqual(failed, 0)
+        self.assertEqual(transfers, [(
+            SOURCE,
+            COINBASE_10,
+            10**18,
+            100,
+            "0x" + "a" * 64,
+            0,
+        )])
+        sleep.assert_any_call(3.0)
+
+    def test_fetch_transfer_logs_uses_independent_quorum_over_silent_empty_rpc(self):
+        log = {
+            "address": flows.DOLO_CONTRACT,
+            "topics": [
+                flows.TRANSFER_TOPIC,
+                "0x" + "0" * 24 + KNOWN_BERA_FLOW_SOURCE[2:],
+                "0x" + "0" * 24 + KNOWN_BERA_FLOW_RECIPIENT[2:],
+            ],
+            "data": hex(21_100 * 10**18),
+            "blockNumber": hex(24_990_784),
+            "transactionHash": KNOWN_BERA_FLOW_TX,
+            "logIndex": "0x0",
+        }
+
+        def response(logs):
+            result = Mock(status_code=200, headers={})
+            result.json.return_value = {"result": logs}
+            return result
+
+        chain = {
+            "bera": {
+                "name": "Berachain",
+                "rpcs": [
+                    "https://berachain-rpc.publicnode.com/",
+                    "https://rpc.berachain.com/",
+                    "https://berachain.drpc.org/",
+                ],
+                "chunk_size": 1_000,
+                "deploy_block": 1,
+            }
+        }
+        responses = {
+            "publicnode.com": response([]),
+            "berachain.com": response([log]),
+            "drpc.org": response([log]),
+        }
+
+        with patch.object(flows, "CHAINS", chain), patch.object(
+            flows.requests,
+            "post",
+            side_effect=lambda url, **_kwargs: responses[flows.rpc_provider_family(url)],
+        ), patch.object(flows.time, "sleep"):
+            transfers, failed, _ = flows.fetch_transfer_logs(
+                "bera", 24_990_784, 24_990_784
+            )
+
+        self.assertEqual(failed, 0)
+        self.assertEqual(
+            transfers,
+            [(
+                KNOWN_BERA_FLOW_SOURCE,
+                KNOWN_BERA_FLOW_RECIPIENT,
+                21_100 * 10**18,
+                24_990_784,
+                KNOWN_BERA_FLOW_TX,
+                0,
+            )],
+        )
+
+    def test_fetch_transfer_logs_regrows_reduced_chunks_only_after_stable_successes(self):
+        requested_ranges = []
+        chain = {
+            "bera": {
+                "name": "Berachain",
+                "rpcs": ["https://rpc-one.example", "https://rpc-two.example"],
+                "chunk_size": 2_000,
+                "deploy_block": 1,
+            }
+        }
+
+        def request_logs(_endpoint, _cfg, start_block, end_block):
+            requested_ranges.append((start_block, end_block))
+            if (start_block, end_block) == (100, 2_099):
+                return None
+            return [{
+                "address": flows.DOLO_CONTRACT,
+                "topics": [
+                    flows.TRANSFER_TOPIC,
+                    "0x" + "0" * 24 + SOURCE[2:],
+                    "0x" + "0" * 24 + OUTSIDE[2:],
+                ],
+                "data": hex(10**18),
+                "blockNumber": hex(start_block),
+                "transactionHash": "0x" + f"{start_block:064x}",
+                "logIndex": "0x0",
+            }]
+
+        with patch.object(flows, "CHAINS", chain), patch.object(
+            flows, "_request_transfer_logs", side_effect=request_logs
+        ), patch.object(
+            flows, "RPC_LOG_CHUNK_REGROW_SUCCESS_THRESHOLD", 3
+        ), patch.object(flows.time, "sleep"):
+            _transfers, failed, _ = flows.fetch_transfer_logs("bera", 100, 5_099)
+
+        self.assertEqual(failed, 0)
+        self.assertEqual(
+            list(dict.fromkeys(requested_ranges)),
+            [
+                (100, 2_099),
+                (100, 1_099),
+                (1_100, 2_099),
+                (2_100, 3_099),
+                (3_100, 5_099),
+            ],
+        )
+
+    def test_dashboard_net_flow_hover_reconciles_gross_directions(self):
+        source = (Path(__file__).resolve().parents[1] / "dolo-preview.html").read_text()
+
+        self.assertIn("grossInEth", source)
+        self.assertIn("grossOutEth", source)
+        self.assertIn("effectiveGrossInflow", source)
+        self.assertIn("effectiveGrossOutflow", source)
+        self.assertIn("In ${fmtNum(grossIn)}", source)
+        self.assertIn("Out ${fmtNum(grossOut)}", source)
+
+    def test_dashboard_flow_hover_explains_protocol_custody_adjustments(self):
+        source = (Path(__file__).resolve().parents[1] / "dolo-preview.html").read_text()
+
+        self.assertIn("protocolDepositEth", source)
+        self.assertIn("protocolWithdrawalBera", source)
+        self.assertIn("Deposited to Dolomite", source)
+        self.assertIn("Withdrawn from Dolomite", source)
+
+    def test_holder_audiences_separate_verified_market_from_potential_and_bots(self):
+        market = "0x1111111111111111111111111111111111111111"
+        watch = "0x2222222222222222222222222222222222222222"
+        bot = "0x3333333333333333333333333333333333333333"
+        cex = "0x4444444444444444444444444444444444444444"
+        holder_rows = {address: {} for address in (market, watch, bot, cex)}
+        labels = {
+            watch: {"type": "watch"},
+            bot: {"type": "bot"},
+            cex: {"type": "cex"},
+        }
+        balances = {market: 120_000, watch: 220_000, bot: 320_000, cex: 420_000}
+        buckets = [{"key": "all", "min": 0, "max": float("inf")}]
+
+        verified = flows.build_bucket_model(
+            balances, {}, holder_rows, labels, buckets, audience="market"
+        )
+        potential = flows.build_bucket_model(
+            balances, {}, holder_rows, labels, buckets, audience="potential"
+        )
+
+        self.assertEqual(verified["trackedWallets"], 1)
+        self.assertEqual(verified["trackedTotal"], 120_000)
+        self.assertEqual(verified["excludedPotentialWallets"], 2)
+        self.assertEqual(verified["excludedPotentialTotal"], 540_000)
+        self.assertEqual(potential["trackedWallets"], 2)
+        self.assertEqual(potential["trackedTotal"], 540_000)
+        self.assertEqual(potential["excludedCexWallets"], 1)
+
+    def test_behavioral_trader_override_is_loaded_as_a_bot(self):
+        labels = flows.load_address_labels()
+
+        self.assertEqual(labels[AUTOMATED_TRADER]["type"], "bot")
+        self.assertEqual(
+            flows.holder_distribution_type(AUTOMATED_TRADER, {}, labels),
+            "bot",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

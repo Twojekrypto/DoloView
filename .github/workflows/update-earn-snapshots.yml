@@ -1,0 +1,137 @@
+name: Update Earn Snapshots
+
+on:
+  schedule:
+    - cron: '22 */6 * * *'  # Every 6 hours, staggered
+  workflow_dispatch:
+
+concurrency:
+  group: update-earn-snapshots
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  update-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Generate fresh earn snapshots
+        run: python3 generate_earn_snapshots.py
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Validate latest snapshot date
+        run: |
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path("data/earn-snapshots")
+          manifest = json.load((root / "manifest.json").open())
+          today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+          chains = {"arbitrum", "berachain", "ethereum"}
+
+          assert today in manifest.get("dates", []), f"Today's snapshot date missing from manifest: {today}"
+          manifest_chains = set(manifest.get("chains", {}).get(today, []))
+          missing = chains - manifest_chains
+          assert not missing, f"Manifest missing chains for {today}: {sorted(missing)}"
+
+          payload = json.load((root / f"{today}.json").open())
+          snapshot_chains = set((payload.get("snapshots") or {}).keys())
+          missing_payload = chains - snapshot_chains
+          assert not missing_payload, f"Snapshot payload missing chains for {today}: {sorted(missing_payload)}"
+          metadata_chains = set((payload.get("chainMetadata") or {}).keys())
+          missing_metadata = chains - metadata_chains
+          assert not missing_metadata, f"Snapshot metadata missing chains for {today}: {sorted(missing_metadata)}"
+          for chain in chains:
+              metadata = payload["chainMetadata"][chain]
+              assert int(metadata.get("blockNumber") or 0) > 0, f"Missing pinned block for {chain}"
+              assert metadata.get("interestIndexes"), f"Missing interest indexes for {chain}"
+          print(f"Validated earn snapshots for {today}: {sorted(snapshot_chains)}")
+          PY
+
+      - name: Refresh historical EARN prices
+        run: |
+          python3 build_earn_historical_prices.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Refresh existing strict resolved interest ledgers
+        run: |
+          python3 build_earn_resolved_interest_ledger.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain \
+            --existing-addresses
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Build active-chain verified ledger caches
+        run: |
+          python3 build_earn_verified_ledger.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain \
+            --all-addresses
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Publish active-chain verified ledger shards
+        run: |
+          python3 build_earn_verified_ledger_shards.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain
+
+      - name: Audit representative EARN markets
+        run: python3 build_earn_representative_audit.py --check
+
+      - name: Validate generated earn data
+        run: |
+          python3 validate_data.py \
+            data/earn-snapshots \
+            data/earn-historical-prices \
+            data/earn-verified-ledger \
+            data/earn-verified-ledger/ethereum \
+            data/earn-verified-ledger-shards
+
+      - name: Commit & push changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/earn-snapshots/
+          git add data/earn-historical-prices/
+          git add data/earn-quality/representative-audit.json
+          git add -f data/earn-resolved-interest-ledger/
+          git add -f data/earn-verified-ledger/manifest.json data/earn-verified-ledger/ethereum/
+          git add -f data/earn-verified-ledger/arbitrum/ data/earn-verified-ledger/berachain/
+          git add -f data/earn-verified-ledger-shards/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          bash scripts/commit_with_fresh_earn_status.sh "📈 Earn snapshots update: $(date -u '+%Y-%m-%d %H:%M UTC')"

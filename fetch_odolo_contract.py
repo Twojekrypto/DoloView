@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+"""
+Fetch oDOLO contract data via Berachain RPC and save as static JSON.
+Replicates the RPC calls the browser currently makes, but runs server-side
+in GitHub Actions for reliability.
+"""
+
+import json
+import os
+import requests
+from datetime import datetime, timezone
+
+from rpc_client import RpcClient, RpcError, decode_uint256, safe_host
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_FILE = os.path.join(DATA_DIR, "odolo_contract_data.json")
+
+ODOLO_TOKEN = "0x02E513b5B54eE216Bf836ceb471507488fC89543"
+ODOLO_VESTER = "0x3E9b9A16743551DA49b5e136C716bBa7932d2cEc"
+FUTURE_REWARDS_WALLET = "0x79E6E932bf6686a4D357D7821E6e08835Ba8A026"
+ODOLO_ALLOCATION_TOKENS = 200_000_000
+
+# Function selectors
+SEL = {
+    "totalSupply": "0x18160ddd",
+    "balanceOf": "0x70a08231",
+    "decimals": "0x313ce567",
+    "promisedTokens": "0x5e17b694",
+    "pushedTokens": "0x818c16e2",
+    "availableTokens": "0x69bb4dc2",
+}
+
+ROUTESCAN_API = "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api"
+
+
+def pad_address(address):
+    return address.replace("0x", "").lower().zfill(64)
+
+
+VESTER_PADDED = pad_address(ODOLO_VESTER)
+FUTURE_REWARDS_PADDED = pad_address(FUTURE_REWARDS_WALLET)
+
+
+def derive_supply_metrics(total_supply, in_vester_balance, future_rewards_reserve):
+    """Calculate market-circulating oDOLO from on-chain balances."""
+    in_circulation = max(0.0, total_supply - future_rewards_reserve - in_vester_balance)
+    return {
+        "futureRewardsWallet": FUTURE_REWARDS_WALLET,
+        "futureRewardsReserve": future_rewards_reserve,
+        "circulatingExclusions": {
+            "futureRewardsReserve": future_rewards_reserve,
+            "vesterBalance": in_vester_balance,
+        },
+        "circulatingMethodology": "totalSupply - futureRewardsReserve - inVesterBalance",
+        "inCirculation": in_circulation,
+    }
+
+
+def derive_raw_supply_metrics(
+    total_supply_wei,
+    in_vester_balance_wei,
+    future_rewards_reserve_wei,
+):
+    """Preserve the exact on-chain supply partition for validation."""
+    values = (
+        int(total_supply_wei),
+        int(in_vester_balance_wei),
+        int(future_rewards_reserve_wei),
+    )
+    if any(value < 0 for value in values):
+        raise ValueError("oDOLO raw supply values must be non-negative")
+    total_supply_wei, in_vester_balance_wei, future_rewards_reserve_wei = values
+    in_circulation_wei = (
+        total_supply_wei - in_vester_balance_wei - future_rewards_reserve_wei
+    )
+    if in_circulation_wei < 0:
+        raise ValueError("oDOLO excluded balances exceed totalSupply")
+    return {
+        "totalSupplyWei": str(total_supply_wei),
+        "inVesterBalanceWei": str(in_vester_balance_wei),
+        "futureRewardsReserveWei": str(future_rewards_reserve_wei),
+        "inCirculationWei": str(in_circulation_wei),
+    }
+
+
+def derive_allocation_metrics(total_supply_wei, decimals):
+    """Reconcile current ERC-20 supply against the immutable 200M allocation."""
+    unit = 10 ** int(decimals)
+    allocation_wei = ODOLO_ALLOCATION_TOKENS * unit
+    if total_supply_wei > allocation_wei:
+        raise ValueError("oDOLO totalSupply exceeds the immutable 200M allocation")
+    burned_wei = allocation_wei - total_supply_wei
+    return {
+        "allocationSupply": ODOLO_ALLOCATION_TOKENS,
+        "allocationSupplyWei": str(allocation_wei),
+        "redeemedAndBurned": burned_wei / unit,
+        "redeemedAndBurnedWei": str(burned_wei),
+        "allocationMethodology": (
+            "allocationSupply - totalSupply; exercised oDOLO is burned"
+        ),
+    }
+
+
+def get_holder_count():
+    """Fetch oDOLO token holder count from Routescan API."""
+    try:
+        params = {
+            "module": "token",
+            "action": "tokenholdercount",
+            "contractaddress": ODOLO_TOKEN
+        }
+        resp = requests.get(ROUTESCAN_API, params=params, timeout=10)
+        data = resp.json()
+        if data.get("status") == "1" and data.get("result"):
+            return int(data["result"])
+    except Exception as e:
+        print(f"   ⚠️ Could not fetch holder count: {e}")
+    return None
+
+
+def main():
+    print("📡 Fetching oDOLO contract data via RPC...")
+
+    client = RpcClient(chain="berachain")
+    try:
+        snapshot_block = int(client.call("eth_blockNumber", []), 16)
+        snapshot_block_tag = hex(snapshot_block)
+        # Batch 1: Token data
+        batch1 = client.eth_call_batch([
+            (ODOLO_TOKEN, SEL["totalSupply"]),
+            (ODOLO_TOKEN, SEL["decimals"]),
+            (ODOLO_TOKEN, SEL["balanceOf"] + VESTER_PADDED),
+            (ODOLO_TOKEN, SEL["balanceOf"] + FUTURE_REWARDS_PADDED),
+        ], block=snapshot_block_tag)
+
+        # Batch 2: Vester data
+        batch2 = client.eth_call_batch([
+            (ODOLO_VESTER, SEL["promisedTokens"]),
+            (ODOLO_VESTER, SEL["pushedTokens"]),
+            (ODOLO_VESTER, SEL["availableTokens"]),
+        ], block=snapshot_block_tag)
+    except RpcError as e:
+        print(f"   ❌ All RPC endpoints failed! {e}")
+        if os.path.exists(OUTPUT_FILE):
+            print(f"   Keeping existing {OUTPUT_FILE}")
+        else:
+            print(f"   No existing file — cannot create placeholder")
+        return
+
+    total_supply_wei = decode_uint256(batch1[0])
+    decimals = decode_uint256(batch1[1]) or 18
+    divisor = 10 ** decimals
+
+    in_vester_balance_wei = decode_uint256(batch1[2])
+    future_rewards_reserve_wei = decode_uint256(batch1[3])
+
+    data = {
+        "totalSupply": total_supply_wei / divisor,
+        "inVesterBalance": in_vester_balance_wei / divisor,
+        "futureRewardsReserve": future_rewards_reserve_wei / divisor,
+        "promisedTokens": decode_uint256(batch2[0]) / divisor,
+        "pushedTokens": decode_uint256(batch2[1]) / divisor,
+        "availableTokens": decode_uint256(batch2[2]) / divisor,
+        "decimals": decimals,
+        "blockNumber": snapshot_block,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        # Store only the provider host, never the full URL (it contains the API key).
+        "rpc_source": safe_host(client.last_endpoint or ""),
+    }
+
+    data.update(derive_supply_metrics(
+        data["totalSupply"],
+        data["inVesterBalance"],
+        data["futureRewardsReserve"],
+    ))
+    data.update(derive_raw_supply_metrics(
+        total_supply_wei,
+        in_vester_balance_wei,
+        future_rewards_reserve_wei,
+    ))
+    data.update(derive_allocation_metrics(total_supply_wei, decimals))
+
+    # Fetch holder count from Routescan
+    holders = get_holder_count()
+    if holders is not None:
+        data["holders"] = holders
+        print(f"   Holders: {holders:,}")
+
+    with open(OUTPUT_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+    print(f"   ✅ Saved odolo_contract_data.json")
+    print(f"   Total Supply: {data['totalSupply']:,.2f}")
+    print(f"   Future Rewards Reserve: {data['futureRewardsReserve']:,.2f}")
+    print(f"   Vester Balance: {data['inVesterBalance']:,.2f}")
+    print(f"   Available Tokens (vester accounting): {data['availableTokens']:,.2f}")
+    print(f"   Pushed Tokens (vester accounting): {data['pushedTokens']:,.2f}")
+    print(f"   In Circulation: {data['inCirculation']:,.2f}")
+
+
+if __name__ == "__main__":
+    main()

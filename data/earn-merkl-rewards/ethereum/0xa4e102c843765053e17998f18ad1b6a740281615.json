@@ -1,0 +1,43 @@
+{
+  "address": "0xa4e102c843765053e17998f18ad1b6a740281615",
+  "chain": "ethereum",
+  "generatedAt": "2026-11-24T05:03:06Z",
+  "rewards": {
+    "WLFI": {
+      "accumulated": 7.587497650260877,
+      "assignedPerToken": {
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 7.587497650260877
+      },
+      "assignedUnclaimedPerToken": {
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 7.501670117145746
+      },
+      "decimals": 18,
+      "perAccountToken": {
+        "0": {
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 6.100281075615178
+        },
+        "53264502873611599238092944693585836337018990370729549454485579084447725161769": {
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 1.487216574645701
+        }
+      },
+      "perToken": {
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 7.587497650260877
+      },
+      "token": "0xdA5e1988097297dCdc1f90D4dFE7909e847CBeF6",
+      "unclaimed": 7.501670117145746,
+      "unclaimedPerAccountToken": {
+        "0": {
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 6.087760458167983
+        },
+        "53264502873611599238092944693585836337018990370729549454485579084447725161769": {
+          "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 1.4139096589777636
+        }
+      },
+      "unclaimedPerToken": {
+        "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": 7.501670117145746
+      }
+    }
+  },
+  "source": "merkl-v4-protocol-rewards",
+  "version": 1
+}

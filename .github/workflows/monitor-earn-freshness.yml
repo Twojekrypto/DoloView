@@ -1,0 +1,310 @@
+name: Monitor EARN Freshness
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      allow_remediation:
+        description: 'Dispatch stale producer workflows before publishing status.'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: earn-freshness-watchdog
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONUNBUFFERED: '1'
+      GH_TOKEN: ${{ github.token }}
+      EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+      # Three active chains can need both canonical and netflow refreshes.
+      EARN_WATCHDOG_MAX_DISPATCHES: '6'
+      ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
+      ALCHEMY_ARBITRUM_RPC_KAT: ${{ secrets.ALCHEMY_ARBITRUM_RPC_KAT }}
+      ALCHEMY_ARBITRUM_RPC_DAN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_DAN }}
+      ALCHEMY_ARBITRUM_RPC_ZEN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_ZEN }}
+      ALCHEMY_ARBITRUM_RPC_2: ${{ secrets.ALCHEMY_ARBITRUM_RPC_2 }}
+      ALCHEMY_ARBITRUM_RPC_3: ${{ secrets.ALCHEMY_ARBITRUM_RPC_3 }}
+      ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+      ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+      ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+      ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+      ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+      ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+      ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+      QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+      DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+      ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+      ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+      ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+      MANTLE_RPC: ${{ secrets.MANTLE_RPC }}
+      MANTLE_RPC_2: ${{ secrets.MANTLE_RPC_2 }}
+      QUICKNODE_MANTLE_RPC: ${{ secrets.QUICKNODE_MANTLE_RPC }}
+      QUICKNODE_MANTLE_RPC_2: ${{ secrets.QUICKNODE_MANTLE_RPC_2 }}
+      MANTLE_RPC_QUICKNODE_TWOJE: ${{ secrets.MANTLE_RPC_QUICKNODE_TWOJE }}
+      DRPC_MANTLE_RPC: ${{ secrets.DRPC_MANTLE_RPC }}
+      DRPC_MANTLE_RPC_ZEN: ${{ secrets.DRPC_MANTLE_RPC_ZEN }}
+      ALCHEMY_MANTLE_RPC_ZEN: ${{ secrets.ALCHEMY_MANTLE_RPC_ZEN }}
+      ALCHEMY_MANTLE_RPC_DANU: ${{ secrets.ALCHEMY_MANTLE_RPC_DANU }}
+      ALCHEMY_MANTLE_RPC: ${{ secrets.ALCHEMY_MANTLE_RPC }}
+      ALCHEMY_MANTLE_RPC_2_JEFF: ${{ secrets.ALCHEMY_MANTLE_RPC_2_JEFF }}
+      ALCHEMY_MANTLE_RPC_2: ${{ secrets.ALCHEMY_MANTLE_RPC_2 }}
+      ALCHEMY_MANTLE_RPC_3: ${{ secrets.ALCHEMY_MANTLE_RPC_3 }}
+      XLAYER_RPC_QUICKNODE_TWOJE: ${{ secrets.XLAYER_RPC_QUICKNODE_TWOJE }}
+      XLAYER_RPC: ${{ secrets.XLAYER_RPC }}
+      XLAYER_RPC_2: ${{ secrets.XLAYER_RPC_2 }}
+      ALCHEMY_XLAYER_RPC_ZEN: ${{ secrets.ALCHEMY_XLAYER_RPC_ZEN }}
+      DRP_XLAYER_RPC_TWO: ${{ secrets.DRP_XLAYER_RPC_TWO }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Build freshness status
+        run: |
+          set -euo pipefail
+          git pull --rebase -X theirs origin master
+          mkdir -p data/earn-freshness
+          python3 update_earn_freshness_status.py \
+            --output data/earn-freshness/status.json \
+            --actions-output /tmp/earn-freshness-actions.json
+          python3 build_earn_quality_status.py --output data/earn-quality/status.json
+          : > /tmp/earn-refresh-active-chains.txt
+          cat data/earn-freshness/status.json
+          cat data/earn-quality/status.json
+          cat /tmp/earn-freshness-actions.json
+
+      - name: Commit freshness status
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/earn-freshness/status.json data/earn-quality/status.json
+          EARN_FRESHNESS_ACTIONS_OUTPUT=/tmp/earn-freshness-actions.json \
+            bash scripts/commit_with_fresh_earn_status.sh "Update EARN freshness status - $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+      - name: Detect active EARN refresh workflows
+        if: always()
+        run: |
+          python3 scripts/plan_earn_watchdog_dispatch.py \
+            /tmp/earn-freshness-actions.json \
+            /tmp/earn-refresh-jobs.tsv \
+            --active-repairs /tmp/earn-refresh-active-chains.txt \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Trigger stale EARN refresh workflows
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.allow_remediation }}
+        run: |
+          set -euo pipefail
+          if [ ! -s /tmp/earn-refresh-jobs.tsv ]; then
+            echo "No EARN refresh workflows needed."
+            exit 0
+          fi
+
+          : > /tmp/earn-refresh-dispatched.tsv
+          dispatched_count=0
+          max_dispatches="${EARN_WATCHDOG_MAX_DISPATCHES:-4}"
+          while IFS=$'\t' read -r workflow chain priority mode inputs_json; do
+            if [ -z "$workflow" ]; then
+              continue
+            fi
+            if [ "${chain:-}" = "__all__" ]; then
+              chain=""
+            fi
+            job_key="${workflow}:chain=${chain:-all}"
+            if grep -Fxq "$job_key" /tmp/earn-refresh-dispatched.tsv; then
+              echo "Skipping duplicate refresh request for $job_key in this watchdog run."
+              continue
+            fi
+            if [ "$dispatched_count" -ge "$max_dispatches" ]; then
+              echo "Deferring $job_key (${mode:-unknown}, priority ${priority:-50}) because watchdog already dispatched $dispatched_count/$max_dispatches refresh workflow(s)."
+              continue
+            fi
+            active="$(python3 - "$workflow" "${chain:-}" <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          workflow = sys.argv[1]
+          chain = (sys.argv[2] if len(sys.argv) > 2 else "").strip().lower()
+          repo = os.environ["GITHUB_REPOSITORY"]
+          chain_label_pattern = re.compile(r"\[([^\]]+)\]")
+
+          def active_runs(status):
+              try:
+                  output = subprocess.check_output(
+                      [
+                          "gh",
+                          "run",
+                          "list",
+                          "--repo",
+                          repo,
+                          "--workflow",
+                          workflow,
+                          "--status",
+                          status,
+                          "--limit",
+                          "50",
+                          "--json",
+                          "databaseId,displayTitle,name,status",
+                      ],
+                      text=True,
+                  )
+              except subprocess.CalledProcessError as exc:
+                  print(f"gh run list failed for {workflow}/{status}: {exc}", file=sys.stderr)
+                  return []
+              return json.loads(output or "[]")
+
+          def covers_requested_chain(run):
+              if not chain:
+                  return True
+              title = " ".join(
+                  str(run.get(key) or "").strip().lower()
+                  for key in ("displayTitle", "name")
+                  if str(run.get(key) or "").strip()
+              )
+              labels = {
+                  label.strip().lower()
+                  for label in chain_label_pattern.findall(title)
+                  if label.strip()
+              }
+              return chain in labels or "all" in labels
+
+          matches = [
+              run
+              for status in ("queued", "in_progress", "pending", "waiting", "requested")
+              for run in active_runs(status)
+              if covers_requested_chain(run)
+          ]
+          for run in matches:
+              print(
+                  f"Active matching run: {run.get('databaseId')} {run.get('status')} {run.get('displayTitle')}",
+                  file=sys.stderr,
+              )
+          print(len(matches))
+          PY
+          )"
+            if [ "$active" -gt 0 ]; then
+              if [ -n "${chain:-}" ]; then
+                echo "Skipping $workflow for $chain because $active matching run(s) are already queued/running."
+              else
+                echo "Skipping $workflow because $active run(s) are already queued/running."
+              fi
+              printf '%s\n' "${chain:-__all__}" >> /tmp/earn-refresh-active-chains.txt
+              continue
+            fi
+            dispatch_args=(gh workflow run "$workflow" --repo "$GITHUB_REPOSITORY" --ref master)
+            if [ -n "${chain:-}" ]; then
+              dispatch_args+=(-f "chain=$chain")
+            fi
+            if [ -n "${inputs_json:-}" ] && [ "${inputs_json:-}" != "{}" ]; then
+              python3 - "$inputs_json" > /tmp/earn-refresh-inputs.tsv <<'PY'
+          import json
+          import sys
+
+          try:
+              payload = json.loads(sys.argv[1] or "{}")
+          except json.JSONDecodeError:
+              payload = {}
+          if not isinstance(payload, dict):
+              payload = {}
+          for key, value in sorted(payload.items()):
+              key = str(key or "").strip()
+              value = str(value or "").strip()
+              if key and value and key != "chain":
+                  print(f"{key}\t{value}")
+          PY
+              while IFS=$'\t' read -r input_key input_value; do
+                if [ -n "$input_key" ] && [ -n "$input_value" ]; then
+                  dispatch_args+=(-f "${input_key}=${input_value}")
+                fi
+              done < /tmp/earn-refresh-inputs.tsv
+            fi
+            if [ -n "${chain:-}" ]; then
+              echo "Triggering $workflow for $chain because EARN freshness drifted past the retry threshold."
+            else
+              echo "Triggering $workflow because EARN freshness drifted past the retry threshold."
+            fi
+            dispatch_ok=false
+            for dispatch_attempt in 1 2 3 4; do
+              if "${dispatch_args[@]}"; then
+                dispatch_ok=true
+                break
+              fi
+              echo "⚠️ Dispatch attempt ${dispatch_attempt}/4 for $job_key failed (transient GitHub API error?); retrying in $((dispatch_attempt * 10))s..."
+              sleep $((dispatch_attempt * 10))
+            done
+            if [ "$dispatch_ok" != "true" ]; then
+              echo "::warning::Could not dispatch $job_key after 4 attempts — the watchdog will retry it on its next scheduled run."
+              continue
+            fi
+            echo "$job_key" >> /tmp/earn-refresh-dispatched.tsv
+            printf '%s\n' "${chain:-__all__}" >> /tmp/earn-refresh-active-chains.txt
+            dispatched_count=$((dispatched_count + 1))
+          done < /tmp/earn-refresh-jobs.tsv
+
+      - name: Enforce EARN freshness SLA
+        if: always()
+        run: |
+          python3 scripts/check_earn_sla.py \
+            data/earn-freshness/status.json \
+            --active-repairs /tmp/earn-refresh-active-chains.txt \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Backstop dashboard freshness cadence
+        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.allow_remediation) }}
+        # This is a secondary trigger, independent of the EARN data SLA above.
+        # A GitHub API outage must not block publishing verified EARN data.
+        continue-on-error: true
+        run: python3 scripts/check_dashboard_freshness.py --config config/dashboard_freshness.json --ensure-check-due
+
+      - name: Deploy verified EARN snapshot
+        if: ${{ success() }}
+        run: |
+          set -euo pipefail
+          queued="$(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow pages.yml \
+              --status queued \
+              --limit 1 \
+              --json databaseId \
+              --jq 'length' 2>/dev/null || echo 0
+          )"
+          if [ "${queued:-0}" -gt 0 ]; then
+            echo "Skipping Pages dispatch because a deployment is already queued."
+          else
+            dispatch_ok=false
+            for dispatch_attempt in 1 2 3 4; do
+              if gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref master; then
+                dispatch_ok=true
+                echo "Pages deployment dispatched."
+                break
+              fi
+              echo "⚠️ Pages dispatch attempt ${dispatch_attempt}/4 failed (transient GitHub API error?); retrying in $((dispatch_attempt * 10))s..."
+              sleep $((dispatch_attempt * 10))
+            done
+            if [ "$dispatch_ok" != "true" ]; then
+              echo "::warning::Pages dispatch failed after 4 attempts — the next watchdog run (every 15 min) will retry it."
+            fi
+          fi

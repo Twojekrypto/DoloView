@@ -1,0 +1,3069 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dolomite · Assets</title>
+<link rel="shortcut icon" href="favicon.ico" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared-hover-tooltips.css?v=20260812-row-focusout">
+<script defer src="shared-hover-tooltips.js?v=20260812-row-focusout"></script>
+<link rel="stylesheet" href="tokens.css?v=tokens-20260611">
+<script src="dolomite-token-icons.generated.js?v=20260803-btccx"></script>
+<style>
+/* ==========================================================================
+   DESIGN TOKENS — Graphite + Gold (premium, restrained)
+   ========================================================================== */
+:root{
+  --profit:#75b87b;
+  --profit-hi:#9fcea1;
+  --profit-wash:rgba(117,184,123,.10);
+  --profit-line:rgba(117,184,123,.30);
+  --up:#75b87b;
+  --up-wash:rgba(117,184,123,.10);
+  --down-wash:rgba(180,121,107,.10);
+  --yield:#8fb7c8;
+  --sh-card:0 1px 0 rgba(255,255,255,.02) inset, 0 1px 2px rgba(0,0,0,.4);
+}
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg-0);color:var(--fg-1);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+html{overflow-x:clip}
+body{min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit}
+
+/* Page bg — very subtle vignette only */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(1000px 600px at 80% -10%,rgba(201,162,39,.04),transparent 60%),
+    radial-gradient(800px 500px at -10% 110%,rgba(255,255,255,.02),transparent 60%);
+}
+
+@keyframes assetSkeletonShimmer{
+  0%{background-position:120% 0}
+  100%{background-position:-120% 0}
+}
+.skel{
+  display:block;
+  border-radius:8px;
+  background:linear-gradient(90deg,rgba(255,255,255,.045) 0%,rgba(255,255,255,.10) 42%,rgba(255,255,255,.045) 78%);
+  background-size:220% 100%;
+  animation:assetSkeletonShimmer 1.45s var(--ease) infinite;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.assets-loading .hero-value,
+.assets-loading .hero-token,
+.assets-loading .hero-card .hc-value,
+.assets-loading .hero-card .hc-sub,
+.assets-loading .count-badge,
+.assets-loading .card-meta{
+  position:relative;
+  color:transparent!important;
+  overflow:hidden;
+  border-radius:8px;
+}
+.assets-loading .hero-value .pct,
+.assets-loading .hero-value .pct-symbol{color:transparent!important}
+.assets-loading .hero-token>*{visibility:hidden}
+.assets-loading .hero-value::after,
+.assets-loading .hero-token::after,
+.assets-loading .hero-card .hc-value::after,
+.assets-loading .hero-card .hc-sub::after,
+.assets-loading .count-badge::after,
+.assets-loading .card-meta::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(90deg,rgba(255,255,255,.045) 0%,rgba(255,255,255,.10) 42%,rgba(255,255,255,.045) 78%);
+  background-size:220% 100%;
+  animation:assetSkeletonShimmer 1.45s var(--ease) infinite;
+}
+.assets-loading .hero-value::after{inset:8px 0 5px;width:min(220px,100%)}
+.assets-loading .hero-card .hc-value::after{height:24px;width:min(112px,100%)}
+.assets-loading .hero-card .hc-sub::after{height:12px;width:min(150px,100%)}
+.assets-loading .count-badge::after{inset:0}
+.assets-loading .card-meta .pulse{background:var(--line-3);box-shadow:none}
+
+.wrap{max-width:1320px;margin:0 auto;padding:40px 28px 96px}
+
+/* =========================================================================
+   TOP — logo banner + sticky nav
+   ========================================================================= */
+.site-top{
+  display:flex;flex-direction:column;align-items:center;
+  gap:14px;margin-bottom:40px;
+}
+
+.site-brand{
+  position:relative;
+  display:flex;justify-content:center;align-items:center;
+  width:100%;
+  padding:18px 0 0;
+}
+/* Warm gold atmosphere behind the banner — two layered radials make it
+   sit in the page rather than on top of it. */
+.site-brand::before{
+  content:"";position:absolute;inset:-6% -12% 12% -12%;z-index:-1;
+  background:
+    radial-gradient(55% 55% at 50% 50%, rgba(201,162,39,.14) 0%, transparent 72%),
+    radial-gradient(90% 110% at 50% 100%, rgba(201,162,39,.05) 0%, transparent 65%);
+  filter:blur(20px);pointer-events:none;
+}
+/* Page-coloured vignette overlay: fades the logo's rectangular backdrop
+   into the exact page bg at the edges, hiding the blue-purple undertone. */
+.site-brand::after{
+  content:"";position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(100%,820px);aspect-ratio:495/195;
+  pointer-events:none;
+  background:radial-gradient(
+    ellipse 78% 82% at center,
+    transparent 42%,
+    rgba(9,9,11,.55) 72%,
+    var(--bg-0) 100%
+  );
+}
+/* Logo colour-corrected toward the palette: desaturated, hue-rotated off
+   the blue undertone, tight radial mask so only the content stays solid. */
+.site-brand img{
+  max-width:820px;width:100%;height:auto;display:block;
+  filter:
+    saturate(.82)
+    contrast(.92)
+    brightness(.93)
+    hue-rotate(-7deg);
+  -webkit-mask-image:radial-gradient(
+    ellipse 78% 80% at center,
+    #000 38%,
+    rgba(0,0,0,.7) 62%,
+    rgba(0,0,0,.25) 82%,
+    transparent 98%
+  );
+          mask-image:radial-gradient(
+    ellipse 78% 80% at center,
+    #000 38%,
+    rgba(0,0,0,.7) 62%,
+    rgba(0,0,0,.25) 82%,
+    transparent 98%
+  );
+  transition:filter .4s var(--ease),transform .4s var(--ease);
+}
+.site-brand img:hover{
+  filter:
+    saturate(.92)
+    contrast(.96)
+    brightness(.98)
+    hue-rotate(-5deg);
+  transform:translateY(-1px);
+}
+
+/* Nav sits below the logo with a small gap (no overlap). */
+.site-nav-wrap{
+  position:sticky;top:12px;z-index:30;
+  display:flex;justify-content:center;
+  pointer-events:none;
+}
+.site-nav{
+  pointer-events:auto;
+  display:inline-flex;align-items:center;gap:2px;
+  background:rgba(16,16,20,.72);
+  backdrop-filter:blur(22px) saturate(160%);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  border:1px solid var(--line-2);
+  padding:5px;border-radius:12px;
+  box-shadow:
+    0 6px 24px rgba(0,0,0,.45),
+    0 1px 0 rgba(255,255,255,.03) inset;
+}
+.nav-item{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 14px;border-radius:8px;
+  font-size:13px;font-weight:500;color:var(--fg-2);
+  cursor:pointer;
+  transition:color .15s var(--ease),background .15s var(--ease);
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-item img,
+.nav-item svg{
+  width:15px;height:15px;flex-shrink:0;
+  transition:opacity .15s var(--ease);
+}
+.nav-item img{border-radius:50%;background:var(--bg-3);object-fit:contain}
+.nav-item svg{color:var(--fg-3);opacity:.85}
+.nav-item:hover{color:var(--fg-1);background:var(--bg-3)}
+.nav-item:hover svg{color:var(--fg-1);opacity:1}
+.nav-item.active{
+  color:var(--fg-1);background:var(--bg-3);
+  box-shadow:inset 0 0 0 1px var(--gold-line);
+}
+.nav-item.active svg{color:var(--gold);opacity:1}
+.nav-item.active::after{
+  content:"";width:4px;height:4px;border-radius:50%;
+  background:var(--gold);margin-left:2px;
+  box-shadow:0 0 6px var(--gold-line);
+}
+
+/* =========================================================================
+   HERO — aligned with DOLO graphite + gold system
+   ========================================================================= */
+.hero{
+  position:relative;
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+  border:1px solid var(--line-2);
+  border-radius:var(--r-xl);
+  padding:28px 32px 24px;
+  margin-bottom:24px;
+  overflow:hidden;
+}
+.hero::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,var(--gold-line) 30%,var(--gold-line) 70%,transparent 100%);
+  opacity:.6;
+}
+.hero::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(720px 320px at 80% -30%,rgba(201,162,39,.08),transparent 65%);
+}
+.hero-brand{display:flex;align-items:center;gap:16px;margin-bottom:26px;position:relative;z-index:1;flex-wrap:wrap}
+.hero-token-logo{
+  width:52px;height:52px;border-radius:50%;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  display:grid;place-items:center;overflow:hidden;flex-shrink:0;
+}
+.hero-token-logo svg{width:30px;height:30px;color:var(--gold)}
+.hero-token-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-token-title{font-size:24px;font-weight:800;color:var(--fg-1);letter-spacing:-.7px;line-height:1}
+.hero-token-sub{font-size:12.5px;color:var(--fg-3);font-weight:400;line-height:1.3}
+.hero-token-sub b{color:var(--fg-2);font-weight:500}
+.hero-meta{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.hero-live{font-size:11px;color:var(--fg-3);font-family:var(--mono);display:inline-flex;align-items:center;gap:6px}
+.hero-live .dot{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+.hero-headline{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;padding-bottom:26px;margin-bottom:0;position:relative;z-index:1}
+.hero-value{
+  font-family:var(--mono);
+  font-size:clamp(44px,6vw,62px);
+  font-weight:700;letter-spacing:-2.5px;
+  color:var(--fg-1);
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+}
+.hero-value .pct,
+.hero-value .pct-symbol{color:var(--fg-1)}
+.hero-value .pct-symbol{font-size:.45em;margin-left:4px}
+.hero-token{
+  display:inline-flex;align-items:center;gap:9px;
+  min-height:36px;padding:6px 9px 6px 12px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));
+  border:1px solid var(--line-2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+  font-size:13px;font-weight:650;color:var(--fg-1);
+}
+.hero-token>img{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--bg-3);border:1px solid var(--line-2)}
+.hero-token>img.full-logo{border-radius:4px;object-fit:contain;background:transparent;border-color:transparent}
+.hero-token-name{font-family:var(--mono);letter-spacing:.15px;line-height:1}
+.hero-token-sep{width:1px;height:16px;background:var(--line-2);margin:0 1px}
+.hero-chain-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:var(--fg-2);
+  padding:0 2px 0 0;border-radius:999px;
+  background:transparent;border:0;
+  line-height:1;
+}
+.hero-chain-pill img{
+  width:13px;height:13px;border-radius:50%;object-fit:cover;
+  background:transparent;border:0;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16);
+}
+
+.hero-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  padding-top:22px;border-top:1px solid var(--line-1);
+  position:relative;z-index:1;
+}
+.hero-card{
+  background:transparent;
+  border:0;
+  border-left:1px solid var(--line-1);
+  border-radius:0;
+  padding:0 24px;
+  transition:none;
+  position:relative;
+}
+.hero-card:first-child{border-left:0;padding-left:0}
+.hero-card:hover{background:transparent;transform:none}
+.hero-card .hc-label{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:var(--fg-3);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.hero-card .hc-label svg{width:11px;height:11px;color:var(--fg-3)}
+.hero-card .hc-label img{width:11px;height:11px;border-radius:50%;object-fit:contain;opacity:.82;flex-shrink:0}
+.hero-card .hc-value{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:-.6px;color:var(--fg-1);font-variant-numeric:tabular-nums;line-height:1}
+.hero-card .hc-value.accent{color:var(--gold)}
+.hero-card.supply .hc-value{color:var(--profit)}
+.hero-card.odolo .hc-value{color:var(--gold)}
+.hero-card.borrow .hc-value{color:var(--down)}
+.hero-card .hc-sub{font-size:11px;color:var(--fg-3);margin-top:8px;font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* =========================================================================
+   CARD SHELL
+   ========================================================================= */
+.card{
+  background:var(--bg-2);
+  border:1px solid var(--line-2);
+  border-radius:var(--r-xl);
+  box-shadow:var(--sh-card);
+  overflow:visible;        /* allow dropdowns to escape when table is short */
+  position:relative;
+}
+.card-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px 18px;
+  border-bottom:1px solid var(--line-1);
+}
+.card-title{display:flex;align-items:center;gap:10px}
+.card-title h2{font-size:16px;font-weight:600;letter-spacing:-.1px;color:var(--fg-1)}
+.card-title .count-badge{font-family:var(--mono);font-size:11px;color:var(--fg-2);background:var(--bg-3);border:1px solid var(--line-2);padding:3px 8px;border-radius:999px}
+.card-meta{font-size:11px;color:var(--fg-3);font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+
+/* =========================================================================
+   TOOLBAR
+   ========================================================================= */
+.toolbar{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:14px 24px;
+  background:transparent;
+  border-bottom:1px solid var(--line-1);
+  flex-wrap:wrap;
+}
+.tb-left,.tb-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* search */
+.search{
+  position:relative;
+  display:flex;align-items:center;
+  width:280px;
+  background:var(--bg-3);
+  border:1px solid var(--line-2);
+  border-radius:10px;
+  height:36px;
+  padding:0 14px 0 36px;
+  transition:border-color .2s var(--ease);
+}
+.search:focus-within{border-color:var(--gold-line)}
+.search svg{position:absolute;left:12px;width:14px;height:14px;color:var(--fg-3)}
+.search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg-1);font-size:13px}
+.search input::placeholder{color:var(--fg-3)}
+.search .kbd{font-family:var(--mono);font-size:10px;color:var(--fg-3);border:1px solid var(--line-2);border-radius:4px;padding:1px 5px;background:var(--bg-4)}
+.search-clear{
+  display:none;align-items:center;justify-content:center;flex:0 0 20px;width:20px;height:20px;margin-left:6px;padding:0;
+  border:1px solid var(--line-2);border-radius:6px;background:rgba(255,255,255,.018);color:var(--fg-3);cursor:pointer;
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+}
+.search.has-value .search-clear{display:inline-flex}
+.search.has-value .kbd{display:none}
+.search-clear:hover{color:var(--fg-1);border-color:var(--gold-line);background:var(--gold-wash)}
+.search-clear svg{position:static;width:11px;height:11px;color:currentColor}
+
+/* dropdown btn */
+.dd{position:relative}
+.dd-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  height:36px;padding:0 12px;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  border-radius:10px;font-size:13px;color:var(--fg-1);font-weight:500;
+  transition:border-color .2s var(--ease),background .2s var(--ease);
+}
+.dd-btn:hover{border-color:var(--line-3)}
+.dd-btn.open{border-color:var(--gold-line);background:var(--bg-4)}
+.dd-btn .icon{width:14px;height:14px;color:var(--fg-2);flex-shrink:0;transition:color .2s var(--ease)}
+.dd-btn img.icon{border-radius:50%;object-fit:cover;background:var(--bg-4);box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.dd-btn .lbl{
+  flex:1;min-width:0;text-align:left;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.dd-btn .count{font-family:var(--mono);font-size:10px;color:var(--fg-3);background:var(--bg-4);padding:2px 6px;border-radius:999px;border:1px solid var(--line-2);flex-shrink:0;transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease)}
+.dd-btn .chev{width:10px;height:10px;color:var(--fg-3);flex-shrink:0;transition:transform .2s var(--ease),color .2s var(--ease)}
+.dd-btn.open .chev{transform:rotate(180deg)}
+
+/* Persistent filtered state — subtle gold accent, matches the .open
+   style so selection reads "something is picked" without shouting. */
+.dd-btn.filtered{
+  border-color:var(--gold-line);
+  background:var(--bg-4);
+}
+.dd-btn.filtered .count{
+  color:var(--gold);
+  border-color:var(--gold-line);
+}
+.dd-btn.filtered:hover{border-color:var(--gold-line)}
+
+/* Fixed widths so labels never resize the button — "All Chains", "2 chains",
+   "Polygon zkEVM" and "Berachain" all occupy the same space. */
+#dd-cat .dd-btn{min-width:170px}
+#dd-net .dd-btn{min-width:210px}
+#dd-rw  .dd-btn{min-width:150px}
+
+/* Quick-clear × — only visible when the filter has a selection */
+.dd-clear{
+  display:none;
+  align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:4px;
+  margin-left:-2px;flex-shrink:0;
+  color:var(--fg-3);cursor:pointer;
+  transition:color .15s var(--ease),background .15s var(--ease);
+}
+.dd-btn.filtered .dd-clear{display:inline-flex}
+.dd-clear:hover{background:rgba(201,162,39,.18);color:var(--gold)}
+.dd-clear svg{width:10px;height:10px;pointer-events:none}
+
+.dd-panel{
+  position:absolute;top:calc(100% + 6px);left:0;
+  min-width:220px;max-width:320px;
+  background:var(--bg-2);
+  border:1px solid var(--line-2);
+  border-radius:var(--r-md);
+  box-shadow:var(--sh-hi);
+  padding:6px;z-index:40;
+  opacity:0;transform:translateY(-4px);pointer-events:none;
+  transition:opacity .18s var(--ease),transform .18s var(--ease);
+}
+.dd-panel.show{opacity:1;transform:translateY(0);pointer-events:auto}
+.dd-panel-head{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600;padding:8px 10px 6px}
+.dd-list{display:flex;flex-direction:column}
+.dd-opt{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:6px;
+  font-size:13px;color:var(--fg-2);cursor:pointer;
+  transition:background .15s var(--ease),color .15s var(--ease);
+}
+.dd-opt + .dd-opt{border-top:1px solid var(--line-1)}
+.dd-opt:hover{background:var(--bg-3);color:var(--fg-1)}
+.dd-opt.active{background:rgba(201,162,39,.04);color:var(--fg-1)}
+.dd-opt img,
+.dd-opt .dd-ico{
+  width:18px;height:18px;border-radius:50%;flex-shrink:0;
+  background:var(--bg-4);border:1px solid var(--line-2);
+  display:grid;place-items:center;object-fit:cover;
+  transition:border-color .15s var(--ease);
+}
+.dd-opt.active img,
+.dd-opt.active .dd-ico{border-color:var(--gold-line)}
+.dd-opt .dd-ico svg{width:11px;height:11px;color:var(--fg-3)}
+.dd-opt.active .dd-ico svg{color:var(--gold)}
+.dd-opt.select-all .dd-ico svg{width:14px;height:14px;color:var(--fg-2)}
+.dd-opt-name{flex:1;min-width:0}
+.dd-opt.select-all{
+  background:linear-gradient(180deg,var(--bg-3),var(--bg-2));
+  border:1px solid var(--line-2);margin-bottom:4px;
+}
+.dd-opt.select-all .dd-opt-name{font-weight:600;color:var(--fg-1)}
+/* Checkbox indicator on LEFT — mirrors Rewards filter */
+.dd-opt-check{
+  width:15px;height:15px;border-radius:4px;flex-shrink:0;
+  background:var(--bg-4);border:1.5px solid var(--line-3);
+  display:grid;place-items:center;
+  transition:background .15s var(--ease),border-color .15s var(--ease);
+}
+.dd-opt-check svg{
+  width:9px;height:9px;
+  color:var(--bg-0);
+  opacity:0;transition:opacity .15s var(--ease);
+}
+.dd-opt.active .dd-opt-check{background:var(--gold);border-color:var(--gold)}
+.dd-opt.active .dd-opt-check svg{opacity:1}
+
+/* pill switch (APR/APY) */
+.pill-switch{
+  position:relative;
+  display:inline-flex;align-items:center;
+  background:var(--bg-3);border:1px solid var(--line-2);
+  border-radius:10px;padding:3px;height:36px;
+  cursor:pointer;-webkit-user-select:none;user-select:none;
+}
+.pill-switch .opt{position:relative;z-index:1;padding:0 14px;height:28px;display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:var(--fg-3);letter-spacing:.4px;cursor:pointer;transition:color .2s var(--ease)}
+.pill-switch .opt.active{color:var(--bg-0)}
+.pill-switch .slider{position:absolute;top:3px;left:3px;height:28px;border-radius:8px;background:var(--gold);box-shadow:0 2px 8px rgba(201,162,39,.35);transition:transform .25s var(--ease),width .25s var(--ease)}
+
+/* rewards btn with dots */
+.rw-btn{display:inline-flex;align-items:center;gap:8px}
+.rw-dots{display:inline-flex;gap:3px}
+.rw-dot{width:6px;height:6px;border-radius:50%;background:var(--fg-4);transition:background .2s var(--ease)}
+.rw-dot.on{background:var(--gold)}
+
+/* rewards dropdown — minimal filter-table */
+.dd-panel-rw{padding:6px;min-width:220px}
+.dd-panel-rw .dd-panel-head{padding:8px 10px 6px}
+.rw-list{display:flex;flex-direction:column}
+.rw-item{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:6px;cursor:pointer;
+  transition:background .15s var(--ease);
+}
+.rw-item + .rw-item{border-top:1px solid var(--line-1)}
+.rw-item:hover{background:var(--bg-3)}
+.rw-check{
+  width:15px;height:15px;border-radius:4px;flex-shrink:0;
+  background:var(--bg-4);border:1.5px solid var(--line-3);
+  display:grid;place-items:center;
+  transition:background .15s var(--ease),border-color .15s var(--ease);
+}
+.rw-check svg{
+  width:9px;height:9px;
+  color:var(--bg-0);
+  opacity:0;transition:opacity .15s var(--ease);
+}
+.rw-item.active .rw-check{background:var(--gold);border-color:var(--gold)}
+.rw-item.active .rw-check svg{opacity:1}
+.rw-dot-src{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.rw-dot-src.lending{background:var(--fg-1)}
+.rw-dot-src.odolo{background:var(--gold)}
+.rw-dot-src.yield{background:var(--yield)}
+.rw-name{font-size:13px;font-weight:500;color:var(--fg-2);flex:1;min-width:0}
+.rw-item.active .rw-name{color:var(--fg-1)}
+
+.sep{width:1px;height:22px;background:var(--line-2)}
+
+/* =========================================================================
+   TABLE — dense, terminal-inspired
+   ========================================================================= */
+.tbl-wrap{
+  --asset-table-head-h:40px;
+  --asset-table-row-h:92px;
+  --asset-table-visible-rows:10;
+  height:calc(var(--asset-table-head-h) + (var(--asset-table-visible-rows) * var(--asset-table-row-h)));
+  overflow:auto;
+  border-radius:0;
+  scrollbar-color:rgba(201,162,39,.45) rgba(255,255,255,.04);
+  scrollbar-width:thin;
+}
+.tbl-wrap::-webkit-scrollbar{width:10px;height:10px}
+.tbl-wrap::-webkit-scrollbar-track{background:rgba(255,255,255,.035);border-radius:999px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:rgba(201,162,39,.35);border:2px solid var(--bg-2);border-radius:999px}
+.tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(201,162,39,.55)}
+.assets-table-wrap{clip-path:inset(0 round 0 0 var(--r-xl) var(--r-xl))}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl{
+  width:100%;border-collapse:separate;border-spacing:0;
+  font-size:13px;
+}
+.assets-table-wrap #tbl{table-layout:fixed}
+.tbl thead th{
+  position:sticky;top:0;z-index:2;
+  font-size:10px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--fg-3);text-align:left;
+  padding:12px 18px;
+  background:var(--bg-1);
+  border-bottom:1px solid var(--line-2);
+  white-space:nowrap;
+  user-select:none;
+  cursor:pointer;
+}
+.tbl thead th .sort{display:inline-block;margin-left:6px;color:var(--fg-4);font-size:9px}
+.tbl thead th.sorted{color:var(--gold)}
+.tbl thead th.sorted .sort{color:var(--gold)}
+.tbl thead th.num{text-align:right}
+.tbl thead th:hover{color:var(--fg-1)}
+.tbl thead th.action{cursor:default;text-align:center}
+.tbl thead th.action:hover{color:var(--fg-3)}
+
+.tbl tbody tr{
+  transition:background .15s var(--ease);
+  cursor:pointer;
+}
+.tbl tbody td{
+  padding:12px 18px;
+  border-bottom:1px solid var(--line-1);
+  vertical-align:middle;
+  color:var(--fg-1);
+  font-variant-numeric:tabular-nums;
+  position:relative;
+}
+.assets-table-wrap #tbl tbody td{overflow:hidden}
+.assets-table-wrap #tbl tbody td>*{max-width:100%}
+.assets-table-wrap #tbl tbody td.details-cell{padding-left:4px;padding-right:4px!important}
+.assets-table-wrap #tbl thead th[data-column="details"]{padding-left:4px;padding-right:4px!important;text-align:center}
+.tbl tbody tr.data > td,
+.tbl tbody tr.loading-row > td{height:var(--asset-table-row-h)}
+.tbl tbody td.num{text-align:right;font-family:var(--mono);font-weight:500}
+.tbl tbody td.details-cell{width:112px;text-align:center}
+.tbl tbody tr:hover td{background:var(--bg-3)}
+.tbl tbody tr.data:hover td:first-child::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold);border-radius:0 2px 2px 0}
+.assets-table-wrap #tbl tbody tr.data.terminal-row:hover td:first-child{border-radius:0 0 0 var(--r-xl)}
+.assets-table-wrap #tbl tbody tr.data.terminal-row:hover td:last-child{border-radius:0 0 var(--r-xl) 0}
+.assets-table-wrap #tbl tbody tr.data.terminal-row:hover td:first-child::before{border-radius:0 2px 0 var(--r-xl)}
+.tbl tbody tr.expanded td{background:var(--gold-wash);border-bottom-color:transparent}
+.tbl tbody tr.data.expanded td:first-child::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:var(--gold);border-radius:0 2px 2px 0;box-shadow:0 0 12px var(--gold-line)}
+.tbl tbody tr.loading-row{cursor:default}
+.tbl tbody tr.loading-row:hover td{background:transparent}
+.loading-asset{display:flex;align-items:center;gap:14px}
+.skel-avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0}
+.skel-stack{display:flex;flex-direction:column;gap:8px;min-width:180px}
+.skel-line{height:12px}
+.skel-line.name{width:112px}
+.skel-line.meta{width:180px;height:10px}
+.skel-num{height:16px;width:86px;margin-left:auto}
+.skel-num.wide{width:116px}
+
+/* asset cell */
+.asset-cell{display:flex;align-items:center;gap:14px;min-width:0}
+.chev{width:14px;height:14px;color:var(--fg-4);flex-shrink:0;transition:transform .2s var(--ease),color .2s var(--ease)}
+tr.expanded .chev{transform:rotate(90deg);color:var(--gold)}
+.tok-ico{width:30px;height:30px;border-radius:50%;background:var(--bg-3);border:1px solid var(--line-2);overflow:hidden;flex-shrink:0;display:grid;place-items:center}
+.tok-ico img{width:100%;height:100%;object-fit:cover}
+.tok-ico img.grayscale{filter:grayscale(1) brightness(1.5)}
+.tok-ico.full-logo{border-radius:5px;background:transparent;border-color:transparent}
+.tok-ico.full-logo img{object-fit:contain;border-radius:0}
+.tok-meta{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.tok-name{font-weight:600;color:var(--fg-1);display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
+.tok-name .tok-sym{font-family:var(--mono);font-size:13px;letter-spacing:.2px;flex-shrink:0}
+.tok-name .tok-long{color:var(--fg-3);font-weight:400;font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tok-tags{display:flex;align-items:center;gap:6px;margin-top:3px;min-width:0;overflow:hidden;white-space:nowrap}
+.tag{font-size:10px;letter-spacing:.4px;padding:2px 7px;border-radius:4px;color:var(--fg-2);background:var(--bg-3);border:1px solid var(--line-2);font-weight:500;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+.tag.chain{text-transform:capitalize}
+.tag.chain .dot{width:6px;height:6px;border-radius:50%}
+.tag.chain img{width:12px;height:12px;border-radius:50%;object-fit:cover}
+.chain-badge{display:inline-flex;align-items:center;gap:7px;color:var(--fg-1);font-size:12.5px;font-weight:500;line-height:1.2;white-space:nowrap}
+.chain-badge img{width:15px;height:15px;border-radius:50%;object-fit:contain;background:var(--bg-3);flex-shrink:0}
+.tag.cat{color:var(--fg-3)}
+.tag.odolo{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.token-ca{
+  display:inline-flex;align-items:center;gap:4px;
+  font-family:var(--mono);font-size:10px;line-height:1;
+  color:var(--fg-3);text-decoration:none;
+  padding:3px 6px;border-radius:4px;
+  background:rgba(255,255,255,.025);border:1px solid var(--line-1);
+  white-space:nowrap;flex-shrink:0;
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+}
+.token-ca:hover{color:var(--fg-1);border-color:var(--gold-line);background:var(--gold-wash)}
+.token-ca-label{font-size:9px;letter-spacing:.6px;color:var(--fg-4);font-family:'Inter',system-ui,sans-serif;font-weight:700}
+.token-ca-copy{
+  width:20px;height:20px;border-radius:5px;
+  display:inline-grid;place-items:center;flex-shrink:0;
+  color:var(--fg-3);background:rgba(255,255,255,.025);border:1px solid var(--line-1);
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+}
+.token-ca-copy:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.token-ca-copy.copied{color:var(--up);border-color:var(--up)}
+.token-ca-copy svg{width:11px;height:11px}
+.asset-toggle{
+  height:24px;width:100%;max-width:72px;min-width:0;padding:0 6px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:3px;flex-shrink:0;overflow:hidden;
+  color:var(--gold);background:var(--gold-wash);border:1px solid rgba(201,162,39,.28);cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(201,162,39,.035);
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease),box-shadow .15s var(--ease),transform .15s var(--ease);
+}
+.asset-toggle svg{width:12px;height:12px;transition:transform .18s var(--ease);pointer-events:none}
+.asset-toggle span{font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;line-height:1;pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.asset-toggle:hover{color:var(--fg-1);border-color:var(--gold);background:rgba(201,162,39,.16);box-shadow:0 0 0 3px rgba(201,162,39,.08);transform:translateY(-1px)}
+.tbl tbody tr.expanded .asset-toggle{color:var(--fg-1);border-color:var(--gold);background:rgba(201,162,39,.18);box-shadow:0 0 0 3px rgba(201,162,39,.08)}
+.tbl tbody tr.expanded .asset-toggle svg{transform:rotate(180deg)}
+.assets-table-wrap #tbl tbody td.details-cell .asset-toggle{margin:0 auto;max-width:72px}
+
+/* chain dot colors — restrained */
+.dot-berachain{background:#c9a227}
+.dot-arbitrum{background:#6b8aa8}
+.dot-ethereum{background:#8a8a9e}
+.dot-botanix{background:#b4796b}
+.dot-mantle{background:#6a7a6e}
+.dot-polygonzkevm{background:#8a6b9a}
+.dot-xlayer{background:#7a7a6b}
+
+/* price cell */
+.price-val{color:var(--fg-1);font-family:var(--mono)}
+
+/* APY / supply cell — vertical breakdown (original-style) */
+.apy-cell{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0;line-height:1.1}
+.apy-val{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--profit);letter-spacing:-.3px;line-height:1}
+.apy-val.negative{color:var(--down)}
+.apy-lines{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.apy-line{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.1px;
+  line-height:1.2;white-space:nowrap;
+}
+.apy-line[data-tip]{cursor:help}
+.apy-line .apy-dash{color:var(--fg-4);font-weight:400}
+.apy-line .apy-src{font-weight:500}
+.apy-line .apy-num{font-weight:600;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+/* Lending — native yield, neutral white; total supply carries green signal */
+.apy-line.lending .apy-src,
+.apy-line.lending .apy-num{color:var(--fg-1)}
+.apy-line.lending .apy-dash{color:var(--fg-3)}
+/* oDOLO — protocol rewards, gold accent */
+.apy-line.odolo .apy-src,
+.apy-line.odolo .apy-num{color:var(--gold)}
+.apy-line.odolo .apy-dash{color:var(--gold-line)}
+/* External yield — subtle blue, separate from lending and oDOLO */
+.apy-line.yield .apy-src,
+.apy-line.yield .apy-num{color:var(--yield)}
+.apy-line.yield .apy-dash{color:rgba(143,183,200,.50)}
+.apy-line.negative .apy-src,
+.apy-line.negative .apy-num{color:var(--down)}
+.apy-line.negative .apy-dash{color:rgba(180,121,107,.50)}
+
+/* borrow cell */
+.bw-val{font-family:var(--mono);font-size:14px;font-weight:500;color:var(--down)}
+
+.exp-row{cursor:default}
+.exp-row > td{
+  position:relative;height:auto;padding:0!important;white-space:normal;
+  background:linear-gradient(90deg,rgba(201,162,39,.035),var(--bg-1) 42px);
+  border-bottom-color:var(--line-2);
+}
+.exp-row > td::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:var(--gold);box-shadow:0 0 12px var(--gold-line)}
+.exp-row:hover > td{background:linear-gradient(90deg,rgba(201,162,39,.035),var(--bg-1) 42px)}
+.asset-detail-panel{
+  position:relative;width:100%;margin:0;overflow:visible;border:0;border-radius:0;background:transparent;box-shadow:none;
+}
+.asset-detail-panel::before{display:none}
+.asset-detail-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 22px 12px;
+}
+.asset-detail-eyebrow{font-size:9.5px;letter-spacing:1.45px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:6px}
+.asset-detail-title{font-size:15px;font-weight:700;color:var(--fg-1);letter-spacing:0;line-height:1.25}
+.asset-detail-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.asset-detail-pill{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;
+  border:1px solid var(--line-2);background:rgba(255,255,255,.025);
+  color:var(--fg-2);font-family:var(--mono);font-size:10.5px;font-weight:600;white-space:nowrap;
+}
+.asset-detail-pill.gold{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.asset-detail-pill.chain{text-transform:uppercase;letter-spacing:.9px;font-size:10px;gap:7px}
+.asset-detail-pill .adp-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;background-color:var(--bg-3);background-position:center;background-size:cover;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.asset-detail-pill img{width:12px;height:12px;border-radius:50%;object-fit:cover}
+.asset-detail-content{
+  position:relative;margin:0 12px 14px 14px;border:1px solid rgba(201,162,39,.14);border-radius:8px;
+  background:rgba(0,0,0,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 1px 0 rgba(255,255,255,.025);
+}
+.exp-body{
+  display:flex;flex-direction:column;gap:22px;
+  padding:16px 18px 18px;
+  background:transparent;
+}
+.exp-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line-1);border-radius:8px;background:rgba(255,255,255,.012);overflow:hidden}
+.exp-stat{padding:14px 16px;border-left:1px solid rgba(255,255,255,.055)}
+.exp-stat:first-child{border-left:0}
+.exp-stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--fg-3);font-weight:600;margin-bottom:8px}
+.exp-stat .val{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--fg-1);letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.exp-stat .val.accent{color:var(--profit)}
+.exp-stat .val.down{color:var(--down)}
+.exp-stat .sub{font-size:11px;color:var(--fg-3);margin-top:4px;font-family:var(--mono)}
+.exp-bar{margin-top:8px;width:100%;height:4px;border-radius:2px;background:var(--bg-3);overflow:hidden}
+.exp-bar>span{display:block;height:100%;background:var(--gold);opacity:.75}
+
+/* ========== YIELD CALCULATOR ========== */
+.calc{
+  background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.006));
+  border:1px solid rgba(201,162,39,.14);
+  border-radius:8px;
+  padding:18px 20px;
+}
+.calc-head{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-bottom:14px}
+.calc-title{display:flex;align-items:center;gap:10px;font-size:11px;text-transform:uppercase;letter-spacing:1.6px;font-weight:700;color:var(--gold)}
+.calc-title svg{width:14px;height:14px}
+.calc-help{
+  position:relative;
+  width:17px;height:17px;border-radius:50%;
+  display:inline-grid;place-items:center;
+  margin-left:-2px;
+  font-size:11px;line-height:1;font-weight:800;letter-spacing:0;
+  color:var(--fg-2);background:var(--bg-3);border:1px solid var(--line-2);
+  cursor:help;
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+}
+.calc-help:hover,.calc-help:focus-visible{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash);outline:0}
+.calc-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%}
+.calc-tabs{display:inline-flex;background:var(--bg-3);border:1px solid var(--line-2);border-radius:8px;padding:3px;position:relative}
+.calc-tab{padding:6px 14px;font-size:11px;font-weight:600;letter-spacing:.4px;color:var(--fg-3);border-radius:6px;cursor:pointer;transition:color .2s var(--ease),background .2s var(--ease)}
+.calc-tab.active{color:var(--bg-0);background:var(--gold)}
+.calc-input-wrap{
+  display:inline-flex;align-items:stretch;
+  background:var(--bg-4);border:1px solid var(--line-2);
+  border-radius:8px;height:34px;overflow:hidden;
+  transition:border-color .2s var(--ease);
+}
+.calc-input-wrap:focus-within{border-color:var(--gold-line)}
+.calc-input-wrap .dol{
+  display:flex;align-items:center;
+  padding-left:12px;padding-right:2px;
+  color:var(--fg-3);font-family:var(--mono);font-size:13px;
+}
+.calc-input{
+  background:none;border:0;outline:0;
+  color:var(--fg-1);font-family:var(--mono);font-size:13px;
+  width:120px;text-align:right;
+  padding:0 10px 0 4px;
+}
+/* Kill native spinners */
+.calc-input::-webkit-outer-spin-button,
+.calc-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.calc-input[type="number"]{-moz-appearance:textfield;appearance:textfield}
+
+/* Custom stepper */
+.calc-steppers{
+  display:flex;flex-direction:column;
+  width:22px;flex-shrink:0;
+  border-left:1px solid var(--line-2);
+}
+.calc-stepper{
+  flex:1;
+  display:grid;place-items:center;
+  background:transparent;border:0;cursor:pointer;
+  color:var(--fg-3);
+  transition:background .12s var(--ease),color .12s var(--ease);
+  -webkit-user-select:none;user-select:none;
+}
+.calc-stepper + .calc-stepper{border-top:1px solid var(--line-2)}
+.calc-stepper:hover{background:var(--bg-3);color:var(--fg-1)}
+.calc-stepper:active,
+.calc-stepper.pressing{background:var(--gold-wash);color:var(--gold)}
+.calc-stepper svg{width:9px;height:9px;stroke-width:2.5;pointer-events:none}
+
+.calc-max{
+  background:var(--bg-3);border:1px solid var(--line-2);
+  padding:0 12px;height:34px;margin-left:8px;
+  border-radius:8px;
+  font-size:10px;letter-spacing:1px;font-weight:600;
+  color:var(--fg-2);cursor:pointer;
+  transition:color .15s var(--ease),border-color .15s var(--ease),background .15s var(--ease);
+}
+.calc-max:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+
+.calc-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:4px}
+.calc-row{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
+  padding:10px 14px;border-radius:8px;background:rgba(255,255,255,.015);
+  border:1px solid var(--line-1);
+}
+.calc-row.metric-focus{
+  grid-column:1/-1;position:relative;overflow:hidden;
+  grid-template-columns:minmax(0,1fr) minmax(128px,auto) minmax(0,1fr);
+  padding:15px 18px 15px 20px;
+  background:linear-gradient(180deg,rgba(255,255,255,.026),rgba(255,255,255,.006));
+  border-color:rgba(201,162,39,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.052),inset 0 -1px 0 rgba(0,0,0,.24),0 10px 22px rgba(0,0,0,.13);
+}
+/* Unified gold identity chrome on every metric row — single left rail, semantic color lives on the numbers only. */
+.calc-row.metric-focus::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,rgba(201,162,39,.6),rgba(201,162,39,.16));
+  opacity:.85;pointer-events:none;
+}
+.calc-row.metric-focus .calc-side{gap:5px}
+.calc-row.metric-focus .calc-side-lbl{font-size:10px;color:var(--fg-3)}
+.calc-row.metric-focus .calc-side-val{
+  font-size:24px;line-height:1.05;font-weight:700;letter-spacing:-.7px;
+  color:var(--metric-value);text-shadow:0 0 16px rgba(var(--metric-rgb),.12);
+}
+.calc-row.metric-focus .calc-side:first-child .calc-side-lbl{color:var(--fg-3)}
+.calc-row.metric-focus .calc-side:first-child .calc-side-val{
+  font-size:22px;font-weight:650;color:rgba(var(--metric-rgb),.72);text-shadow:none;
+}
+.calc-row.metric-focus .calc-side:last-child .calc-side-lbl{color:var(--fg-2);font-weight:700}
+.calc-row.metric-focus .calc-side:last-child .calc-side-val{
+  font-size:26px;font-weight:760;color:var(--metric-value);text-shadow:0 0 18px rgba(var(--metric-rgb),.16);
+}
+.calc-row.metric-focus .calc-arrow{width:26px;height:16px;opacity:.9;color:var(--metric-value)}
+.calc-row.lending-focus{order:-3;--metric-rgb:117,184,123;--metric-value:var(--profit-hi)}
+.calc-row.borrow-focus{order:-1;--metric-rgb:180,121,107;--metric-value:#d29689;opacity:.62;transition:opacity .25s var(--ease)}
+.calc-row.borrow-focus:hover,.calc-row.borrow-focus:focus-within{opacity:1}
+.calc-row.util-focus{order:-2;--metric-rgb:201,162,39;--metric-value:var(--gold-hi)}
+/* Hero answer — the user-level result shown before market mechanics */
+.calc-hero{padding:12px 16px;margin-bottom:12px;background:linear-gradient(135deg,var(--gold-wash),rgba(255,255,255,.015));border:1px solid var(--gold-line);border-radius:10px}
+.calc-hero-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.calc-hero-line.muted{color:var(--fg-3);font-size:12px}
+.calc-hero-amt{font-family:var(--mono);font-size:13px;color:var(--fg-2);font-weight:600;font-variant-numeric:tabular-nums}
+.calc-hero-verb{font-size:11px;color:var(--fg-3);letter-spacing:.2px}
+.calc-hero-earn{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.calc-hero-earn.down{color:var(--down)}
+.calc-hero-sub{margin-top:4px;font-size:10.5px;color:var(--fg-3);letter-spacing:.3px}
+.calc-presets{display:inline-flex;gap:6px}
+.calc-preset{padding:6px 10px;font-size:10.5px;font-weight:600;font-family:var(--mono);color:var(--fg-3);background:var(--bg-3);border:1px solid var(--line-2);border-radius:8px;cursor:pointer;transition:color .2s var(--ease),background .2s var(--ease),border-color .2s var(--ease)}
+.calc-preset:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.calc-preset.active{color:var(--bg-0);background:var(--gold);border-color:var(--gold)}
+.calc-mini{margin-top:2px;font-size:10px;color:var(--fg-3);letter-spacing:.4px;line-height:1.6}
+.calc-mini b{font-family:var(--mono);font-weight:600;color:var(--fg-3)}
+.calc-mini b.pos{color:var(--profit)}
+.calc-mini b.neg{color:var(--down)}
+.calc-mini b.neu{color:var(--gold-hi)}
+.calc-empty{padding:14px 16px;font-size:11.5px;color:var(--fg-3);background:var(--bg-3);border:1px dashed var(--line-3);border-radius:10px;line-height:1.5}
+.calc-impact{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:120px}
+.calc-impact-label{font-size:8.5px;line-height:1;text-transform:uppercase;letter-spacing:1px;color:var(--fg-3);font-weight:700;white-space:nowrap}
+.calc-delta{
+  display:inline-flex;align-items:center;justify-content:center;min-width:72px;
+  padding:5px 10px;border-radius:999px;
+  font-family:var(--mono);font-size:12px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;
+  color:var(--fg-1);background:rgba(255,255,255,.045);border:1px solid var(--line-2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.calc-impact.is-up .calc-delta{color:var(--profit);background:rgba(255,255,255,.026);border-color:rgba(46,204,113,.3)}
+.calc-impact.is-down .calc-delta{color:var(--down);background:rgba(255,255,255,.026);border-color:rgba(255,92,92,.3)}
+.calc-impact.is-flat .calc-delta{color:var(--fg-2);background:rgba(255,255,255,.026);border-color:var(--line-2)}
+.calc-impact.is-neutral .calc-delta{color:var(--gold-hi);background:rgba(255,255,255,.026);border-color:rgba(201,162,39,.3)}
+/* Inside a metric row the whole impact group follows the row's data color (direction read from the +/- sign). */
+.calc-row.metric-focus .calc-delta{
+  color:var(--metric-value);
+  background:rgba(var(--metric-rgb),.07);
+  border-color:rgba(var(--metric-rgb),.32);
+}
+.calc-side{display:flex;flex-direction:column;gap:2px;min-width:0}
+.calc-side-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--fg-3);font-weight:600}
+.calc-side-val{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--fg-1);font-variant-numeric:tabular-nums}
+.calc-side-val.right{text-align:right}
+.calc-side-val.gold{color:var(--gold)}
+.calc-side-val.profit{color:var(--profit)}
+.calc-side-val.down{color:var(--down)}
+.calc-arrow{width:16px;height:10px;opacity:.6;color:var(--fg-3)}
+.calc-arrow.up-dir{color:var(--up)}
+.calc-arrow.down-dir{color:var(--down)}
+
+/* =========================================================================
+   PROTOCOL INFO CARD (bottom of page)
+   ========================================================================= */
+.proto{margin-top:24px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-card);position:relative}
+.proto::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--gold-line) 30%,var(--gold-line) 70%,transparent 100%);
+  opacity:.6;pointer-events:none;
+}
+.proto-head{display:flex;flex-direction:column;align-items:flex-start;gap:16px;padding:22px 24px 20px;border-bottom:1px solid var(--line-1)}
+.proto-brand{display:flex;align-items:center;gap:14px}
+.proto-brand-mark{width:40px;height:40px;border-radius:50%;background:var(--bg-3);border:1px solid var(--line-2);display:grid;place-items:center;overflow:hidden;flex-shrink:0}
+.proto-brand-mark img{width:28px;height:28px;object-fit:contain}
+.proto-brand-text{display:flex;flex-direction:column;gap:2px}
+.proto-brand-name{font-size:15px;font-weight:600;color:var(--fg-1);letter-spacing:-.1px}
+.proto-brand-sub{font-size:12px;color:var(--fg-3)}
+
+.proto-links{display:flex;align-items:center;gap:14px;flex-wrap:wrap;row-gap:10px}
+.proto-links-group{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.proto-links-label{
+  font-size:9.5px;text-transform:uppercase;letter-spacing:1.4px;font-weight:600;
+  color:var(--fg-4);margin-right:4px;
+}
+.proto-links-sep{width:1px;height:18px;background:var(--line-2);flex-shrink:0}
+.proto-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  height:32px;padding:0 12px;
+  font-size:12px;color:var(--fg-2);
+  background:var(--bg-3);border:1px solid var(--line-2);border-radius:999px;
+  transition:border-color .2s var(--ease),color .2s var(--ease),background .2s var(--ease);
+}
+.proto-pill:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.proto-pill svg{width:13px;height:13px}
+
+.proto-body{padding:20px 24px 24px}
+.proto-body-head{
+  font-size:11px;text-transform:uppercase;letter-spacing:1.6px;
+  color:var(--fg-2);font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.proto-body-head::after{
+  content:"";flex:1;height:1px;background:var(--line-1);
+}
+.proto-addrs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.proto-addr{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 14px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:var(--r-md);
+  transition:border-color .2s var(--ease),background .2s var(--ease);
+  cursor:pointer;
+}
+.proto-addr:hover{border-color:var(--gold-line);background:rgba(201,162,39,.02)}
+.proto-addr-left{display:flex;align-items:center;gap:12px;min-width:0}
+.proto-token{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.proto-token img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--bg-3);border:1px solid var(--line-2)}
+.proto-token-name{font-size:14px;font-weight:600;color:var(--fg-1);letter-spacing:-.1px}
+.proto-chain-chip{display:inline-flex;align-items:center;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--fg-2);padding:3px 8px;border-radius:4px;background:var(--bg-3);border:1px solid var(--line-2);font-weight:500}
+.proto-chain-chip .dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;background-color:var(--bg-2);background-position:center;background-size:cover;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.proto-chain-chip .dot-ethereum{background-image:url("https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg")}
+.proto-chain-chip .dot-berachain{background-image:url("https://icons.llamao.fi/icons/chains/rsz_berachain.jpg");background-size:126%}
+.proto-addr-right{display:flex;align-items:center;gap:8px;min-width:0;flex:1;justify-content:flex-end}
+.proto-addr-hex{font-family:var(--mono);font-size:11px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.proto-copy{width:26px;height:26px;border-radius:6px;background:var(--bg-3);border:1px solid var(--line-2);display:grid;place-items:center;color:var(--fg-3);flex-shrink:0;cursor:pointer;transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease)}
+.proto-copy:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.proto-copy.copied{color:var(--up);border-color:var(--up)}
+.proto-explore{width:26px;height:26px;border-radius:6px;background:var(--bg-3);border:1px solid var(--line-2);display:grid;place-items:center;color:var(--fg-3);flex-shrink:0;cursor:pointer;transition:color .2s var(--ease),border-color .2s var(--ease),background .2s var(--ease)}
+.proto-explore:hover{color:var(--gold);border-color:var(--gold-line);background:var(--gold-wash)}
+.proto-explore svg,.proto-copy svg{width:12px;height:12px;pointer-events:none}
+
+/* footer small */
+.foot{margin-top:24px;text-align:center;font-size:11px;color:var(--fg-3);letter-spacing:.3px}
+
+/* responsive */
+@media (max-width:980px){
+  .hero-grid{grid-template-columns:1fr 1fr}
+  .exp-stats-row{grid-template-columns:1fr 1fr}
+  .calc-grid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .wrap{padding:24px 16px 48px}
+  .hero{padding:22px 18px}
+  .hero-grid{grid-template-columns:1fr}
+  .hero-card{border-left:0;border-top:1px solid var(--line-1);padding:14px 0 0}
+  .hero-card:first-child{border-top:0;padding-top:0}
+  .hero-meta{margin-left:0;width:100%}
+  .search{width:100%}
+  .tb-left,.tb-right{width:100%}
+  .asset-detail-head{padding:15px 16px;align-items:flex-start;flex-direction:column}
+  .asset-detail-meta{justify-content:flex-start}
+  .asset-detail-content{margin:0 10px 14px 12px}
+  .exp-body{padding:14px 12px 16px}
+  .exp-stats-row{grid-template-columns:1fr}
+  .exp-stat{border-left:0;border-top:1px solid rgba(255,255,255,.055)}
+  .exp-stat:first-child{border-top:0}
+  .calc-row.metric-focus{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);padding:14px 14px 14px 16px}
+  .calc-row.metric-focus .calc-side-lbl{font-size:8.5px;letter-spacing:1px}
+  .calc-row.metric-focus .calc-side-val{font-size:20px}
+  .calc-row.metric-focus .calc-side:first-child .calc-side-val{font-size:19px}
+  .calc-row.metric-focus .calc-side:last-child .calc-side-val{font-size:21px}
+  .calc-row.metric-focus .calc-arrow{width:20px;height:13px}
+  .calc-impact{min-width:104px;gap:4px}
+  .calc-impact-label{font-size:7.5px;letter-spacing:.8px}
+  .calc-delta{min-width:62px;padding:5px 8px;font-size:11px}
+  .proto-addrs{grid-template-columns:1fr}
+  .proto-addr-hex{max-width:120px}
+  .proto-links-sep{display:none}
+  .proto-links{flex-direction:column;align-items:flex-start;gap:10px}
+  .site-top{gap:10px;margin-bottom:32px}
+  .site-brand{padding:12px 0 0}
+  .site-brand img{max-width:460px}
+  .nav-item{padding:8px 10px;gap:6px;font-size:12px}
+  .nav-item.active::after{display:none}
+}
+</style>
+<script src="count-up.js?v=20260821-smooth-resume-v1"></script>
+</head>
+<body class="assets-loading">
+<div class="wrap">
+
+  <!-- TOP -->
+  <header class="site-top">
+    <div class="site-brand">
+      <img src="TwojeKrypto%20dashboard.webp" alt="Dolomite Dashboard · Powered by TwojeKrypto">
+    </div>
+    <div class="site-nav-wrap">
+      <nav class="site-nav">
+        <a class="nav-item" href="./portfolio/" data-tab="portfolio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18v12H3z"/><path d="M3 7l3-4h12l3 4"/><path d="M3 12h6a3 3 0 0 0 6 0h6"/></svg>
+          <span>Portfolio</span>
+        </a>
+        <a class="nav-item active" href="./assets/" data-tab="assets">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span>Assets</span>
+        </a>
+        <a class="nav-item" href="./tvl/" data-tab="tvl">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 4 5-8"/></svg>
+          <span>TVL</span>
+        </a>
+        <a class="nav-item" href="./dolo/" data-tab="dolo">
+          <img src="dolo-logo.svg" alt="" onerror="this.style.display='none'">
+          <span>DOLO</span>
+        </a>
+        <a class="nav-item" href="./odolo/" data-tab="odolo">
+          <img src="odolo-logo-official.svg" alt="" onerror="this.style.display='none'">
+          <span>oDOLO</span>
+        </a>
+        <a class="nav-item" href="./vedolo/" data-tab="vedolo">
+          <img src="vedolo-logo.svg" alt="" onerror="this.style.display='none'">
+          <span>veDOLO</span>
+        </a>
+        <a class="nav-item" href="./earn/" data-tab="earn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+          <span>Earn</span>
+        </a>
+        <a class="nav-item" href="./borrow/" data-tab="borrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M12 13v4"/><path d="m9.5 15 2.5 2.5L14.5 15"/></svg>
+          <span>Borrow</span>
+        </a>
+        <a class="nav-item" href="./supply/" data-tab="supply">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span>Supply</span>
+        </a>
+        <a class="nav-item" href="./rewards/" data-tab="rewards">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+            <span>Rewards</span>
+        </a>
+        <a class="nav-item" href="./revenue/" data-tab="revenue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-7"/><path d="M16 7h3v3"/></svg>
+          <span>Revenue</span>
+        </a>
+        <a class="nav-item" href="./history/" data-tab="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/><path d="M12 7v5l3 2"/></svg>
+          <span>History</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-brand">
+      <div class="hero-token-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="hero-token-text">
+        <div class="hero-token-title">Assets</div>
+        <div class="hero-token-sub"><b>Dolomite</b> lending markets</div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-live"><span class="dot"></span>Live markets</div>
+      </div>
+    </div>
+    <div class="hero-headline">
+      <div class="hero-value"><span class="pct" data-count-value="0">0.000</span><span class="pct-symbol">%</span></div>
+      <div class="hero-token">
+        <img src="https://app.dolomite.io/static/media/HONEY.3f0a04d651c47e52fb627fd616a9b92e.svg" onerror="this.style.display='none'" alt="HONEY">
+        <span class="hero-token-name">HONEY</span>
+        <span class="hero-token-sep" aria-hidden="true"></span>
+        <span class="hero-chain-pill"><img src="https://icons.llamao.fi/icons/chains/rsz_berachain.jpg" onerror="this.style.display='none'" alt="">Berachain</span>
+      </div>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-card supply">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+          Avg Supply APR
+        </div>
+        <div class="hc-value" data-count-value="0">0.000%</div>
+        <div class="hc-sub">across 42 markets</div>
+      </div>
+      <div class="hero-card odolo">
+        <div class="hc-label">
+          <img src="odolo-logo-official.svg" alt="" onerror="this.style.display='none'">
+          oDOLO Boost
+        </div>
+        <div class="hc-value" data-count-value="0">+0.000%</div>
+        <div class="hc-sub">average incentive</div>
+      </div>
+      <div class="hero-card markets">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Total Markets
+        </div>
+        <div class="hc-value" data-count-value="0">0</div>
+        <div class="hc-sub">listed assets · 3 active chains</div>
+      </div>
+      <div class="hero-card borrow">
+        <div class="hc-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          Highest Borrow
+        </div>
+        <div class="hc-value" data-count-value="0">0.000%</div>
+        <div class="hc-sub">USDC · Berachain</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSETS CARD -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">
+        <h2>Dolomite Assets</h2>
+        <span class="count-badge" id="count-badge">42 markets</span>
+      </div>
+      <div class="card-meta"><span class="pulse"></span>Loading data update…</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <div class="tb-left">
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="q" type="text" placeholder="Search token or paste address…" spellcheck="false" autocomplete="off">
+          <button class="search-clear" type="button" aria-label="Clear search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+          <span class="kbd">/</span>
+        </label>
+
+        <!-- CATEGORY -->
+        <div class="dd" id="dd-cat">
+          <button class="dd-btn" data-dd="cat">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span class="lbl">All Assets</span>
+            <span class="count">3/3</span>
+            <span class="dd-clear" data-clear="cat" role="button" aria-label="Clear category filter">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="dd-panel">
+            <div class="dd-panel-head">Category</div>
+            <div class="dd-list">
+              <div class="dd-opt active" data-cat="all"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><div class="dd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></div><span class="dd-opt-name">All Assets</span></div>
+              <div class="dd-opt" data-cat="stable"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://app.dolomite.io/static/media/USDC.5f67b2404ca2e547fb00b70128d132cd.svg" onerror="this.style.display='none'"><span class="dd-opt-name">Stablecoins</span></div>
+              <div class="dd-opt" data-cat="btc"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://app.dolomite.io/static/media/WBTC.f3c8718835179e7543b5.png" onerror="this.style.display='none'"><span class="dd-opt-name">BTC &amp; Wrapped</span></div>
+              <div class="dd-opt" data-cat="eth"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://app.dolomite.io/static/media/ETH.6a879eb637c89695e6c5f5dc65c8c927.svg" onerror="this.style.display='none'"><span class="dd-opt-name">ETH &amp; LSTs</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NETWORK -->
+        <div class="dd" id="dd-net">
+          <button class="dd-btn" data-dd="net">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <span class="lbl">All Chains</span>
+            <span class="count">5/5</span>
+            <span class="dd-clear" data-clear="net" role="button" aria-label="Clear chain filter">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="2.5" y1="2.5" x2="9.5" y2="9.5"/><line x1="9.5" y1="2.5" x2="2.5" y2="9.5"/></svg>
+            </span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="dd-panel">
+            <div class="dd-panel-head">Chain</div>
+            <div class="dd-list">
+              <div class="dd-opt select-all active" data-net="all"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><div class="dd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div><span class="dd-opt-name">All Chains</span></div>
+              <div class="dd-opt" data-net="ethereum"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://icons.llamao.fi/icons/chains/rsz_ethereum.jpg" onerror="this.style.display='none'"><span class="dd-opt-name">Ethereum</span></div>
+              <div class="dd-opt" data-net="berachain"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://icons.llamao.fi/icons/chains/rsz_berachain.jpg" onerror="this.style.display='none'"><span class="dd-opt-name">Berachain</span></div>
+              <div class="dd-opt" data-net="arbitrum"><span class="dd-opt-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></span><img src="https://icons.llamao.fi/icons/chains/rsz_arbitrum.jpg" onerror="this.style.display='none'"><span class="dd-opt-name">Arbitrum</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tb-right">
+        <!-- REWARDS -->
+        <div class="dd" id="dd-rw">
+          <button class="dd-btn rw-btn" data-dd="rw">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            <span class="lbl">Rewards</span>
+            <span class="rw-dots"><span class="rw-dot on"></span><span class="rw-dot on"></span><span class="rw-dot on"></span></span>
+            <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="dd-panel dd-panel-rw">
+            <div class="dd-panel-head">Supply sources</div>
+            <div class="rw-list">
+              <div class="rw-item active" data-rw="lending">
+                <div class="rw-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+                <span class="rw-dot-src lending"></span>
+                <div class="rw-name">Lending</div>
+              </div>
+              <div class="rw-item active" data-rw="odolo">
+                <div class="rw-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+                <span class="rw-dot-src odolo"></span>
+                <div class="rw-name">oDOLO</div>
+              </div>
+              <div class="rw-item active" data-rw="yield">
+                <div class="rw-check"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg></div>
+                <span class="rw-dot-src yield"></span>
+                <div class="rw-name">Yield</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pill-switch" id="aprapy">
+          <div class="slider" style="width:52px;transform:translateX(0)"></div>
+          <span class="opt active" data-val="APR">APR</span>
+          <span class="opt" data-val="APY">APY</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="tbl-wrap assets-table-wrap">
+      <table class="tbl" id="tbl">
+        <colgroup>
+          <col data-column="chain" style="width:10.958796%"><col data-column="asset" style="width:44.661649%"><col data-column="price" style="width:10.088748%">
+          <col data-column="supply" style="width:12.202853%"><col data-column="borrow" style="width:9.587956%"><col data-column="details" style="width:12.500000%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th data-sort="chain" data-column="chain" style="padding-left:32px">Chain</th>
+            <th data-sort="name" data-column="asset">Asset</th>
+            <th data-sort="price" data-column="price" class="num">Price</th>
+            <th data-sort="supply" data-column="supply" class="num">Supply</th>
+            <th data-sort="borrow" data-column="borrow" class="num">Borrow</th>
+            <th data-column="details" class="action" style="padding-right:32px">Details</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"><!-- filled by JS --></tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- PROTOCOL INFO -->
+  <section class="proto">
+    <div class="proto-head">
+      <div class="proto-brand">
+        <div class="proto-brand-mark">
+          <img src="dolo-logo.svg" alt="DOLO" onerror="this.outerHTML='<span style=&quot;color:var(--gold);font-weight:800;font-size:16px&quot;>◆</span>'">
+        </div>
+        <div class="proto-brand-text">
+          <div class="proto-brand-name">Dolomite</div>
+          <div class="proto-brand-sub" id="proto-market-sub">Lending &amp; margin · <b>live markets</b> · <b>3 active chains</b></div>
+        </div>
+      </div>
+      <div class="proto-links">
+        <div class="proto-links-group">
+          <span class="proto-links-label">Community</span>
+          <a class="proto-pill" href="https://twitter.com/Dolomite_io" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>Twitter</a>
+          <a class="proto-pill" href="https://t.me/dolomite_official" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>Telegram</a>
+          <a class="proto-pill" href="https://discord.com/invite/uDRzrB2YgP" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037 19.736 19.736 0 00-4.885 1.515.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.955 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/></svg>Discord</a>
+        </div>
+        <span class="proto-links-sep"></span>
+        <div class="proto-links-group">
+          <span class="proto-links-label">Resources</span>
+          <a class="proto-pill" href="https://dolomite.io" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>Website</a>
+          <a class="proto-pill" href="https://docs.dolomite.io/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Docs</a>
+          <a class="proto-pill" href="https://github.com/dolomite-exchange" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>GitHub</a>
+          <a class="proto-pill" href="https://docs.dolomite.io/security/audits" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Audits</a>
+        </div>
+      </div>
+    </div>
+    <div class="proto-body">
+      <div class="proto-body-head">Contract Addresses</div>
+      <div class="proto-addrs" id="proto-addrs"><!-- filled by JS --></div>
+    </div>
+  </section>
+
+  <div class="foot">Assets dashboard · onchain market data · <span id="now"></span></div>
+</div>
+
+<script>
+/* ==========================================================================
+   STATIC FALLBACK — replaced at runtime by official Dolomite rates
+   ========================================================================== */
+// Kept only so the design renders if official APIs are temporarily unavailable.
+// The live path below replaces this with api.dolomite.io interest rates and
+// subgraph liquidity/price data before marking the table as official.
+let ASSETS = [
+  {"sym":"AAVE","name":"Aave","cat":"eth","chain":"arbitrum","price":25.46,"odolo":1.59,"yield":0,"lending":1.65,"borrow":5.09,"tvl":8490000,"util":38.07,"dust":false},
+  {"sym":"ARB","name":"Arbitrum","cat":"eth","chain":"arbitrum","price":21.53,"odolo":1.44,"yield":0,"lending":0.56,"borrow":1.81,"tvl":6630000,"util":36.08,"dust":false},
+  {"sym":"DAI","name":"Dai Stablecoin","cat":"stable","chain":"arbitrum","price":1,"odolo":0.02,"yield":0,"lending":4.64,"borrow":9.45,"tvl":53620000,"util":57.76,"dust":false},
+  {"sym":"DPX","name":"Dopex","cat":"eth","chain":"arbitrum","price":23.05,"odolo":0.23,"yield":0,"lending":1.36,"borrow":4.15,"tvl":6130000,"util":38.43,"dust":false},
+  {"sym":"GMX","name":"GMX","cat":"eth","chain":"arbitrum","price":16.9,"odolo":2.23,"yield":0,"lending":1.76,"borrow":6.74,"tvl":7110000,"util":30.79,"dust":false},
+  {"sym":"GRAIL","name":"Camelot GRAIL","cat":"eth","chain":"arbitrum","price":24.71,"odolo":1.7,"yield":0,"lending":2.4,"borrow":6.98,"tvl":1410000,"util":40.39,"dust":false},
+  {"sym":"JONES","name":"Jones DAO","cat":"eth","chain":"arbitrum","price":18.43,"odolo":0.51,"yield":0,"lending":1.18,"borrow":4.23,"tvl":6020000,"util":32.73,"dust":false},
+  {"sym":"LINK","name":"Chainlink","cat":"eth","chain":"arbitrum","price":34.8,"odolo":1.67,"yield":0,"lending":1.1,"borrow":3.27,"tvl":8430000,"util":39.44,"dust":false},
+  {"sym":"MAGIC","name":"Magic","cat":"eth","chain":"arbitrum","price":7.38,"odolo":0.62,"yield":0,"lending":0.57,"borrow":2.69,"tvl":7360000,"util":24.9,"dust":false},
+  {"sym":"MIM","name":"Magic Internet Money","cat":"stable","chain":"arbitrum","price":1,"odolo":2.05,"yield":0,"lending":6.46,"borrow":9.7,"tvl":11480000,"util":78.39,"dust":false},
+  {"sym":"PENDLE","name":"Pendle","cat":"eth","chain":"arbitrum","price":6.12,"odolo":1.1,"yield":0,"lending":0.51,"borrow":2.98,"tvl":1510000,"util":20.01,"dust":false},
+  {"sym":"RDNT","name":"Radiant","cat":"eth","chain":"arbitrum","price":38.52,"odolo":1.94,"yield":0,"lending":1.04,"borrow":6.08,"tvl":4650000,"util":20.09,"dust":false},
+  {"sym":"UNI","name":"Uniswap","cat":"eth","chain":"arbitrum","price":3.34,"odolo":0.62,"yield":0,"lending":1.33,"borrow":5.23,"tvl":1580000,"util":29.91,"dust":false},
+  {"sym":"USDC","name":"USD Coin","cat":"stable","chain":"arbitrum","price":1,"odolo":0.48,"yield":0,"lending":5.64,"borrow":8.75,"tvl":61050000,"util":75.83,"dust":false},
+  {"sym":"USDC.e","name":"USD Coin (Bridged)","cat":"stable","chain":"arbitrum","price":1,"odolo":1.06,"yield":0,"lending":4.4,"borrow":7.64,"tvl":37790000,"util":67.83,"dust":false},
+  {"sym":"USDS","name":"Sky USD","cat":"stable","chain":"arbitrum","price":1,"odolo":1.14,"yield":0,"lending":6.48,"borrow":11.29,"tvl":54230000,"util":67.57,"dust":false},
+  {"sym":"USDT","name":"Tether","cat":"stable","chain":"arbitrum","price":1,"odolo":2.43,"yield":0,"lending":8.18,"borrow":13.68,"tvl":50890000,"util":70.37,"dust":false},
+  {"sym":"USDe","name":"USDe","cat":"stable","chain":"arbitrum","price":1,"odolo":1.41,"yield":0,"lending":6.19,"borrow":10.91,"tvl":23940000,"util":66.77,"dust":false},
+  {"sym":"WBTC","name":"Wrapped Bitcoin","cat":"btc","chain":"arbitrum","price":94401.92,"odolo":0.3,"yield":0,"lending":2.07,"borrow":5.75,"tvl":138400000,"util":42.42,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"arbitrum","price":3561.64,"odolo":1.31,"yield":0,"lending":1.04,"borrow":3.27,"tvl":83440000,"util":37.25,"dust":false},
+  {"sym":"WOETH","name":"Wrapped Origin ETH","cat":"eth","chain":"arbitrum","price":12.09,"odolo":1.69,"yield":0,"lending":1.22,"borrow":3.65,"tvl":58340000,"util":39.17,"dust":false},
+  {"sym":"XAI","name":"Xai","cat":"eth","chain":"arbitrum","price":33.22,"odolo":1.81,"yield":0,"lending":1.44,"borrow":5.59,"tvl":3780000,"util":30.22,"dust":false},
+  {"sym":"ezETH","name":"Renzo ETH","cat":"eth","chain":"arbitrum","price":11.33,"odolo":1.88,"yield":8.06,"lending":2.92,"borrow":7.27,"tvl":55370000,"util":47.24,"dust":false},
+  {"sym":"rETH","name":"Rocket Pool ETH","cat":"eth","chain":"arbitrum","price":7.8,"odolo":1.93,"yield":4.74,"lending":1.91,"borrow":4.53,"tvl":112270000,"util":49.51,"dust":false},
+  {"sym":"rsETH","name":"KelpDAO Restaked ETH","cat":"eth","chain":"arbitrum","price":18.75,"odolo":1.56,"yield":5.17,"lending":1.85,"borrow":4.09,"tvl":41670000,"util":53.1,"dust":false},
+  {"sym":"sUSDS","name":"Staked sUSDS","cat":"stable","chain":"arbitrum","price":1,"odolo":1.26,"yield":7.91,"lending":8.17,"borrow":13.95,"tvl":23170000,"util":68.86,"dust":false},
+  {"sym":"tBTC","name":"Threshold BTC","cat":"btc","chain":"arbitrum","price":94805.48,"odolo":0.56,"yield":0,"lending":1.68,"borrow":4.21,"tvl":16710000,"util":47.04,"dust":false},
+  {"sym":"uniBTC","name":"Universal BTC","cat":"btc","chain":"arbitrum","price":94195.42,"odolo":1.08,"yield":0,"lending":1.32,"borrow":3.34,"tvl":31600000,"util":46.42,"dust":false},
+  {"sym":"weETH","name":"Wrapped eETH","cat":"eth","chain":"arbitrum","price":18.99,"odolo":0.51,"yield":3.31,"lending":3.18,"borrow":6.61,"tvl":91840000,"util":56.59,"dust":false},
+  {"sym":"wstETH","name":"Wrapped Staked ETH","cat":"eth","chain":"arbitrum","price":6.84,"odolo":0.59,"yield":4.36,"lending":1.75,"borrow":4.46,"tvl":6820000,"util":46.27,"dust":false},
+  {"sym":"BYUSD","name":"Berachain Yield USD","cat":"stable","chain":"berachain","price":1,"odolo":3.7,"yield":0,"lending":6.63,"borrow":12.83,"tvl":27770000,"util":60.82,"dust":false},
+  {"sym":"DOLO","name":"Dolomite","cat":"eth","chain":"berachain","price":1.2,"odolo":2.72,"yield":0,"lending":1.09,"borrow":4.76,"tvl":1100000,"util":26.94,"dust":false},
+  {"sym":"HENLO","name":"Henlo","cat":"eth","chain":"berachain","price":15.49,"odolo":3.22,"yield":0,"lending":0.89,"borrow":5.6,"tvl":8850000,"util":18.79,"dust":false},
+  {"sym":"HONEY","name":"Honey","cat":"stable","chain":"berachain","price":1,"odolo":0.56,"yield":0,"lending":6.61,"borrow":11.84,"tvl":65030000,"util":65.66,"dust":false},
+  {"sym":"IR","name":"Infrared","cat":"eth","chain":"berachain","price":22.3,"odolo":3.08,"yield":0,"lending":0.58,"borrow":4.2,"tvl":7120000,"util":16.38,"dust":false},
+  {"sym":"LBTC","name":"Lombard BTC","cat":"btc","chain":"berachain","price":94516.53,"odolo":4.13,"yield":0,"lending":1.67,"borrow":4.54,"tvl":97700000,"util":43.3,"dust":false},
+  {"sym":"NECT","name":"Nectar","cat":"stable","chain":"berachain","price":1,"odolo":4.06,"yield":0,"lending":5.68,"borrow":9,"tvl":71670000,"util":74.28,"dust":false},
+  {"sym":"OHM","name":"Olympus","cat":"eth","chain":"berachain","price":14.53,"odolo":1.73,"yield":0,"lending":0.76,"borrow":5.74,"tvl":4330000,"util":15.51,"dust":false},
+  {"sym":"PT-iBGT-25DEC2025","name":"PT iBGT DEC2025","cat":"eth","chain":"berachain","price":45.37,"odolo":2.38,"yield":6.67,"lending":0.45,"borrow":2.34,"tvl":7240000,"util":22.42,"dust":false},
+  {"sym":"STONE","name":"StakeStone Ether","cat":"eth","chain":"berachain","price":11.22,"odolo":3.61,"yield":0,"lending":2.57,"borrow":7.22,"tvl":94100000,"util":41.92,"dust":false},
+  {"sym":"SolvBTC","name":"Solv BTC","cat":"btc","chain":"berachain","price":94688.62,"odolo":2.51,"yield":0,"lending":1.88,"borrow":5.84,"tvl":46640000,"util":37.79,"dust":false},
+  {"sym":"USDC.e","name":"USD Coin (Bridged)","cat":"stable","chain":"berachain","price":1,"odolo":2.45,"yield":0,"lending":5.2,"borrow":10.55,"tvl":13930000,"util":58,"dust":false},
+  {"sym":"USDa","name":"USDa","cat":"stable","chain":"berachain","price":1,"odolo":1.85,"yield":0,"lending":6.02,"borrow":11.72,"tvl":29840000,"util":60.39,"dust":false},
+  {"sym":"USDe","name":"USDe","cat":"stable","chain":"berachain","price":1,"odolo":3.85,"yield":0,"lending":5.54,"borrow":10.38,"tvl":19860000,"util":62.79,"dust":false},
+  {"sym":"USD₮0","name":"Tether (USDT0)","cat":"stable","chain":"berachain","price":1,"odolo":2.47,"yield":0,"lending":4.32,"borrow":7.11,"tvl":60770000,"util":71.54,"dust":false},
+  {"sym":"WBERA","name":"Wrapped Bera","cat":"eth","chain":"berachain","price":42.58,"odolo":0.7,"yield":0,"lending":1.78,"borrow":5.34,"tvl":5520000,"util":39.13,"dust":false},
+  {"sym":"WBTC","name":"Wrapped Bitcoin","cat":"btc","chain":"berachain","price":95162.3,"odolo":0.57,"yield":0,"lending":1.24,"borrow":4.46,"tvl":22240000,"util":32.84,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"berachain","price":3567.3,"odolo":3.28,"yield":0,"lending":2.01,"borrow":6.07,"tvl":26420000,"util":38.91,"dust":false},
+  {"sym":"beraETH","name":"Bera ETH","cat":"eth","chain":"berachain","price":8.46,"odolo":0.68,"yield":0,"lending":1.93,"borrow":6.43,"tvl":39590000,"util":35.33,"dust":false},
+  {"sym":"diBGT","name":"Dolomite iBGT","cat":"eth","chain":"berachain","price":29.5,"odolo":2.63,"yield":8.42,"lending":0.84,"borrow":2.22,"tvl":7650000,"util":44.29,"dust":false},
+  {"sym":"eBTC","name":"Ethena BTC","cat":"btc","chain":"berachain","price":93733.92,"odolo":0.9,"yield":0,"lending":2.37,"borrow":5.77,"tvl":22570000,"util":48.28,"dust":false},
+  {"sym":"iBERA","name":"Infrared Bera","cat":"eth","chain":"berachain","price":16.08,"odolo":3.42,"yield":8.09,"lending":0.26,"borrow":1.8,"tvl":9270000,"util":17.27,"dust":false},
+  {"sym":"oriBGT","name":"Origin iBGT","cat":"eth","chain":"berachain","price":6.16,"odolo":1.69,"yield":8.4,"lending":0.43,"borrow":2.47,"tvl":4620000,"util":20.68,"dust":false},
+  {"sym":"pol-rUSD","name":"Polygon rUSD","cat":"eth","chain":"berachain","price":15.07,"odolo":3.56,"yield":0,"lending":2.08,"borrow":5.46,"tvl":770000,"util":44.86,"dust":false},
+  {"sym":"rUSD","name":"Reserve USD","cat":"stable","chain":"berachain","price":1,"odolo":1.57,"yield":0,"lending":7.33,"borrow":11.84,"tvl":33010000,"util":72.82,"dust":false},
+  {"sym":"sUSDe","name":"Staked USDe","cat":"stable","chain":"berachain","price":1,"odolo":2.81,"yield":5.9,"lending":5.77,"borrow":11.11,"tvl":11680000,"util":61.05,"dust":false},
+  {"sym":"sWBERA","name":"Staked WBERA","cat":"eth","chain":"berachain","price":35.36,"odolo":0.85,"yield":4.83,"lending":0.95,"borrow":2.94,"tvl":4460000,"util":38.21,"dust":false},
+  {"sym":"savUSD","name":"Staked USD","cat":"stable","chain":"berachain","price":1,"odolo":4.34,"yield":2.62,"lending":6.34,"borrow":9.51,"tvl":28280000,"util":78.49,"dust":false},
+  {"sym":"srUSD","name":"Staked Reserve USD","cat":"stable","chain":"berachain","price":1,"odolo":2.56,"yield":0,"lending":4.81,"borrow":8.1,"tvl":70390000,"util":69.89,"dust":false},
+  {"sym":"uniBTC","name":"Universal BTC","cat":"btc","chain":"berachain","price":94126.59,"odolo":1.14,"yield":0,"lending":1.34,"borrow":5.19,"tvl":108580000,"util":30.29,"dust":false},
+  {"sym":"weETH","name":"Wrapped eETH","cat":"eth","chain":"berachain","price":13.06,"odolo":1.89,"yield":5,"lending":1.82,"borrow":4.2,"tvl":62380000,"util":51.05,"dust":false},
+  {"sym":"wgBERA","name":"Wrapped gBERA","cat":"eth","chain":"berachain","price":43.79,"odolo":2.43,"yield":2.77,"lending":0.89,"borrow":4.1,"tvl":8870000,"util":25.65,"dust":false},
+  {"sym":"CRV","name":"Curve","cat":"eth","chain":"ethereum","price":12.13,"odolo":2.2,"yield":0,"lending":0.69,"borrow":2.38,"tvl":9580000,"util":33.9,"dust":false},
+  {"sym":"DOLO","name":"Dolomite","cat":"eth","chain":"ethereum","price":49.75,"odolo":1.53,"yield":0,"lending":0.47,"borrow":1.69,"tvl":860000,"util":32.39,"dust":false},
+  {"sym":"LINK","name":"Chainlink","cat":"eth","chain":"ethereum","price":10.89,"odolo":1.24,"yield":0,"lending":1.43,"borrow":5.33,"tvl":7740000,"util":31.54,"dust":false},
+  {"sym":"SolvBTC","name":"Solv BTC","cat":"btc","chain":"ethereum","price":94195.91,"odolo":0.29,"yield":0,"lending":0.73,"borrow":2.03,"tvl":84850000,"util":42.04,"dust":false},
+  {"sym":"USD1","name":"USD1","cat":"stable","chain":"ethereum","price":1,"odolo":2.04,"yield":0,"lending":7.07,"borrow":10.97,"tvl":8990000,"util":75.78,"dust":false},
+  {"sym":"USDC","name":"USD Coin","cat":"stable","chain":"ethereum","price":1,"odolo":2.08,"yield":0,"lending":6.72,"borrow":11.75,"tvl":67380000,"util":67.28,"dust":false},
+  {"sym":"USDT","name":"Tether","cat":"stable","chain":"ethereum","price":1,"odolo":2.38,"yield":0,"lending":6.51,"borrow":11.44,"tvl":45570000,"util":66.99,"dust":false},
+  {"sym":"WBTC","name":"Wrapped Bitcoin","cat":"btc","chain":"ethereum","price":94692.99,"odolo":0.36,"yield":0,"lending":0.74,"borrow":2.22,"tvl":148060000,"util":39.18,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"ethereum","price":3481.55,"odolo":0.35,"yield":0,"lending":1.14,"borrow":3.1,"tvl":73990000,"util":43.36,"dust":false},
+  {"sym":"WLFI","name":"WLFI","cat":"eth","chain":"ethereum","price":25.97,"odolo":1.22,"yield":0,"lending":0.96,"borrow":4.74,"tvl":6370000,"util":23.71,"dust":false},
+  {"sym":"cUSD","name":"cUSD","cat":"stable","chain":"ethereum","price":1,"odolo":0.66,"yield":0,"lending":6.22,"borrow":12.76,"tvl":25500000,"util":57.37,"dust":false},
+  {"sym":"cbBTC","name":"Coinbase BTC","cat":"btc","chain":"ethereum","price":94482.89,"odolo":2.06,"yield":0,"lending":1.3,"borrow":4.48,"tvl":94950000,"util":34.12,"dust":false},
+  {"sym":"mETH","name":"Mantle Staked ETH","cat":"eth","chain":"ethereum","price":22.83,"odolo":1.97,"yield":6.8,"lending":2.27,"borrow":4.71,"tvl":114600000,"util":56.81,"dust":false},
+  {"sym":"rUSD","name":"Reserve USD","cat":"stable","chain":"ethereum","price":1,"odolo":1.09,"yield":0,"lending":6.74,"borrow":13.29,"tvl":26240000,"util":59.68,"dust":false},
+  {"sym":"sUSDe","name":"Staked USDe","cat":"stable","chain":"ethereum","price":1,"odolo":1.95,"yield":4.34,"lending":7.4,"borrow":13.49,"tvl":46720000,"util":64.54,"dust":false},
+  {"sym":"srUSD","name":"Staked Reserve USD","cat":"stable","chain":"ethereum","price":1,"odolo":2.42,"yield":0,"lending":6.04,"borrow":9.44,"tvl":55950000,"util":75.23,"dust":false},
+  {"sym":"stcUSD","name":"Staked cUSD","cat":"stable","chain":"ethereum","price":1,"odolo":2.03,"yield":0,"lending":5.93,"borrow":9.87,"tvl":7090000,"util":70.68,"dust":false},
+  {"sym":"weETH","name":"Wrapped eETH","cat":"eth","chain":"ethereum","price":11.68,"odolo":2.28,"yield":3.22,"lending":1.43,"borrow":3.94,"tvl":13660000,"util":42.65,"dust":false},
+  {"sym":"wsrUSD","name":"Wrapped Staked rUSD","cat":"stable","chain":"ethereum","price":1,"odolo":0.57,"yield":0,"lending":8.3,"borrow":13.64,"tvl":24090000,"util":71.55,"dust":false},
+  {"sym":"wstETH","name":"Wrapped Staked ETH","cat":"eth","chain":"ethereum","price":25.89,"odolo":1.91,"yield":2.33,"lending":1.47,"borrow":3.16,"tvl":84200000,"util":54.74,"dust":false},
+  {"sym":"FBTC","name":"Ignition FBTC","cat":"btc","chain":"mantle","price":93898.82,"odolo":2.4,"yield":0,"lending":0.81,"borrow":3.45,"tvl":101510000,"util":27.64,"dust":false},
+  {"sym":"USDC","name":"USD Coin","cat":"stable","chain":"mantle","price":1,"odolo":2.21,"yield":0,"lending":5.82,"borrow":10.95,"tvl":54540000,"util":62.58,"dust":false},
+  {"sym":"USDT","name":"Tether","cat":"stable","chain":"mantle","price":1,"odolo":1.96,"yield":0,"lending":4.76,"borrow":9.79,"tvl":17990000,"util":57.24,"dust":false},
+  {"sym":"USDY","name":"Ondo USD Yield","cat":"stable","chain":"mantle","price":1,"odolo":1.36,"yield":0,"lending":3.73,"borrow":7.83,"tvl":53850000,"util":56.09,"dust":false},
+  {"sym":"USDe","name":"USDe","cat":"stable","chain":"mantle","price":1,"odolo":1.84,"yield":0,"lending":3.77,"borrow":7.89,"tvl":72640000,"util":56.24,"dust":false},
+  {"sym":"WBTC","name":"Wrapped Bitcoin","cat":"btc","chain":"mantle","price":93591.4,"odolo":1.13,"yield":0,"lending":0.92,"borrow":2.37,"tvl":12970000,"util":45.61,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"mantle","price":3516.97,"odolo":2.15,"yield":0,"lending":1.42,"borrow":3.71,"tvl":84310000,"util":44.92,"dust":false},
+  {"sym":"WMNT","name":"Wrapped Mantle","cat":"eth","chain":"mantle","price":39.58,"odolo":1.96,"yield":0,"lending":0.91,"borrow":3,"tvl":9170000,"util":35.86,"dust":false},
+  {"sym":"cmETH","name":"Cached mETH","cat":"eth","chain":"mantle","price":8.51,"odolo":2.47,"yield":4.95,"lending":3.5,"borrow":6.92,"tvl":119100000,"util":59.53,"dust":false},
+  {"sym":"mETH","name":"Mantle Staked ETH","cat":"eth","chain":"mantle","price":20.4,"odolo":1.3,"yield":3.72,"lending":3.15,"borrow":7.56,"tvl":50000000,"util":49.03,"dust":false},
+  {"sym":"DAI","name":"Dai Stablecoin","cat":"stable","chain":"polygonzkevm","price":1,"odolo":0.26,"yield":0,"lending":4.58,"borrow":8.9,"tvl":56710000,"util":60.6,"dust":false},
+  {"sym":"LINK","name":"Chainlink","cat":"eth","chain":"polygonzkevm","price":17.15,"odolo":0.08,"yield":0,"lending":0.41,"borrow":2.14,"tvl":8950000,"util":22.47,"dust":false},
+  {"sym":"MATIC","name":"Matic","cat":"eth","chain":"polygonzkevm","price":36.43,"odolo":0.47,"yield":0,"lending":2.38,"borrow":6.59,"tvl":1230000,"util":42.55,"dust":false},
+  {"sym":"POL","name":"Polygon","cat":"eth","chain":"polygonzkevm","price":40.53,"odolo":1.34,"yield":0,"lending":1.6,"borrow":5.89,"tvl":4510000,"util":31.92,"dust":false},
+  {"sym":"USDC.E","name":"USD Coin (Bridged)","cat":"stable","chain":"polygonzkevm","price":1,"odolo":1.24,"yield":0,"lending":4.74,"borrow":7.34,"tvl":65620000,"util":75.98,"dust":false},
+  {"sym":"USDT","name":"Tether","cat":"stable","chain":"polygonzkevm","price":1,"odolo":1.6,"yield":0,"lending":4.51,"borrow":8.29,"tvl":26700000,"util":63.99,"dust":false},
+  {"sym":"WBTC","name":"Wrapped Bitcoin","cat":"btc","chain":"polygonzkevm","price":94471.59,"odolo":1.72,"yield":0,"lending":1.24,"borrow":3.54,"tvl":77910000,"util":41.26,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"polygonzkevm","price":3507.55,"odolo":1.69,"yield":0,"lending":1.29,"borrow":3.72,"tvl":91170000,"util":40.65,"dust":false},
+  {"sym":"USDC","name":"USD Coin","cat":"stable","chain":"xlayer","price":1,"odolo":1.7,"yield":0,"lending":8.55,"borrow":13.05,"tvl":78710000,"util":77.04,"dust":false},
+  {"sym":"USDT","name":"Tether","cat":"stable","chain":"xlayer","price":1,"odolo":0.6,"yield":0,"lending":7.24,"borrow":11.5,"tvl":14790000,"util":74.06,"dust":false},
+  {"sym":"WETH","name":"Wrapped Ether","cat":"eth","chain":"xlayer","price":3490.97,"odolo":1.51,"yield":0,"lending":2.23,"borrow":4.69,"tvl":1780000,"util":55.85,"dust":false},
+  {"sym":"WOKB","name":"Wrapped OKB","cat":"eth","chain":"xlayer","price":32.71,"odolo":0.72,"yield":0,"lending":1.36,"borrow":4.54,"tvl":1400000,"util":35.26,"dust":false}
+];
+
+/* Normalise lending APR to match the kink model output at current util
+   with a default 15% reserve factor — keeps every record self-consistent
+   so the calculator never jumps on a tiny deposit. */
+ASSETS.forEach(r => {
+  r.lending = +(r.borrow * r.util/100 * 0.85).toFixed(2);
+});
+
+/* ==========================================================================
+   STATE
+   ========================================================================== */
+const state = {
+  q:"",
+  cats: new Set(),    // empty set = "All Assets"
+  nets: new Set(),    // empty set = "All Chains"
+  sort:{key:"marketSupply",dir:"desc"},
+  rw:{odolo:true,yield:true,lending:true},
+  mode:"APR",
+  loading:true,
+  fallback:false,
+  expanded:new Set(),
+  calc:new Map()      // per-row calculator state {action, amount}
+};
+
+const CAT_LABELS = {stable:"Stablecoins", btc:"BTC & Wrapped", eth:"ETH & LSTs"};
+const CHAIN_LABELS = {
+  berachain:"Berachain", arbitrum:"Arbitrum", ethereum:"Ethereum",
+  botanix:"Botanix", mantle:"Mantle",
+  polygonzkevm:"Polygon zkEVM", xlayer:"X Layer"
+};
+const ACTIVE_ASSET_CHAIN_KEYS = new Set(["ethereum", "berachain", "arbitrum"]);
+let CHAIN_COUNT_TOTAL = ACTIVE_ASSET_CHAIN_KEYS.size;
+const ASSETS_CACHE_KEY = "dolomite-assets-live-rows-v3";
+const ASSETS_SNAPSHOT_URL = "assets_live.json";
+const ASSETS_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/* ==========================================================================
+   HELPERS
+   ========================================================================== */
+// Official Dolomite app CDN — same source used by liq-monitor.html
+// so every listed token renders with its real, full-colour icon.
+const DOLO_CDN = 'https://app.dolomite.io/static/media/';
+const SYMBOL_ICONS = {
+  // Stablecoins
+  'USDC'   : DOLO_CDN + 'USDC.5f67b2404ca2e547fb00b70128d132cd.svg',
+  'USDC.e' : DOLO_CDN + 'USDC.5f67b2404ca2e547fb00b70128d132cd.svg',
+  'USDC.E' : DOLO_CDN + 'USDC.5f67b2404ca2e547fb00b70128d132cd.svg',
+  'USDT'   : 'icons/usdt.png',
+  'USDT0'  : 'icons/usdt.png',
+  'USD₮0'  : 'icons/usdt.png',
+  'DAI'    : 'icons/dai.svg',
+  'USDM'   : DOLO_CDN + 'USDM.6c74738cd3a3499145fda4386f94cb8f.svg',
+  'wUSDM'  : DOLO_CDN + 'wUSDM.91bedb44039233b7c172ff95ea112192.svg',
+  'USDe'   : DOLO_CDN + 'USDe-alt.ce2f05f4bb09aa83c4dd5886a5a2886f.svg',
+  'sUSDe'  : DOLO_CDN + 'sUSDe.60857af2b2de944764d31ffa3711252c.svg',
+  'USDa'   : DOLO_CDN + 'USDa.d95d6e9683a87b9007323745861f6b74.svg',
+  'USDai'  : DOLO_CDN + 'USDai.8c41c3dde0d91e5e38e1aafb27cf6e55.svg',
+  'sUSDa'  : DOLO_CDN + 'sUSDa.dc563217493f063b521fe276283e0d51.svg',
+  'sUSDai' : DOLO_CDN + 'sUSDai.5a9e2565db913d6bbd950993cc04bcde.svg',
+  'savUSD' : DOLO_CDN + 'savUSD.a2df97177abb3f75f4313a7241aa5fb0.svg',
+  'rUSD'   : DOLO_CDN + 'rUSD.9b373643ab772af9dab0807b476b9afb.svg',
+  'srUSD'  : DOLO_CDN + 'srUSD.bef2b101351c2021e25a96dc70122077.svg',
+  'wsrUSD' : DOLO_CDN + 'srUSD.bef2b101351c2021e25a96dc70122077.svg',
+  'pol-rUSD': DOLO_CDN + 'pol-rUSD.315d0412835066838a187ecd29acb7ca.svg',
+  'BYUSD'  : DOLO_CDN + 'BYUSD.8c0a1d051c4192302d739dbae5928286.svg',
+  'NECT'   : DOLO_CDN + 'NECT.61b2d550cd59933e77667c3d75f73f5a.svg',
+  'HONEY'  : DOLO_CDN + 'HONEY.3f0a04d651c47e52fb627fd616a9b92e.svg',
+  'MIM'    : DOLO_CDN + 'MIM.3926602167b2dc6b73725f1cbd641130.svg',
+  'GRAI'   : DOLO_CDN + 'GRAI.34fe5f7729b8c43b63ff0ab77c7b2b51.svg',
+  'eUSD'   : DOLO_CDN + 'eUSD.5785fe83caa38875ac585eda225c0d02.svg',
+  'USDS'   : DOLO_CDN + 'USDs.106fa406e23ae22c8bb6120c2ed861f4.svg',
+  'sUSDS'  : DOLO_CDN + 'sUSDs.788070a4e1bbf5ab8c6130d47bdf8108.svg',
+  'USD0'   : 'icons/usd0.png',
+  'USD0++' : 'icons/usd0.png',
+  'deUSD'  : 'icons/deusd.png',
+  'sdeUSD' : 'icons/deusd.png',
+  'USDY'   : DOLO_CDN + 'USDY.56cf7a38e78550dd507090fe52a59b41.svg',
+  'USD1'   : DOLO_CDN + 'USD1.b88613f468d884c0a044350162ec22c2.svg',
+  'cUSD'   : 'icons/stcusd.png',
+  'stcUSD' : 'icons/stcusd.png',
+  // ETH & LSTs
+  'ETH'    : DOLO_CDN + 'ETH.6a879eb637c89695e6c5f5dc65c8c927.svg',
+  'WETH'   : DOLO_CDN + 'WETH.8f785563e47cbf373160.png',
+  'wstETH' : DOLO_CDN + 'wstETH.2e97640d284bbe78da3776549d27ec47.svg',
+  'savETH' : DOLO_CDN + 'savETH.1c28535854c4a65f2a4786a2f02ae499.svg',
+  'weETH'  : DOLO_CDN + 'weETH.ac3fd68b653520508855e997e756d116.svg',
+  'rETH'   : DOLO_CDN + 'rETH.bab59070c249d5b359fa196fed62e60e.svg',
+  'rsETH'  : DOLO_CDN + 'rsETH.2270aa7836bedfa00c1a1d2967df0c33.svg',
+  'ezETH'  : DOLO_CDN + 'ezETH.23c954d818f85c10660e5c0a476ff398.svg',
+  'mETH'   : DOLO_CDN + 'mETH.589d7c134eea64fa2033e80dced1e34d.svg',
+  'cmETH'  : DOLO_CDN + 'cmETH.8cab59dd270fad4e153b008454f9f54e.svg',
+  'beraETH': DOLO_CDN + 'beraETH.661651b3419b7bb331ab2ebcb427b21b.svg',
+  'WOETH'  : DOLO_CDN + 'WOETH.d17df010b680ea8c9c3e74d49b8e2e07.svg',
+  'STONE'  : DOLO_CDN + 'STONE-alt.bf62e30edc6330897c738a4f9f1f5179.svg',
+  'rswETH' : DOLO_CDN + 'rswETH.fc4bdb76a764bf110676766fd0185dfe.svg',
+  'tETH'   : DOLO_CDN + 'tETH.77b0839567f787ef80a76c3e83b90293.svg',
+  'ETH+'   : DOLO_CDN + 'ETH_plus.58a00bd8aa8caafbc3837b4dcd7a1786.svg',
+  'ETHx'   : DOLO_CDN + 'ETH_plus.58a00bd8aa8caafbc3837b4dcd7a1786.svg',
+  'ylstETH': DOLO_CDN + 'ylstETH.8b2fa7c2cee8860ed6acbc0fa174eba5.svg',
+  // BTC
+  'BTC'    : DOLO_CDN + 'BTC.ccaa294316dc68d8ecb092ef90e2c07c.svg',
+  'WBTC'   : DOLO_CDN + 'WBTC.f3c8718835179e7543b5.png',
+  'cbBTC'  : DOLO_CDN + 'CBBTC.fb6f792430a130d980920b6e69857bce.svg',
+  'uniBTC' : DOLO_CDN + 'uniBTC.bac6fdc858f4d751e79211986782ddd1.svg',
+  'LBTC'   : DOLO_CDN + 'LBTC.095d1662f9a83aea1c899fa1eeb84502.svg',
+  'tBTC'   : DOLO_CDN + 'tBTC.2907801a7fa28c6583322ad3c2931333.svg',
+  'SolvBTC': DOLO_CDN + 'solvBTC.326d594ebd54e4317f078b70f72a58b4.svg',
+  'SolvBTC.a': DOLO_CDN + 'solvBTC.326d594ebd54e4317f078b70f72a58b4.svg',
+  'xSolvBTC': DOLO_CDN + 'xSolvBTC.b2110d70dea973b20c4f1e6a137f2256.svg',
+  'solvBTCbbn': DOLO_CDN + 'solvBTCbbn.a4ffbb3feb4a22c2ca5564097b70f35c.svg',
+  'eBTC'   : DOLO_CDN + 'eBTC.e48b2e6a0a78d4ffc09991510cb5792b.svg',
+  'FBTC'   : DOLO_CDN + 'FBTC.f29f5d2839b1b765719121f8094c7f11.svg',
+  'PumpBTC': DOLO_CDN + 'PumpBTC.aa48de36289e8439daf0456c4252dd27.svg',
+  'pumpBTC': DOLO_CDN + 'PumpBTC.aa48de36289e8439daf0456c4252dd27.svg',
+  'pumpBTC.bera': DOLO_CDN + 'PumpBTC.aa48de36289e8439daf0456c4252dd27.svg',
+  'pBTC'   : DOLO_CDN + 'pBTC-2.33f92d1521de41c2fd041b11c9d77c7a.svg',
+  'stBTC'  : DOLO_CDN + 'stBTC.3935aab6a35bd55630f244a1f56631ba.svg',
+  'SBTC'   : DOLO_CDN + 'SBTC.42e2a04abe2a5a21904064d886e10804.svg',
+  'ylPumpBTC': DOLO_CDN + 'ylPumpBTC.4ed846397580cd47e2ac1cc59dba2d56.svg',
+  'ylpumpBTC': DOLO_CDN + 'ylPumpBTC.4ed846397580cd47e2ac1cc59dba2d56.svg',
+  'ylfBTC' : DOLO_CDN + 'WBTC.f3c8718835179e7543b5.png',
+  'ylBTCLRT': DOLO_CDN + 'ylBTCLRT.de3276def7f8a795b2215806ce3776d6.svg',
+  'ylBTCLST': DOLO_CDN + 'ylBTCLRT.de3276def7f8a795b2215806ce3776d6.svg',
+  'STONEBTC': DOLO_CDN + 'STONEBTC.4ca9c1ebc2fca809154e406e9afa589b.svg',
+  // Berachain
+  'BERA'   : DOLO_CDN + 'BERA.a24a9b40b3447dde7ea1d2cab4dd59e9.svg',
+  'WBERA'  : DOLO_CDN + 'wBERA.4ca51f80e3cd585d5152483f427d0416.svg',
+  'iBERA'  : DOLO_CDN + 'iBERA.10d1ede095601cbc9bb5bf3bcdcb22a1.svg',
+  'sWBERA' : DOLO_CDN + 'sWBERA.e2be8febc13f6552990168c4e232d62a.svg',
+  'wgBERA' : DOLO_CDN + 'wgBERA.e10d0909ba87a40264fe74050034b025.svg',
+  'iBGT'   : DOLO_CDN + 'iBGT.88932437445efa66139716bca4a9c19b.svg',
+  'oriBGT' : DOLO_CDN + 'oriBGT.7f3393531bde0f56498780c803133999.svg',
+  'diBGT'  : DOLO_CDN + 'iBGT.88932437445efa66139716bca4a9c19b.svg',
+  'BGT'    : DOLO_CDN + 'BGT.59af0fc7aad30ed3de49e3115ee24d04.svg',
+  'PT-iBGT-25DEC2025': DOLO_CDN + 'PT-iBGT.45a4b4c47be320270ac8d1ce32439d2a.svg',
+  // DeFi / Governance
+  'DOLO'   : 'dolo-logo.svg',
+  'ARB'    : DOLO_CDN + 'ARB.f8b26a91d3f23a571be6398aa1a1f119.svg',
+  'LINK'   : DOLO_CDN + 'LINK.e6e8d688b54af33e1f99.png',
+  'GMX'    : DOLO_CDN + 'GMX.b836adc14ee095fd9b7671e718878333.svg',
+  'PENDLE' : DOLO_CDN + 'PENDLE.e4e3db03c3798bf15a6c384ab5de3fee.svg',
+  'AAVE'   : DOLO_CDN + 'AAVE.a9c152c66f6bed5f3d0865b8d5ea0dba.svg',
+  'UNI'    : DOLO_CDN + 'UNI.fbe3002e628fbf39d75525ae192d3665.svg',
+  'CRV'    : DOLO_CDN + 'CRV.f927723690ec12fcc8381902a361c75e.svg',
+  'DPX'    : DOLO_CDN + 'DPX.ac054aa02be296979160d68dbb594a39.svg',
+  'GRAIL'  : DOLO_CDN + 'GRAIL.13f8e457ed0e3d6868b41f28eb431819.svg',
+  'JONES'  : DOLO_CDN + 'JONES.3ce2e6a8fb1444d9d6439e5781e6c2c1.svg',
+  'PREMIA' : DOLO_CDN + 'PREMIA.6c5c2339f3179353bb163b4e53d8dfa1.svg',
+  'MAGIC'  : DOLO_CDN + 'MAGIC.e86265b765bebd6be26b2485691ab714.svg',
+  'RDNT'   : DOLO_CDN + 'RDNT.92d507e82611bb1e4353e8b8cae0a73a.svg',
+  'XAI'    : DOLO_CDN + 'XAI.ed6137b5d4b6078ac5061beb0e9b78f5.svg',
+  'WLFI'   : DOLO_CDN + 'WLFI.2c1e57c98e3cad7282c40941b36ee606.svg',
+  'OHM'    : DOLO_CDN + 'OHM.2df913d6b9413f26311c1df9718d1461.svg',
+  'IR'     : DOLO_CDN + 'IR.4f115e858cbe4dbe82da00a8443ab1af.svg',
+  'KDK'    : DOLO_CDN + 'KDK.31acd6ac4abb4a8c30812380c009f685.svg',
+  'HENLO'  : DOLO_CDN + 'HENLO.8d50b084294cb406094f0005d46c2c75.svg',
+  'oUSDT'  : 'icons/usdt.png',
+  // Network / L2
+  'MNT'    : DOLO_CDN + 'MNT.7e882ac93f636391a8f7d2e0841cad98.svg',
+  'WMNT'   : DOLO_CDN + 'WMNT.a58988c614392a216cc8937be5ab96db.svg',
+  'OKB'    : DOLO_CDN + 'OKB.dfac9609700af55b3d9ef4e0e5b28f01.svg',
+  'WOKB'   : DOLO_CDN + 'WOKB.4a6ddee6f2dfa841dd0932eab45ae376.svg',
+  'POL'    : DOLO_CDN + 'MATIC.dfc4843b6db6db48662b1db5f752f9f1.svg',
+  'MATIC'  : DOLO_CDN + 'MATIC.dfc4843b6db6db48662b1db5f752f9f1.svg',
+  // Pendle PT tokens
+  'PT-GLP' : DOLO_CDN + 'PT-GLP.10ed789425b588fe57650640de551bed.svg',
+  'PT-rETH': DOLO_CDN + 'PT-rETH.e2b8a22fc3817c3a51225d7ffb5e616b.svg',
+  'PT-wstETH': DOLO_CDN + 'PT-wstETH.09d3f15856b64c9b4f64c8de1264db37.svg',
+  'PT-weETH': DOLO_CDN + 'PT-weETH.24d74aa18d08440b7f662eba78dcc52c.svg',
+  'PT-eETH': DOLO_CDN + 'PT-weETH.24d74aa18d08440b7f662eba78dcc52c.svg',
+  'PT-ezETH': DOLO_CDN + 'PT-ezETH.d1ed194653ea88e9f3fe8c029064d654.svg',
+  'PT-rsETH': DOLO_CDN + 'PT-rsETH.857e86584fe78053a1044b78df689b4d.svg',
+  'PT-mETH': DOLO_CDN + 'PT-mETH.793642f12d4c303ecf771107c77ecfbb.svg',
+  'PT-cmETH': DOLO_CDN + 'PT-cmETH.f49c697e967386e0fd082040501e92e0.svg',
+  'PT-USDe': DOLO_CDN + 'PT-USDe.b5a8d24289b509fe4e6b4c702a790828.svg',
+  'PT-MNT' : DOLO_CDN + 'PT-MNT.19aa4a53e3aa4337407a1502ae89fc31.svg',
+  // GMX V2 / GLV market tokens from the official Dolomite Earn app
+  'gmARB-USD': DOLO_CDN + 'ARB-GM.50df3ed4a1a52b938992cb5e08efbc36.svg',
+  'gmBTC-USD': DOLO_CDN + 'WBTC-GM.6e7f69538bb02b42b881b86aea5c6d6e.svg',
+  'gmETH-USD': DOLO_CDN + 'ETH-GM.0b7d447f3c11298af07411c926352c71.svg',
+  'gmLINK-USD': DOLO_CDN + 'LINK-GM.7d4b33346ec9822f9dc7c22a393f7698.svg',
+  'gmBTC'  : DOLO_CDN + 'WBTC-GM.6e7f69538bb02b42b881b86aea5c6d6e.svg',
+  'gmETH'  : DOLO_CDN + 'ETH-GM.0b7d447f3c11298af07411c926352c71.svg',
+  'gmUNI-USD': DOLO_CDN + 'UNI-GM.8a4dfd0dc79f5b60138039338d28a6c7.svg',
+  'gmAAVE-USD': DOLO_CDN + 'gmAAVE.e032a2febd818f511cf782e09b12f212.svg',
+  'gmDOGE-USD': DOLO_CDN + 'gmDOGE.36090e2ebcd305890c779e005d41d331.svg',
+  'gmGMX-USD': DOLO_CDN + 'gmGMX.2c5cb2e0f1769629b38580607b77ecbc.svg',
+  'gmSOL-USD': DOLO_CDN + 'gmSOL.73d56a4a2dcf3d39fc5c946b8c65c631.svg',
+  'gmWstETH-USD': DOLO_CDN + 'wstETH.2e97640d284bbe78da3776549d27ec47.svg',
+  'gmGMX'  : DOLO_CDN + 'gmGMX.2c5cb2e0f1769629b38580607b77ecbc.svg',
+  'gmPENDLE-USD': DOLO_CDN + 'gmPENDLE.cd8acede00414f70056c0fb9aa2baa7c.svg',
+  'gmPEPE-USD': DOLO_CDN + 'gmPEPE.966f4beb1b823729066c29c52921b664.svg',
+  'gmWIF-USD': DOLO_CDN + 'gmWIF.8dfcfc27c0c56651a2e523e97c7fdcb4.svg',
+  'GLV-BTC': DOLO_CDN + 'GLV-BTC.c576682a1343bbfde84710a572b5a68e.svg',
+  'GLV-ETH': DOLO_CDN + 'GLV-ETH.092b4c8a9412efd58d3542d26bc5a522.svg',
+};
+Object.assign(SYMBOL_ICONS, globalThis.DOLOMITE_TOKEN_ICONS || {});
+const TOKEN_ICON_OVERRIDES = {
+  'arbitrum:0x2c799166c9f0dbf9efc5004cbce4c5a37fa39329': SYMBOL_ICONS['gmARB-USD'],
+  'arbitrum:0x1e8e8b7a2f827b3bc12b00ee402145061b7050ef': SYMBOL_ICONS['gmBTC-USD'],
+  'arbitrum:0x505582242757f16d72f8c4462a616e388ca1b074': SYMBOL_ICONS['gmETH-USD'],
+  'arbitrum:0x18cb14564fbb015bd3439220d177799355abc0e0': SYMBOL_ICONS['gmLINK-USD'],
+  'arbitrum:0xb15bbbfcff6c411410c66642306d1ffa7ecec4d8': SYMBOL_ICONS['gmBTC'],
+  'arbitrum:0x2d165a76dd3e552df3860789331ab73c5a3d7f92': SYMBOL_ICONS['gmETH'],
+  'arbitrum:0x20d51cb520c4622dcc3d7e35003dbab07d547e7e': SYMBOL_ICONS['gmUNI-USD'],
+  'arbitrum:0x24c9121c75c099b38d40020872b8a0d2c27c614d': SYMBOL_ICONS['gmAAVE-USD'],
+  'arbitrum:0x1beed3b7d1237b7773b5c4c249933e3ca5e027c1': SYMBOL_ICONS['gmDOGE-USD'],
+  'arbitrum:0x5c99f6cf6069698d234d50bf69ebd2f53e45ed1c': SYMBOL_ICONS['gmGMX-USD'],
+  'arbitrum:0x1ebb1c7023addbb2b6e30e6f4c8d4a4440bfd412': SYMBOL_ICONS['gmSOL-USD'],
+  'arbitrum:0xc587646f67b38739006ed0200e2e0a26fdb01c9b': SYMBOL_ICONS['gmWstETH-USD'],
+  'arbitrum:0xcf248baf933c7b1b876b997246f25021a65383b3': SYMBOL_ICONS['gmGMX'],
+  'arbitrum:0xe5d6fe410c69b44c357403a1936b3bfaddbe340b': SYMBOL_ICONS['gmPENDLE-USD'],
+  'arbitrum:0x6586f1db71513daf94b0431156d225a46c00f20b': SYMBOL_ICONS['gmPEPE-USD'],
+  'arbitrum:0xf5063b40fa66ab2fbda2e6807ac5759a41a1b0c3': SYMBOL_ICONS['gmWIF-USD'],
+  'arbitrum:0x7e584529bb40220a2bd5d0c13e3d65abd4a47f0e': SYMBOL_ICONS['GLV-BTC'],
+  'arbitrum:0x11f4532c05fb8ea6320b1dc155bfdc2498a5d8b4': SYMBOL_ICONS['GLV-ETH'],
+  'arbitrum:0x51fc0f6660482ea73330e414efd7808811a57fa2': SYMBOL_ICONS['PREMIA'],
+  'arbitrum:0x894134a25a5fac1c2c26f1d8fbf05111a3cb9487': SYMBOL_ICONS['GRAI'],
+  'arbitrum:0x12275dcb9048680c4be40942ea4d92c74c63b844': SYMBOL_ICONS['eUSD'],
+  'arbitrum:0x18c14c2d707b2212e17d1579789fc06010cfca23': SYMBOL_ICONS['ETH+'],
+  'berachain:0xe946dd7d03f6f5c440f68c84808ca88d26475fc5': SYMBOL_ICONS['ylfBTC'],
+  'berachain:0x1fcca65fb6ae3b2758b9b2b394cb227eae404e1e': SYMBOL_ICONS['pumpBTC.bera'],
+  'berachain:0x91a6af4c8cb1673ab0d776828b6b271ac3da9dcb': SYMBOL_ICONS['USD0'],
+  'berachain:0x30ea2d525ef7c234f8aa6e3a8909b88f71244cb0': SYMBOL_ICONS['USD0++'],
+  'berachain:0x7203fb920421170cc4da001d758fde8f391a0570': SYMBOL_ICONS['deUSD'],
+  'berachain:0xaf51434ac57f05e0bc397739c15cf653dbdbd86d': SYMBOL_ICONS['sdeUSD'],
+};
+const tokenIcon = (sym, row={}) => {
+  const addrKey = row.chain && row.addr ? `${row.chain}:${String(row.addr).toLowerCase()}` : "";
+  const s = String(sym || "").trim();
+  return TOKEN_ICON_OVERRIDES[addrKey]
+    || row.icon
+    || SYMBOL_ICONS[s]
+    || SYMBOL_ICONS[s.toUpperCase()]
+    || SYMBOL_ICONS[s.replace(/-\\d{1,2}[A-Z]{3}\\d{4}$/i, "")]
+    || 'dolomite-logo.svg';
+};
+const tokIcon = tokenIcon;
+const GRAYSCALE_SYMBOLS = new Set(['CRV','USD0','USD0++','deUSD','sdeUSD','MATIC','POL','stcUSD','cUSD','USDT','cbBTC']);
+const tokenIconClass = (sym)=>GRAYSCALE_SYMBOLS.has(String(sym || "").trim()) ? "grayscale" : "";
+const FULL_LOGO_SYMBOL_PATTERN = /^(?:wstETH|ylstETH|(?:d?PT|d?YT)-|gm(?!x$)|dGM(?:$|[-\s])|d?GLV|(?:m|plv|dplv|dfs|magic|s)GLP)/i;
+const tokenIconFrameClass = sym => FULL_LOGO_SYMBOL_PATTERN.test(String(sym || "").trim()) ? "full-logo" : "";
+const chainIcon = (chain)=>`https://icons.llamao.fi/icons/chains/rsz_${chain==="polygonzkevm"?"polygon%20zkevm":chain==="xlayer"?"x%20layer":chain}.jpg`;
+
+const fmtPrice = (v)=>{
+  if(v>=1000) return "$"+v.toLocaleString("en-US",{maximumFractionDigits:0});
+  if(v>=1) return "$"+v.toFixed(2);
+  return "$"+v.toFixed(4);
+};
+const fmtChg = (v)=>(v>=0?"+":"")+v.toFixed(2)+"%";
+const fmtPct = (v)=>v.toFixed(2)+"%";
+function deltaClass(next, prev, invert=false){
+  const delta = next - prev;
+  if(Math.abs(delta) <= 0.005) return "is-flat";
+  return invert ? (delta < 0 ? "is-up" : "is-down") : (delta > 0 ? "is-up" : "is-down");
+}
+function lendingDeltaClass(sim){
+  return deltaClass(sim.newLending, sim.oldLending);
+}
+function borrowDeltaClass(sim){
+  return deltaClass(sim.newBorrow, sim.oldBorrow, true);
+}
+function utilDeltaClass(sim){
+  return Math.abs(sim.newUtil - sim.oldUtil) <= 0.005 ? "is-flat" : "is-neutral";
+}
+function fmtPpDelta(next, prev){
+  const delta = next - prev;
+  if(Math.abs(delta) < 0.005) return "0.00 pp";
+  return (delta > 0 ? "+" : "-") + Math.abs(delta).toFixed(2) + " pp";
+}
+function impactLabel(action){
+  return action==="withdraw" ? "Withdraw impact" : "Deposit impact";
+}
+const fmtCmp = (v)=>{
+  if(v>=1e9) return "$"+(v/1e9).toFixed(2)+"B";
+  if(v>=1e6) return "$"+(v/1e6).toFixed(1)+"M";
+  if(v>=1e3) return "$"+(v/1e3).toFixed(0)+"K";
+  return "$"+v.toFixed(0);
+};
+const fmtUsd = (v)=>{
+  const abs=Math.abs(v);
+  if(abs>=1e6) return "$"+(v/1e6).toFixed(2)+"M";
+  if(abs>=1e3) return "$"+(v/1e3).toFixed(2)+"K";
+  if(abs>=1) return "$"+v.toFixed(2);
+  return "$"+v.toFixed(4);
+};
+const avg = (arr)=> arr.reduce((a,b)=>a+b,0)/arr.length;
+
+/* APY = (1 + APR/n)^n - 1 ; n = 365 daily compound */
+const aprToApy = (apr)=>((Math.pow(1+apr/100/365,365)-1)*100);
+const rateForMode = (apr)=> state.mode==="APY" && apr > 0 ? aprToApy(apr) : apr;
+const fmtRate = (apr)=>fmtPct(rateForMode(apr));
+const marketKey = (row)=> row.key || `${row.chain}:${(row.addr || row.sym || row.name || "").toLowerCase()}`;
+const chainMeta = (chainKey)=>LIVE_CHAINS[chainKey] || {name:CHAIN_LABELS[chainKey] || chainKey, short:chainKey, id:null, icon:chainIcon(chainKey), explorer:""};
+
+const LIVE_CHAINS = {
+  ethereum: {id:1, name:"Ethereum", short:"ETH", icon:chainIcon("ethereum"), explorer:"https://etherscan.io/address/", subgraph:"https://api.goldsky.com/api/public/project_clyuw4gvq4d5801tegx0aafpu/subgraphs/dolomite-ethereum/latest/gn"},
+  berachain: {id:80094, name:"Berachain", short:"BERA", icon:chainIcon("berachain"), explorer:"https://berascan.com/address/", subgraph:"https://api.goldsky.com/api/public/project_clyuw4gvq4d5801tegx0aafpu/subgraphs/dolomite-berachain-mainnet/latest/gn"},
+  arbitrum: {id:42161, name:"Arbitrum", short:"ARB", icon:chainIcon("arbitrum"), explorer:"https://arbiscan.io/address/", subgraph:"https://api.goldsky.com/api/public/project_clyuw4gvq4d5801tegx0aafpu/subgraphs/dolomite-arbitrum/latest/gn"},
+  mantle: {id:5000, name:"Mantle", short:"MNT", icon:chainIcon("mantle"), explorer:"https://mantlescan.xyz/address/", subgraph:"https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-mantle/latest/gn"},
+  botanix: {id:3637, name:"Botanix", short:"BOT", icon:chainIcon("botanix"), explorer:"https://botanixscan.io/address/", tokenExplorer:"https://botanixscan.io/token/", subgraph:"https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-botanix/latest/gn"},
+  polygonzkevm: {id:1101, name:"Polygon zkEVM", short:"zkEVM", icon:chainIcon("polygonzkevm"), explorer:"https://zkevm.polygonscan.com/address/", tokenExplorer:"https://zkevm.polygonscan.com/token/", subgraph:"https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-polygon-zkevm/latest/gn"},
+  xlayer: {id:196, name:"X Layer", short:"XLAY", icon:chainIcon("xlayer"), explorer:"https://www.okx.com/web3/explorer/xlayer/address/", subgraph:"https://subgraph.api.dolomite.io/api/public/1301d2d1-7a9d-4be4-9e9a-061cb8611549/subgraphs/dolomite-x-layer/latest/gn"}
+};
+const STABLE_SYMBOLS = new Set(["USDC","USDT","USDT0","USD₮0","DAI","USDC.E","HONEY","USDE","SUSDE","DEUSD","SDEUSD","EUSD","GRAI","NECT","RUSD","SRUSD","WSRUSD","POL-RUSD","BYUSD","MIM","USDS","SUSDS","USDA","SUSDA","USDAI","SUSDAI","SAVUSD","USD0","USD0++","USD1","USDY","USDM","WUSDM","CUSD","STCUSD","OUSDT"]);
+const BTC_SYMBOLS = new Set(["BTC","WBTC","LBTC","EBTC","SOLVBTC","SOLVBTC.A","SOLVBTC.BBN","SOLVBTCBBN","TBTC","UNIBTC","PUMPBTC","PUMPBTC.BERA","CBBTC","FBTC","STBTC","SBTC","PBTC","XSOLVBTC","YLFBTC","YLPUMPBTC","YLBTCLRT","YLBTCLST","STONEBTC","GMBTC","GMBTC-USD","GLV-BTC"]);
+const ETH_SYMBOLS = new Set(["SAVETH","DSAVETH","ETH","WETH","WSTETH","STETH","RETH","WEETH","BERAETH","EZETH","RSETH","RSWETH","STONE","WOETH","METH","CMETH","TETH","ETH+","ETHX","YLSTETH","PT-RETH","PT-WSTETH","PT-WEETH","PT-EETH","PT-EZETH","PT-RSETH","PT-METH","PT-CMETH","GMETH","GMETH-USD","GMWSTETH-USD","GLV-ETH"]);
+const MONTH_INDEX = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+
+function normalizeSymbol(sym){
+  return String(sym || "").trim().toUpperCase();
+}
+
+function classifyAsset(sym, name=""){
+  const token = normalizeSymbol(sym);
+  if(STABLE_SYMBOLS.has(token)) return "stable";
+  if(BTC_SYMBOLS.has(token)) return "btc";
+  if(ETH_SYMBOLS.has(token)) return "eth";
+  const text = `${token} ${String(name || "").toUpperCase()}`;
+  if(/^(GM|GLV).*(BTC|WBTC)/.test(text)) return "btc";
+  if(/^(GM|GLV).*(ETH|WSTETH|WEETH|EZETH|RETH|RSETH|METH|CMETH)/.test(text)) return "eth";
+  return "other";
+}
+function maturityDateFor(sym, name=""){
+  const match = `${sym || ""} ${name || ""}`.match(/(\d{1,2})(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)(20\d{2})/i);
+  if(!match) return null;
+  return new Date(Date.UTC(+match[3], MONTH_INDEX[match[2].toUpperCase()], +match[1], 23, 59, 59));
+}
+function isExpiredMarket(sym, name=""){
+  const maturity = maturityDateFor(sym, name);
+  return !!maturity && maturity < new Date();
+}
+const shortAddr = (a)=>String(a || "").slice(0,6)+"…"+String(a || "").slice(-4);
+const explorerUrl = (row)=>{
+  const meta = chainMeta(row.chain);
+  const base = meta.tokenExplorer || meta.explorer || "";
+  return row.addr && base ? base + row.addr : "";
+};
+const isWrappedMarketName = (row)=>/^(GM|GLV):\s*/i.test(String(row.name || "")) || /^gm[A-Z0-9].*/.test(String(row.sym || "")) || /^GLV-/i.test(String(row.sym || ""));
+// XSS guard: token symbols/names/yield labels originate from deployer-controlled
+// ERC-20 metadata (live API + snapshot) and are interpolated into innerHTML.
+const esc = (v)=>String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+function assetChainBadge(chainKey){
+  const chain = chainMeta(chainKey);
+  return `<span class="chain-badge"><img src="${chain.icon}" onerror="this.style.display='none'" alt="">${esc(chain.name)}</span>`;
+}
+const tokenNameHtml = (row)=>`<span class="tok-sym">${esc(row.sym)}</span>${isWrappedMarketName(row) ? "" : `<span class="tok-long">${esc(row.name)}</span>`}`;
+function shouldSkipMarket(row){
+  const sym = row.token?.tokenSymbol || "";
+  const name = row.token?.tokenName || "";
+  return isExpiredMarket(sym, name);
+}
+function compactYieldSourceLabel(label){
+  const cleaned = String(label || "").replace(/\s*\(.*?\)\s*/g,"").replace(/\s+APR$/i,"").replace(/\s+APY$/i,"").trim() || "Yield";
+  const compactLabels = {
+    "Sky Savings Rate": "Sky Rate",
+    "ETH Staking": "Staking",
+    "ETH Staking Yield": "Staking",
+    "Staking Yield": "Staking",
+    "ETH Restaking": "Restaking",
+    "GLV Performance": "GLV Perf.",
+    "GM Performance": "GM Perf.",
+    "Net Lending Rewards": "Lending"
+  };
+  return compactLabels[cleaned] || cleaned;
+}
+function parseYieldParts(parts){
+  let odolo = 0;
+  let external = 0;
+  const sources = [];
+  (parts || []).forEach(p=>{
+    const raw = (parseFloat(p.interestRate) || 0) * 100;
+    if(raw === 0) return;
+    const label = compactYieldSourceLabel(p.label);
+    if(label.toLowerCase().includes("odolo")){
+      odolo += raw;
+    } else if(p.category === "rewards" || p.category === "nativeYield"){
+      external += raw;
+      sources.push({
+        label,
+        rate:raw,
+        category:p.category || "yield",
+        rewardSymbol:String(p.rewardToken?.symbol || "").trim(),
+        campaignId:String(p.merklData?.campaignIdentifier || "").trim()
+      });
+    }
+  });
+  return {odolo, external, sources};
+}
+
+function getSupplyAprSourceTip(sourceKey, symbol, rateData){
+  const asset = String(symbol || "this asset").trim() || "this asset";
+  if(sourceKey === "lending"){
+    return `Interest paid by borrowers in the ${asset} market on Dolomite.`;
+  }
+  if(sourceKey === "odolo"){
+    return `Weekly oDOLO emissions allocated to ${asset} suppliers on Dolomite. The displayed rate changes with emissions and supplied liquidity.`;
+  }
+
+  const sources = Array.isArray(rateData?.yieldSources) ? rateData.yieldSources : [];
+  if(!sources.length){
+    return `Additional yield reported for supplying ${asset} through Dolomite.`;
+  }
+  return sources.map(source=>{
+    const label = String(source?.label || "").trim();
+    const rewardSymbol = String(source?.rewardSymbol || "").trim().toUpperCase();
+    const isEthereumWlfiMarket = rateData?.chain === "ethereum" && /^(USD1|USDC)$/i.test(asset) && source?.category === "rewards";
+    if(rewardSymbol === "WLFI" || /\bWLFI\b/i.test(label) || isEthereumWlfiMarket){
+      return `WLFI incentives from World Liberty Financial's Merkl campaign for supplying ${asset} through Dolomite.`;
+    }
+    if(rewardSymbol){
+      return `${rewardSymbol} incentives from ${label || "an external rewards campaign"} for supplying ${asset} through Dolomite.`;
+    }
+    if(source?.category === "rewards"){
+      return `External incentives from ${label || "a rewards campaign"} for supplying ${asset} through Dolomite.`;
+    }
+    if(/Sky/i.test(label)) return `Native savings yield earned by the underlying ${asset} asset through ${label}.`;
+    if(/Restaking/i.test(label)) return `Native restaking yield earned by the underlying ${asset} asset.`;
+    if(/Staking/i.test(label)) return `Native staking yield earned by the underlying ${asset} asset.`;
+    if(/GLV|GM Perf/i.test(label)) return `${label} yield reported for the underlying ${asset} market.`;
+    return `${label || "Native yield"} generated by the underlying ${asset} asset or its source protocol.`;
+  }).join(" ");
+}
+
+function assetAgeLabel(value){
+  const ts = typeof value === "number" ? value : Date.parse(value || "");
+  if(!Number.isFinite(ts)) return "just now";
+  const mins = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if(mins < 1) return "just now";
+  if(mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if(hours < 48) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+function normalizeAssetRows(rows){
+  const numericFields = [
+    "price","odolo","yield","lending","borrow","supplyApr","lowerOptimalApr","upperOptimalApr",
+    "optimalUtilizationRate","tvl","util","supplied","borrowed","availableLiquidity","supplyCap",
+    "borrowCap","borrowedUsd"
+  ];
+  return (rows || []).map(row=>{
+    const chain = row.chain || "";
+    const meta = chainMeta(chain);
+    const addr = String(row.addr || "").toLowerCase();
+    const sym = row.sym || row.symbol || "UNKNOWN";
+    const normalized = {
+      ...row,
+      key: row.key || `${chain}:${addr || String(row.marketId || sym).toLowerCase()}`,
+      sym,
+      name: row.name || sym,
+      addr,
+      cat: classifyAsset(sym, row.name || sym),
+      chain,
+      chainName: row.chainName || meta.name || CHAIN_LABELS[chain] || chain,
+      icon: tokenIcon(sym, {...row, chain, addr}),
+      yieldSources: Array.isArray(row.yieldSources) ? row.yieldSources.map(source => ({
+        ...source,
+        label: compactYieldSourceLabel(source.label)
+      })) : [],
+      borrowDisabled: row.borrowDisabled === true,
+      depthReady: row.depthReady === true
+    };
+    numericFields.forEach(field=>{
+      const value = Number(row[field]);
+      normalized[field] = Number.isFinite(value) ? value : 0;
+    });
+    normalized.dust = row.dust === true || (normalized.depthReady && normalized.tvl < 10000);
+    return normalized;
+  }).filter(row=>row.chain && row.sym);
+}
+
+async function loadPrebuiltAssets(){
+  const resp = await fetch(ASSETS_SNAPSHOT_URL, {cache:"no-cache"});
+  if(!resp.ok) throw new Error(`Snapshot HTTP ${resp.status}`);
+  const payload = await resp.json();
+  const rows = normalizeAssetRows(Array.isArray(payload) ? payload : payload.rows);
+  if(!rows.length) throw new Error("No prebuilt asset rows returned");
+  return {
+    rows,
+    generatedAt: payload.generatedAt || payload.timestamp || null,
+    source: payload.source || "assets_live.json"
+  };
+}
+
+async function fetchMarketDepth(){
+  const QUERY = `{
+    totalPars(first: 1000) { id supplyPar borrowPar token { id } }
+    marketRiskInfos(first: 1000) { id supplyMaxWei borrowMaxWei isBorrowingDisabled }
+    interestIndexes(first: 1000) { id supplyIndex borrowIndex }
+    oraclePrices(first: 1000) { id price token { id } }
+  }`;
+  const out = {};
+  await Promise.all(Object.entries(LIVE_CHAINS).filter(([key])=>ACTIVE_ASSET_CHAIN_KEYS.has(key)).map(async ([chainKey, chain])=>{
+    try{
+      const resp = await fetch(chain.subgraph, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({query:QUERY})});
+      if(!resp.ok) return;
+      const json = await resp.json();
+      const data = json.data || {};
+      const indexes = {};
+      (data.interestIndexes || []).forEach(r=>{ indexes[String(r.id).toLowerCase()] = {s:parseFloat(r.supplyIndex)||1, b:parseFloat(r.borrowIndex)||1}; });
+      const caps = {};
+      (data.marketRiskInfos || []).forEach(r=>{ caps[String(r.id).toLowerCase()] = {s:parseFloat(r.supplyMaxWei)||0, b:parseFloat(r.borrowMaxWei)||0, disabled:r.isBorrowingDisabled===true}; });
+      const prices = {};
+      (data.oraclePrices || []).forEach(r=>{
+        const addr = String(r.token?.id || r.id || "").toLowerCase();
+        if(addr) prices[addr] = parseFloat(r.price) || 0;
+      });
+      (data.totalPars || []).forEach(tp=>{
+        const addr = String(tp.token?.id || "").toLowerCase();
+        if(!addr) return;
+        const idx = indexes[addr] || {s:1,b:1};
+        const cap = caps[addr] || {};
+        const supplied = (parseFloat(tp.supplyPar)||0) * idx.s;
+        const borrowed = (parseFloat(tp.borrowPar)||0) * idx.b;
+        out[`${chainKey}:${addr}`] = {
+          supplied,
+          borrowed,
+          availableLiquidity: Math.max(0, supplied - borrowed),
+          supplyCap: cap.s || 0,
+          borrowCap: cap.b || 0,
+          borrowDisabled: cap.disabled || false,
+          price: prices[addr] || 0
+        };
+      });
+    }catch(e){
+      console.warn("Market depth fetch failed", chainKey, e);
+    }
+  }));
+  return out;
+}
+
+async function loadLiveAssets(){
+  const depthPromise = fetchMarketDepth();
+  const rows = [];
+  await Promise.all(Object.entries(LIVE_CHAINS).filter(([key])=>ACTIVE_ASSET_CHAIN_KEYS.has(key)).map(async ([chainKey, chain])=>{
+    try{
+      const resp = await fetch(`https://api.dolomite.io/tokens/${chain.id}/interest-rates?exclude-odolo=false`);
+      if(!resp.ok) return;
+      const json = await resp.json();
+      (json.interestRates || []).forEach(r=>{
+        if(shouldSkipMarket(r)) return;
+        const token = r.token || {};
+        const sym = token.tokenSymbol || "UNKNOWN";
+        const addr = String(token.tokenAddress || "").toLowerCase();
+        const parts = parseYieldParts(r.outsideSupplyInterestRateParts);
+        rows.push({
+          key:`${chainKey}:${addr || String(token.marketId || sym).toLowerCase()}`,
+          sym,
+          name: token.tokenName || sym,
+          addr,
+          marketId: token.marketId,
+          cat: classifyAsset(sym, token.tokenName || sym),
+          chain: chainKey,
+          chainName: chain.name,
+          icon: tokenIcon(sym, {chain: chainKey, addr}),
+          price: 0,
+          odolo: parts.odolo,
+          yield: parts.external,
+          yieldSources: parts.sources,
+          lending: (parseFloat(r.supplyInterestRate)||0) * 100,
+          borrow: (parseFloat(r.borrowInterestRate)||0) * 100,
+          supplyApr: (parseFloat(r.totalSupplyInterestRate)||0) * 100,
+          lowerOptimalApr: (parseFloat(r.lowerOptimalRate)||0) * 100,
+          upperOptimalApr: (parseFloat(r.upperOptimalRate)||0) * 100,
+          optimalUtilizationRate: parseFloat(r.optimalUtilizationRate)||0,
+          tvl: 0,
+          util: 0,
+          dust: false,
+          borrowDisabled: false,
+          depthReady: false
+        });
+      });
+    }catch(e){
+      console.warn("Interest rate fetch failed", chainKey, e);
+    }
+  }));
+  const depth = await depthPromise;
+  rows.forEach(row=>{
+    const md = depth[row.key];
+    if(!md) return;
+    row.depthReady = true;
+    row.price = md.price || row.price || 0;
+    row.supplied = md.supplied;
+    row.borrowed = md.borrowed;
+    row.availableLiquidity = md.availableLiquidity;
+    row.supplyCap = md.supplyCap;
+    row.borrowCap = md.borrowCap;
+    row.borrowDisabled = md.borrowDisabled;
+    row.util = md.supplied > 0 ? (md.borrowed / md.supplied) * 100 : 0;
+    row.tvl = (md.supplied || 0) * (row.price || 0);
+    row.borrowedUsd = (md.borrowed || 0) * (row.price || 0);
+    row.dust = row.depthReady && row.tvl < 10000;
+  });
+  return rows;
+}
+
+function setLiveStatus(ok, count){
+  const el = document.querySelector(".card-meta");
+  if(el) el.innerHTML = `<span class="pulse"></span>Data updated · just now`;
+  const heroLive = document.querySelector(".hero-live");
+  if(heroLive) heroLive.innerHTML = `<span class="dot"></span>${count} markets · ${ok ? "direct refresh" : "static fallback"}`;
+  const foot = document.getElementById("now");
+  if(foot) foot.textContent = `${count} markets · ${new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}`;
+}
+
+function setSnapshotStatus(count, generatedAt){
+  const age = assetAgeLabel(generatedAt);
+  const el = document.querySelector(".card-meta");
+  if(el) el.innerHTML = `<span class="pulse"></span>Data updated · ${age}`;
+  const heroLive = document.querySelector(".hero-live");
+  if(heroLive) heroLive.innerHTML = `<span class="dot"></span>${count} markets · updated ${age}`;
+  const foot = document.getElementById("now");
+  const ts = Date.parse(generatedAt || "");
+  if(foot) foot.textContent = Number.isFinite(ts)
+    ? `${count} markets · ${new Date(ts).toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}`
+    : `${count} markets · official snapshot`;
+}
+
+function setCachedLiveStatus(count, savedAt, failed=false, generatedAt=null){
+  const age = assetAgeLabel(generatedAt || savedAt);
+  const suffix = failed ? "refresh failed" : "refreshing";
+  const label = `Data updated · ${age} · ${suffix}`;
+  const el = document.querySelector(".card-meta");
+  if(el) el.innerHTML = `<span class="pulse"></span>${label}`;
+  const heroLive = document.querySelector(".hero-live");
+  if(heroLive) heroLive.innerHTML = `<span class="dot"></span>${count} cached markets · ${suffix}`;
+  const foot = document.getElementById("now");
+  if(foot) foot.textContent = `${count} markets · cached ${age}`;
+}
+
+function readLiveAssetsCache(){
+  try{
+    const raw = localStorage.getItem(ASSETS_CACHE_KEY);
+    if(!raw) return null;
+    const cached = JSON.parse(raw);
+    if(!cached || cached.version !== 3 || !Array.isArray(cached.rows) || !cached.savedAt) return null;
+    if(Date.now() - cached.savedAt > ASSETS_CACHE_MAX_AGE_MS) return null;
+    cached.rows = normalizeAssetRows(cached.rows);
+    return cached;
+  }catch(_){
+    return null;
+  }
+}
+
+function writeLiveAssetsCache(rows, meta={}){
+  try{
+    localStorage.setItem(ASSETS_CACHE_KEY, JSON.stringify({
+      version: 3,
+      savedAt: Date.now(),
+      generatedAt: meta.generatedAt || null,
+      source: meta.source || "direct",
+      rows
+    }));
+  }catch(_){}
+}
+
+function applyAssetRows(rows){
+  ASSETS = rows.filter(row => ACTIVE_ASSET_CHAIN_KEYS.has(row.chain));
+  state.loading = false;
+  state.fallback = false;
+  document.body.classList.remove("assets-loading","assets-fallback");
+  state.expanded.clear();
+  state.calc.clear();
+  syncNetDropdown();
+  render();
+}
+
+/* ==========================================================================
+   SIMULATE — kink interest-rate model
+   ==========================================================================
+   Dolomite-style: borrow APR = slope1 * u  for u ≤ kink
+                                slope1*kink + slope2*(u - kink) for u > kink
+   We back out slope1 from current (util, borrow), pick a realistic slope2,
+   then recompute supply APR from (1 - reserve) * borrow * util.
+   User deposit raises total supply (util drops), user withdraw shrinks it
+   (util rises; capped so borrowed can't exceed total).
+*/
+const KINK = 80;
+const RESERVE_FACTOR_DEFAULT = 0.15;
+
+function kinkModel(row){
+  const slope1 = row.borrow / Math.max(row.util,1);
+  const slope2 = slope1 * 10;  // kink model steepens sharply
+  return {slope1, slope2};
+}
+function borrowAt(row, util){
+  if(row.lowerOptimalApr > 0 || row.upperOptimalApr > 0){
+    const u = Math.max(0, Math.min(99.9999, util)) / 100;
+    const opt = Math.max(0.05, Math.min(0.98, row.optimalUtilizationRate || 0.8));
+    const lower = Math.max(0, row.lowerOptimalApr || 0);
+    const upper = Math.max(lower, row.upperOptimalApr || row.borrow || 0);
+    if(u <= opt) return opt > 0 ? lower * (u / opt) : 0;
+    return lower + (upper - lower) * ((u - opt) / Math.max(1e-9, 1 - opt));
+  }
+  const {slope1,slope2} = kinkModel(row);
+  return util<=KINK ? slope1*util : slope1*KINK + slope2*(util-KINK);
+}
+/* Back out the per-asset reserve factor so that the model reproduces
+   the recorded row.lending at the current utilization. This keeps
+   "now" values exactly in sync with the table and means any change
+   comes purely from utilization. */
+function effectiveRF(row){
+  const raw = row.borrow * row.util/100;
+  if(raw <= 0) return RESERVE_FACTOR_DEFAULT;
+  return Math.max(0, Math.min(0.6, 1 - row.lending/raw));
+}
+function lendingAt(row, util){
+  return borrowAt(row, util) * util/100 * (1 - effectiveRF(row));
+}
+function supplyAt(row, util){
+  // lending interest only; oDOLO + external yield don't depend on util
+  let s = 0;
+  if(state.rw.odolo) s += row.odolo;
+  if(state.rw.yield) s += row.yield;
+  if(state.rw.lending) s += lendingAt(row, util);
+  return s;
+}
+
+function simulate(row, calc){
+  const requested = Math.max(0, +calc.amount||0);
+  const suppliedUsd = Math.max(0, Number(row.tvl) || 0);
+  const borrowedUsd = row.borrowedUsd != null ? Math.max(0, Number(row.borrowedUsd)||0) : suppliedUsd * Math.max(0,row.util)/100;
+  const cash = row.availableLiquidity != null ? Math.max(0, Number(row.availableLiquidity) * (row.price || 0)) : Math.max(0, suppliedUsd - borrowedUsd);
+  const capRemaining = row.supplyCap ? (Number(row.supplied) >= row.supplyCap ? 0 : row.price ? Math.max(0, row.supplyCap * row.price - suppliedUsd) : 0) : Infinity;
+  const effectiveAmount = calc.action==="withdraw"
+    ? Math.min(requested, cash)
+    : Math.min(requested, capRemaining);
+  if(effectiveAmount <= 0){
+    const oldBorrow = state.mode==="APY" ? aprToApy(row.borrow) : row.borrow;
+    const oldLending = state.mode==="APY" ? aprToApy(row.lending) : row.lending;
+    return {
+      newUtil: row.util,
+      newBorrow: oldBorrow,
+      newLending: oldLending,
+      oldUtil: row.util,
+      oldBorrow,
+      oldLending,
+      requested,
+      effectiveAmount,
+      utilDir:"",
+      lendingDir:"",
+      borrowDir:""
+    };
+  }
+  const effDelta = calc.action==="withdraw" ? -effectiveAmount : effectiveAmount;
+  const newTvl = Math.max(borrowedUsd, suppliedUsd + effDelta);
+  const newUtil = newTvl > 0 ? Math.min(99.9999, borrowedUsd / newTvl * 100) : 0;
+
+  // raw APRs (used for compounding math) — use per-asset effective reserve
+  // factor so "now" lending matches the recorded value exactly
+  const newBorrowApr  = borrowAt(row, newUtil);
+  const newLendingApr = lendingAt(row, newUtil);
+  const oldBorrowApr  = row.borrow;
+  const oldLendingApr = row.lending;   // === lendingAt(row, row.util) by construction
+
+  // display values honour current APR/APY mode
+  const newBorrow  = state.mode==="APY" ? aprToApy(newBorrowApr)  : newBorrowApr;
+  const newLending = state.mode==="APY" ? aprToApy(newLendingApr) : newLendingApr;
+  const oldBorrow  = state.mode==="APY" ? aprToApy(oldBorrowApr)  : oldBorrowApr;
+  const oldLending = state.mode==="APY" ? aprToApy(oldLendingApr) : oldLendingApr;
+
+  return {
+    newUtil, newBorrow, newLending, oldUtil: row.util, oldBorrow, oldLending, requested, effectiveAmount,
+    utilDir:     newUtil>row.util       ? "up-dir" : newUtil<row.util       ? "down-dir" : "",
+    lendingDir:  newLending>oldLending  ? "up-dir" : newLending<oldLending  ? "down-dir" : "",
+    borrowDir:   newBorrow>oldBorrow    ? "up-dir" : newBorrow<oldBorrow    ? "down-dir" : ""
+  };
+}
+
+// Hero answer: translate the simulation into the user-level outcome
+// ("what would I earn per year"), consistent with the Supply column
+// (rateForMode over the raw APR sum; oDOLO/yield extras don't react to size).
+function calcHero(row, sim){
+  const extrasRaw = (state.rw.odolo ? row.odolo : 0) + (state.rw.yield ? row.yield : 0);
+  const totalAfter = rateForMode(lendingAt(row, sim.newUtil) + extrasRaw);
+  const totalNow = rateForMode(row.lending + extrasRaw);
+  return { totalAfter, totalNow, annual: sim.effectiveAmount * totalAfter / 100 };
+}
+// Full dollars (with separators) below $1M; compact above. The hero answer
+// deserves precision — "$1,157/yr" not "$1K/yr".
+const fmtMoneyFull = (v)=> v >= 1e6 ? fmtCmp(v) : "$" + Math.round(v).toLocaleString("en-US");
+function calcHeroHtml(row, calc, sim){
+  if(sim.effectiveAmount <= 0){
+    return `<div class="calc-hero-line muted">Enter an amount to simulate ${calc.action==="withdraw" ? "a withdrawal" : "a deposit"}.</div>`;
+  }
+  const h = calcHero(row, sim);
+  const isW = calc.action === "withdraw";
+  const annual = Math.abs(h.annual);
+  const capped = sim.effectiveAmount < sim.requested
+    ? ` · capped at ${isW ? "available liquidity" : "remaining supply cap"} ${fmtCmp(sim.effectiveAmount)}`
+    : "";
+  const rateMoved = Math.abs(h.totalAfter - h.totalNow) >= 0.005;
+  const rateText = rateMoved
+    ? `at ${fmtPct(h.totalAfter)} total supply ${state.mode} after the ${isW ? "withdrawal" : "deposit"} (now ${fmtPct(h.totalNow)})`
+    : `at ${fmtPct(h.totalAfter)} total supply ${state.mode}`;
+  return `
+    <div class="calc-hero-line">
+      <span class="calc-hero-amt">${fmtCmp(sim.effectiveAmount)}</span>
+      <span class="calc-hero-verb">${isW ? "withdrawn → you'd give up" : "deposited → you'd earn"}</span>
+      <span class="calc-hero-earn${isW ? " down" : ""}">≈ ${fmtMoneyFull(annual)}/yr</span>
+      <span class="calc-hero-verb">(≈ ${fmtMoneyFull(annual/12)}/mo)</span>
+    </div>
+    <div class="calc-hero-sub">${rateText}${capped}</div>`;
+}
+function calcMarketDead(row){
+  return !(row.tvl > 0) && !(row.lending > 0) && !(row.borrow > 0);
+}
+// One muted line of market mechanics under the hero answer — deltas only,
+// colored by meaning: green = favourable, red = unfavourable, gold = neutral
+// mechanics (utilization). Zero deltas stay muted to avoid noise.
+function calcMiniDelta(next, prev, kind){
+  const delta = next - prev;
+  let cls = "";
+  if(Math.abs(delta) >= 0.005){
+    if(kind === "util") cls = "neu";
+    else if(kind === "lending") cls = delta > 0 ? "pos" : "neg";
+    else cls = delta < 0 ? "pos" : "neg"; // borrow: cheaper debt = favourable
+  }
+  return `<b class="${cls}">${fmtPpDelta(next, prev)}</b>`;
+}
+function calcMiniHtml(sim){
+  if(sim.effectiveAmount <= 0) return "";
+  const negligible = Math.abs(sim.newUtil - sim.oldUtil) < 0.005
+    && Math.abs(sim.newLending - sim.oldLending) < 0.005
+    && Math.abs(sim.newBorrow - sim.oldBorrow) < 0.005;
+  if(negligible) return `Market impact · negligible at this size`;
+  return `Market impact · utilization ${calcMiniDelta(sim.newUtil, sim.oldUtil, "util")} · lending ${state.mode} ${calcMiniDelta(sim.newLending, sim.oldLending, "lending")} · borrow ${state.mode} ${calcMiniDelta(sim.newBorrow, sim.oldBorrow, "borrow")}`;
+}
+
+// Historical-rate + utilization-curve charts were removed; only calculator
+// + basic stat breakdown remain in the expanded-row detail panel.
+
+function activeSupply(row){
+  let s=0;
+  if(state.rw.odolo) s+=row.odolo;
+  if(state.rw.yield) s+=row.yield;
+  if(state.rw.lending) s+=row.lending;
+  return s;
+}
+
+function assetMarketSupply(row){
+  return Math.max(0, Number(row?.tvl) || 0);
+}
+
+function setMetric(el, value){
+  if(window.CountUpMetric) CountUpMetric.text(el, value);
+  else if(el) el.textContent = value;
+}
+
+function updateHero(){
+  const activeAssets = ASSETS.filter(r=>ACTIVE_ASSET_CHAIN_KEYS.has(r.chain));
+  let data = activeAssets.map(r=>({...r,_supply:activeSupply(r)})).filter(r=>!r.dust);
+  if(data.length === 0) data = activeAssets.map(r=>({...r,_supply:activeSupply(r)}));
+  if(data.length === 0) return;
+  const topSupply = data.reduce((best,r)=>r._supply > best._supply ? r : best, data[0]);
+  const topBorrow = data.reduce((best,r)=>r.borrow > best.borrow ? r : best, data[0]);
+  const avgSupply = avg(data.map(r=>r._supply));
+  const odoloRows = data.filter(r=>r.odolo > 0);
+  const avgOdolo = odoloRows.length ? avg(odoloRows.map(r=>r.odolo)) : 0;
+  const chains = new Set(data.map(r=>r.chain));
+  const allChains = new Set(activeAssets.map(r=>r.chain));
+  const heroValue = document.querySelector(".hero-value .pct");
+  setMetric(heroValue, rateForMode(topSupply._supply).toFixed(2));
+  const heroLive = document.querySelector(".hero-live");
+  if(heroLive) heroLive.innerHTML = `<span class="dot"></span>${data.length} live markets · ${allChains.size} chains`;
+  const heroToken = document.querySelector(".hero-token");
+  if(heroToken){
+    const topChain = chainMeta(topSupply.chain);
+    heroToken.innerHTML = `<img class="${tokenIconClass(topSupply.sym)} ${tokenIconFrameClass(topSupply.sym)}" src="${tokIcon(topSupply.sym, topSupply)}" onerror="this.style.display='none'" alt="${esc(topSupply.sym)}">
+        <span class="hero-token-name">${topSupply.sym}</span>
+        <span class="hero-token-sep" aria-hidden="true"></span>
+        <span class="hero-chain-pill"><img src="${topChain.icon}" onerror="this.style.display='none'" alt="">${topChain.name}</span>`;
+  }
+  const cards = document.querySelectorAll(".hero-card");
+  if(cards[0]){
+    cards[0].querySelector(".hc-label").lastChild.textContent = ` Avg Supply ${state.mode}`;
+    setMetric(cards[0].querySelector(".hc-value"), fmtRate(avgSupply));
+    cards[0].querySelector(".hc-sub").textContent = `across ${data.length} markets`;
+  }
+  if(cards[1]){
+    setMetric(cards[1].querySelector(".hc-value"), avgOdolo > 0 ? "+" + fmtRate(avgOdolo) : "—");
+    cards[1].querySelector(".hc-sub").textContent = odoloRows.length ? `${odoloRows.length} boosted markets` : "no active boosts";
+  }
+  if(cards[2]){
+    setMetric(cards[2].querySelector(".hc-value"), String(activeAssets.length));
+    cards[2].querySelector(".hc-sub").textContent = `listed assets · ${allChains.size} chains`;
+  }
+  if(cards[3]){
+    setMetric(cards[3].querySelector(".hc-value"), fmtRate(topBorrow.borrow));
+    cards[3].querySelector(".hc-sub").textContent = `${topBorrow.sym} · ${chainMeta(topBorrow.chain).name}`;
+  }
+  const netCount = document.querySelector("#dd-net .dd-btn .count");
+  if(netCount && state.nets.size === 0) netCount.textContent = `${CHAIN_COUNT_TOTAL}/${CHAIN_COUNT_TOTAL}`;
+  const protoSub = document.getElementById("proto-market-sub");
+  if(protoSub) protoSub.innerHTML = `Lending &amp; margin · <b>${data.length} live markets</b> · <b>${allChains.size} chains</b>`;
+}
+
+/* ==========================================================================
+   RENDER
+   ========================================================================== */
+function renderLoading(){
+  document.body.classList.add("assets-loading");
+  document.body.classList.remove("assets-fallback");
+  const tb = document.getElementById("tbody");
+  const badge = document.getElementById("count-badge");
+  const meta = document.querySelector(".card-meta");
+  const heroLive = document.querySelector(".hero-live");
+  const protoSub = document.getElementById("proto-market-sub");
+  const foot = document.getElementById("now");
+  if(badge) badge.textContent = "Loading markets";
+  if(meta) meta.innerHTML = `<span class="pulse"></span>Loading data update…`;
+  if(heroLive) heroLive.innerHTML = `<span class="dot"></span>Syncing live markets`;
+  if(protoSub) protoSub.innerHTML = `Lending &amp; margin · <b>loading live markets</b>`;
+  if(foot) foot.textContent = "loading official markets";
+  if(!tb) return;
+  tb.innerHTML = Array.from({length:10}, (_, i)=>`
+    <tr class="loading-row" aria-hidden="true">
+      <td data-column="chain" style="padding-left:32px"><span class="skel skel-line meta" style="width:${i % 2 === 0 ? 104 : 88}px"></span></td>
+      <td data-column="asset">
+        <div class="loading-asset">
+          <span class="skel skel-avatar"></span>
+          <span class="skel-stack">
+            <span class="skel skel-line name" style="width:${i % 3 === 0 ? 138 : 104}px"></span>
+            <span class="skel skel-line meta" style="width:${i % 2 === 0 ? 188 : 148}px"></span>
+          </span>
+        </div>
+      </td>
+      <td data-column="price" class="num"><span class="skel skel-num"></span></td>
+      <td data-column="supply" class="num"><span class="skel skel-num wide"></span></td>
+      <td data-column="borrow" class="num"><span class="skel skel-num"></span></td>
+      <td data-column="details" class="details-cell" style="padding-right:32px"><span class="skel skel-num" style="width:68px"></span></td>
+    </tr>
+  `).join("");
+}
+
+function render(){
+  if(state.loading){
+    document.body.classList.remove("assets-detail-open");
+    renderLoading();
+    return;
+  }
+  const tb = document.getElementById("tbody");
+  const q = state.q.trim().toLowerCase();
+  let rows = ASSETS.filter(r=>{
+    if(!ACTIVE_ASSET_CHAIN_KEYS.has(r.chain)) return false;
+    if(isExpiredMarket(r.sym, r.name)) return false;
+    if(state.cats.size>0 && !state.cats.has(r.cat)) return false;
+    if(state.nets.size>0 && !state.nets.has(r.chain)) return false;
+    if(q){
+      if(!r.sym.toLowerCase().includes(q) && !r.name.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }).map(r=>({...r,_supply:activeSupply(r)}));
+
+  updateHero();
+
+  const {key,dir} = state.sort;
+  rows.sort((a,b)=>{
+    let va,vb;
+    if(key==="chain"){va=chainMeta(a.chain).name;vb=chainMeta(b.chain).name}
+    else if(key==="name"){va=a.sym;vb=b.sym}
+    else if(key==="price"){va=a.price;vb=b.price}
+    else if(key==="supply"){va=a._supply;vb=b._supply}
+    else if(key==="marketSupply"){va=assetMarketSupply(a);vb=assetMarketSupply(b)}
+    else if(key==="borrow"){va=(a.borrowTotal ?? a.borrow);vb=(b.borrowTotal ?? b.borrow)}
+    if(typeof va==="string") return dir==="asc"?va.localeCompare(vb):vb.localeCompare(va);
+    return dir==="asc"?va-vb:vb-va;
+  });
+  if(!rows.length){
+    tb.innerHTML = `<tr class="dolo-empty-state-row assets-empty-row"><td colspan="6" class="dolo-empty-state-cell" data-dolo-empty-fixed="true"><div class="dolo-empty-state" role="status"><span>No assets found</span></div></td></tr>`;
+    return;
+  }
+  document.body.classList.toggle("assets-detail-open", rows.some(r => state.expanded.has(marketKey(r))));
+
+  // count
+  document.getElementById("count-badge").textContent = rows.length + " markets";
+
+  // sort arrows
+  document.querySelectorAll("#tbl thead th[data-sort]").forEach(th=>{
+    const k=th.dataset.sort;
+    th.classList.toggle("sorted",k===key);
+    const ex=th.querySelector(".sort");
+    if(ex) ex.remove();
+    if(k===key){
+      const s=document.createElement("span");
+      s.className="sort";
+      s.textContent = dir==="asc" ? "▲" : "▼";
+      th.appendChild(s);
+    }
+  });
+
+  tb.innerHTML = rows.map((r,rowIndex)=>{
+    const supply = state.mode==="APY" ? aprToApy(r._supply) : r._supply;
+    const borrow = state.mode==="APY" ? aprToApy(r.borrow) : r.borrow;
+    // Effective borrow cost: base rate + the borrowed asset's own yield
+    // (staking APR on LSTs) — what the borrower actually owes.
+    const borrowEff = r.borrowYield > 0
+      ? (state.mode==="APY" ? aprToApy((r.borrowTotal ?? (r.borrow + r.borrowYield))) : (r.borrowTotal ?? (r.borrow + r.borrowYield)))
+      : borrow;
+    const chain = chainMeta(r.chain);
+    const keyId = marketKey(r);
+    const addrUrl = explorerUrl(r);
+    const caHTML = r.addr ? `
+                  <a class="token-ca addr-tooltip-wrap" href="${addrUrl || "#"}" target="_blank" rel="noopener" onclick="event.stopPropagation()" data-full-addr="${r.addr}">
+                    <span class="token-ca-label">CA</span><span>${shortAddr(r.addr)}</span>
+                  </a>
+                  <button class="token-ca-copy" data-copy="${r.addr}" aria-label="Copy ${esc(r.sym)} contract address">${COPY_ICO}</button>` : "";
+
+    // vertical breakdown shown under the big Supply value
+    // order: Lending (native, always top) → oDOLO → External Yield
+    const parts = [];
+    if(state.rw.lending && r.lending!==0) parts.push({k:"lending", l:"Lending", v:r.lending, tip:getSupplyAprSourceTip("lending", r.sym, r)});
+    if(state.rw.odolo   && r.odolo!==0)   parts.push({k:"odolo",   l:"oDOLO",   v:r.odolo, tip:getSupplyAprSourceTip("odolo", r.sym, r)});
+    if(state.rw.yield   && r.yield!==0)   parts.push({k:"yield",   l:"Yield",   v:r.yield, tip:getSupplyAprSourceTip("yield", r.sym, r)});
+    const lineHTML = parts.map(p=>
+      `<div class="apy-line ${p.k} ${p.v < 0 ? "negative" : ""}" tabindex="0" data-tip="${esc(p.tip)}"><span class="apy-dash">—</span><span class="apy-src">${p.l}</span><span class="apy-num">${fmtRate(p.v)}</span></div>`
+    ).join("");
+
+    const expanded = state.expanded.has(keyId);
+    const calc = state.calc.get(keyId) || {action:"deposit",amount:10000};
+    state.calc.set(keyId, calc);
+    const toggleHTML = `<button class="asset-toggle" type="button" aria-label="${expanded ? "Hide asset details" : "Show asset details"}" aria-expanded="${expanded}"><span>${expanded ? "Hide" : "Details"}</span>${CHEV_DOWN_ICO}</button>`;
+    const row = `
+      <tr class="data${expanded?" expanded":""}${rowIndex === rows.length - 1 ? " terminal-row" : ""}" data-key="${keyId}">
+        <td style="padding-left:32px" data-column="chain">${assetChainBadge(r.chain)}</td>
+        <td data-column="asset">
+          <div class="asset-cell">
+            <div class="tok-ico ${tokenIconFrameClass(r.sym)}">
+              <img class="${tokenIconClass(r.sym)}" src="${tokIcon(r.sym, r)}" onerror="this.style.display='none'" alt="">
+            </div>
+            <div class="tok-meta">
+              <div class="tok-name">${tokenNameHtml(r)}</div>
+              <div class="tok-tags">
+                ${caHTML}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td data-column="price" class="num">
+          <span class="price-val">${fmtPrice(r.price)}</span>
+        </td>
+        <td data-column="supply" class="num">
+          <div class="apy-cell">
+            <div class="apy-val ${supply < 0 ? "negative" : ""}">${fmtPct(supply)}</div>
+            <div class="apy-lines">${lineHTML}</div>
+          </div>
+        </td>
+        <td data-column="borrow" class="num">
+          <div class="apy-cell">
+            <div class="bw-val">${fmtPct(borrowEff)}</div>
+          </div>
+        </td>
+        <td data-column="details" class="details-cell" style="padding-right:32px">${toggleHTML}</td>
+      </tr>
+    `;
+    const sim = expanded ? simulate(r, calc) : null;
+    const displaySpread = rateForMode(r.borrow) - rateForMode(r.lending);
+    const exp = expanded ? `
+      <tr class="exp-row" data-key="${keyId}">
+        <td colspan="6">
+          <div class="asset-detail-panel">
+            <div class="asset-detail-head">
+              <div>
+                <div class="asset-detail-eyebrow">Asset Details</div>
+                <div class="asset-detail-title">${esc(r.sym)} market profile</div>
+              </div>
+              <div class="asset-detail-meta">
+                <span class="asset-detail-pill chain"><span class="adp-dot" style="background-image:url('${chain.icon}')"></span>${chain.short || chain.name}</span>
+                <span class="asset-detail-pill gold">${fmtPrice(r.price)}</span>
+              </div>
+            </div>
+            <div class="asset-detail-content">
+              <div class="exp-body">
+
+                <!-- STATS ROW -->
+                <div class="exp-stats-row">
+                  <div class="exp-stat">
+                    <div class="lbl">TVL</div>
+                    <div class="val">${fmtCmp(r.tvl)}</div>
+                    <div class="sub">market size</div>
+                  </div>
+                  <div class="exp-stat">
+                    <div class="lbl">Utilization</div>
+                    <div class="val">${r.util.toFixed(1)}%</div>
+                    <div class="exp-bar"><span style="width:${Math.max(0, Math.min(100, r.util))}%"></span></div>
+                  </div>
+                  <div class="exp-stat">
+                    <div class="lbl">Supply ${state.mode}</div>
+                    <div class="val ${r._supply < 0 ? "down" : "accent"}">${fmtRate(r._supply)}</div>
+                    <div class="sub">${state.rw.lending?`Lending ${fmtRate(r.lending)}`:""}${state.rw.yield && r.yield!==0?` · Yield ${fmtRate(r.yield)}`:""}${state.rw.odolo && r.odolo!==0?` · oDOLO ${fmtRate(r.odolo)}`:""}</div>
+                  </div>
+                  <div class="exp-stat">
+                    <div class="lbl">Net Spread</div>
+                    <div class="val ${displaySpread < 0 ? 'down' : ''}">${fmtPct(displaySpread)}</div>
+                    <div class="sub">borrow − native lending</div>
+                  </div>
+                </div>
+
+                <!-- CALCULATOR -->
+                ${calcMarketDead(r) ? `
+                <div class="calc" data-key="${keyId}">
+                  <div class="calc-head">
+                    <div class="calc-title">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="13" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="13" y1="18" x2="16" y2="18"/></svg>
+                      Yield Simulator
+                    </div>
+                  </div>
+                  <div class="calc-empty">No active lending in this market yet — there are no rates to simulate. Check back once the market has supply or borrow activity.</div>
+                </div>` : `
+                <div class="calc" data-key="${keyId}">
+              <div class="calc-head">
+                <div class="calc-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="13" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="10" y2="18"/><line x1="13" y1="18" x2="16" y2="18"/></svg>
+                  Yield Simulator
+                  <span class="calc-help" tabindex="0" aria-label="Yield simulator note" data-tooltip="Only the native lending portion of APR reacts to utilization changes. Any oDOLO rewards${r.yield>0?" and external yield":""} apply on top and don't depend on your deposit.">?
+                  </span>
+                </div>
+                <div class="calc-controls">
+                  <div class="calc-tabs" data-calc-tabs>
+                    <div class="calc-tab ${calc.action==="deposit"?"active":""}" data-action="deposit">Deposit</div>
+                    <div class="calc-tab ${calc.action==="withdraw"?"active":""}" data-action="withdraw">Withdraw</div>
+                  </div>
+                  <div class="calc-input-wrap">
+                    <span class="dol">$</span>
+                    <input class="calc-input" type="number" min="0" value="${calc.amount}" data-calc-input inputmode="numeric">
+                    <div class="calc-steppers">
+                      <button class="calc-stepper" data-step="up" aria-label="Increase amount" tabindex="-1">
+                        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 7 5 3 8 7"/></svg>
+                      </button>
+                      <button class="calc-stepper" data-step="down" aria-label="Decrease amount" tabindex="-1">
+                        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 3 5 7 8 3"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="calc-presets">
+                    ${[1000,10000,100000].map(v=>`<button class="calc-preset ${+calc.amount===v?"active":""}" data-preset="${v}">$${v/1000}K</button>`).join("")}
+                  </div>
+                  <button class="calc-max" data-calc-max>MAX</button>
+                </div>
+              </div>
+
+              <div class="calc-hero" data-calc-hero aria-live="polite">${calcHeroHtml(r, calc, sim)}</div>
+
+              <div class="calc-mini" data-calc-mini>${calcMiniHtml(sim)}</div>
+
+                </div>`}
+
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>` : "";
+
+    return row + exp;
+  }).join("");
+
+  // bind row clicks
+  tb.querySelectorAll("tr.data").forEach(tr=>{
+    tr.addEventListener("click",()=>{
+      const s=tr.dataset.key;
+      const willOpen = !state.expanded.has(s);
+      if(state.expanded.has(s)) state.expanded.delete(s); else state.expanded.add(s);
+      render();
+      if(willOpen) requestAnimationFrame(()=>{
+        const wrap = document.querySelector(".tbl-wrap");
+        if(wrap) wrap.scrollLeft = 0;
+      });
+    });
+  });
+  // expanded row: keep clicks inside from collapsing
+  tb.querySelectorAll("tr.exp-row").forEach(tr=>{
+    tr.addEventListener("click", e=>e.stopPropagation());
+  });
+  tb.querySelectorAll(".token-ca-copy").forEach(btn=>{
+    btn.addEventListener("click", async e=>{
+      e.stopPropagation();
+      const addr = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(addr); } catch(_) {}
+      btn.classList.add("copied");
+      btn.innerHTML = CHECK_ICO;
+      setTimeout(()=>{ btn.classList.remove("copied"); btn.innerHTML = COPY_ICO; }, 1400);
+    });
+  });
+
+  // calculator: tab switch
+  tb.querySelectorAll(".calc").forEach(cl=>{
+    const key = cl.dataset.key;
+    const row = ASSETS.find(a=>marketKey(a)===key);
+    const calc = state.calc.get(key);
+    cl.querySelectorAll(".calc-tab").forEach(tab=>{
+      tab.addEventListener("click", e=>{
+        e.stopPropagation();
+        calc.action = tab.dataset.action;
+        render();
+      });
+    });
+    const input = cl.querySelector("[data-calc-input]");
+    if(input){
+      input.addEventListener("click", e=>e.stopPropagation());
+      input.addEventListener("input", e=>{
+        const v = Math.max(0, parseFloat(e.target.value)||0);
+        calc.amount = v;
+        // partial re-render to avoid losing focus
+        updateCalc(key);
+      });
+      // Keyboard arrows — smart step (not fixed browser step)
+      input.addEventListener("keydown", e=>{
+        if(e.key!=="ArrowUp" && e.key!=="ArrowDown") return;
+        e.preventDefault();
+        stepAmount(e.key==="ArrowUp"?1:-1, e.shiftKey?10:1);
+      });
+    }
+
+    // Smart step: scale with magnitude so stepping never feels stuck or jumpy
+    function smartStep(val){
+      const v = Math.max(0, val);
+      if(v < 1000)     return 100;
+      if(v < 10000)    return 1000;
+      if(v < 100000)   return 10000;
+      if(v < 1000000)  return 100000;
+      return 1000000;
+    }
+    function stepAmount(dir, mult){
+      mult = mult || 1;
+      // decrementing near a boundary? use the lower range step so 10000→9000 not 10000→0
+      const refVal = dir>0 ? calc.amount : Math.max(0, calc.amount - 1);
+      const step = smartStep(refVal) * mult;
+      calc.amount = Math.max(0, Math.round((calc.amount + dir*step)/step)*step);
+      if(input) input.value = calc.amount;
+      updateCalc(key);
+    }
+
+    // Custom steppers with press-and-hold acceleration
+    cl.querySelectorAll(".calc-stepper").forEach(btn=>{
+      const dir = btn.dataset.step==="up" ? 1 : -1;
+      let t1=null, t2=null;
+      const fire = ()=> stepAmount(dir, 1);
+      const stop = ()=>{
+        if(t1){clearTimeout(t1); t1=null}
+        if(t2){clearInterval(t2); t2=null}
+        btn.classList.remove("pressing");
+      };
+      const start = e=>{
+        e.stopPropagation();
+        if(e.cancelable) e.preventDefault();
+        btn.classList.add("pressing");
+        fire();
+        t1 = setTimeout(()=>{
+          t2 = setInterval(fire, 60);
+        }, 380);
+      };
+      btn.addEventListener("mousedown", start);
+      btn.addEventListener("mouseup", stop);
+      btn.addEventListener("mouseleave", stop);
+      btn.addEventListener("touchstart", start, {passive:false});
+      btn.addEventListener("touchend", stop);
+      btn.addEventListener("touchcancel", stop);
+      // swallow click so it doesn't bubble to the row
+      btn.addEventListener("click", e=>e.stopPropagation());
+    });
+
+    cl.querySelectorAll(".calc-preset").forEach(btn=>{
+      btn.addEventListener("click", e=>{
+        e.stopPropagation();
+        calc.amount = +btn.dataset.preset || 0;
+        if(input) input.value = calc.amount;
+        updateCalc(key);
+      });
+    });
+    const maxBtn = cl.querySelector("[data-calc-max]");
+    if(maxBtn){
+      maxBtn.addEventListener("click", e=>{
+        e.stopPropagation();
+        if(calc.action==="withdraw"){
+          const cash = row.availableLiquidity != null && row.price ? row.availableLiquidity * row.price : row.tvl - (row.borrowedUsd != null ? row.borrowedUsd : row.tvl * row.util/100);
+          calc.amount = Math.floor(cash);
+        } else {
+          const capRemaining = row.supplyCap ? (Number(row.supplied) >= row.supplyCap ? 0 : row.price ? Math.max(0, row.supplyCap * row.price - row.tvl) : 0) : Infinity;
+          calc.amount = Number.isFinite(capRemaining) && capRemaining > 0 ? Math.floor(capRemaining) : Math.max(10000, Math.floor(row.tvl * 0.1));
+        }
+        if(input) input.value = calc.amount;
+        updateCalc(key);
+      });
+    }
+  });
+}
+
+// lightweight partial update for calculator (avoids rerender/focus loss)
+function updateCalc(key){
+  const row0 = ASSETS.find(a=>marketKey(a)===key);
+  const row = {...row0, _supply: activeSupply(row0)};
+  const calc = state.calc.get(key);
+  const sim = simulate(row, calc);
+  const sel = Array.from(document.querySelectorAll(".calc")).find(el=>el.dataset.key===key);
+  if(!sel) return;
+  // Simplified layout: hero answer + one muted mechanics line + preset state.
+  const hero = sel.querySelector("[data-calc-hero]");
+  if(hero) hero.innerHTML = calcHeroHtml(row, calc, sim);
+  const mini = sel.querySelector("[data-calc-mini]");
+  if(mini) mini.innerHTML = calcMiniHtml(sim);
+  sel.querySelectorAll(".calc-preset").forEach(btn=>{
+    btn.classList.toggle("active", +btn.dataset.preset === +calc.amount);
+  });
+}
+
+/* ==========================================================================
+   WIRE UP
+   ========================================================================== */
+document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value;render()});
+
+function syncSearchClear(input){
+  const search = input && input.closest(".search");
+  if(search) search.classList.toggle("has-value", input.value.length > 0);
+}
+function wireSearchClears(){
+  document.querySelectorAll(".search").forEach(search=>{
+    const input = search.querySelector("input");
+    const clear = search.querySelector(".search-clear");
+    if(!input || !clear) return;
+    input.addEventListener("input",()=>syncSearchClear(input));
+    clear.addEventListener("click", e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      input.value = "";
+      input.dispatchEvent(new Event("input", {bubbles:true}));
+      input.focus();
+      syncSearchClear(input);
+    });
+    syncSearchClear(input);
+  });
+}
+wireSearchClears();
+
+function setDropdownButtonIcon(btn, opt){
+  const icon = btn && btn.querySelector(".icon");
+  if(!icon || !opt) return;
+  const img = opt.querySelector(":scope > img");
+  const svg = opt.querySelector(":scope > .dd-ico svg");
+  if(img){
+    const next = document.createElement("img");
+    next.className = icon.getAttribute("class") || "icon";
+    if(!next.classList.contains("icon")) next.classList.add("icon");
+    next.src = img.getAttribute("src") || "";
+    next.alt = "";
+    next.onerror = function(){ this.style.display = "none"; };
+    icon.replaceWith(next);
+    return;
+  }
+  if(svg){
+    const next = svg.cloneNode(true);
+    next.classList.add("icon");
+    next.removeAttribute("style");
+    icon.replaceWith(next);
+  }
+}
+
+// sort
+document.querySelectorAll("#tbl thead th[data-sort]").forEach(th=>{
+  th.addEventListener("click",()=>{
+    const k=th.dataset.sort;
+    if(state.sort.key===k){state.sort.dir = state.sort.dir==="asc"?"desc":"asc"}
+    else {state.sort.key=k;state.sort.dir="desc"}
+    render();
+  });
+});
+
+// dropdowns — generic toggle
+document.querySelectorAll("[data-dd]").forEach(btn=>{
+  btn.addEventListener("click",e=>{
+    e.stopPropagation();
+    const panel = btn.nextElementSibling;
+    const was = panel.classList.contains("show");
+    document.querySelectorAll(".dd-panel.show").forEach(p=>p.classList.remove("show"));
+    document.querySelectorAll(".dd-btn.open").forEach(b=>b.classList.remove("open"));
+    if(!was){panel.classList.add("show");btn.classList.add("open")}
+  });
+});
+document.addEventListener("click",()=>{
+  document.querySelectorAll(".dd-panel.show").forEach(p=>p.classList.remove("show"));
+  document.querySelectorAll(".dd-btn.open").forEach(b=>b.classList.remove("open"));
+});
+
+// CATEGORY — multi-select; dropdown stays open
+function syncCatDropdown(){
+  const allOpt = document.querySelector('#dd-cat .dd-opt[data-cat="all"]');
+  allOpt.classList.toggle("active", state.cats.size === 0);
+  document.querySelectorAll('#dd-cat .dd-opt[data-cat]').forEach(o=>{
+    const k = o.dataset.cat;
+    if(k==="all") return;
+    o.classList.toggle("active", state.cats.has(k));
+  });
+  const btn = document.querySelector('#dd-cat .dd-btn');
+  btn.classList.toggle("filtered", state.cats.size > 0);
+  const lbl = btn.querySelector(".lbl");
+  const count = btn.querySelector(".count");
+  const total = Object.keys(CAT_LABELS).length;
+  if(state.cats.size === 0) lbl.textContent = "All Assets";
+  else if(state.cats.size === 1) lbl.textContent = CAT_LABELS[[...state.cats][0]] || [...state.cats][0];
+  else lbl.textContent = `${state.cats.size} categories`;
+  if(count) count.textContent = `${state.cats.size || total}/${total}`;
+  const single = state.cats.size === 1 ? [...state.cats][0] : null;
+  const iconOpt = single
+    ? Array.from(document.querySelectorAll('#dd-cat .dd-opt[data-cat]')).find(o => o.dataset.cat === single)
+    : allOpt;
+  setDropdownButtonIcon(btn, iconOpt || allOpt);
+}
+document.querySelectorAll("#dd-cat .dd-opt").forEach(opt=>{
+  opt.addEventListener("click",e=>{
+    e.stopPropagation();
+    const key = opt.dataset.cat;
+    if(key === "all") state.cats.clear();
+    else {
+      if(state.cats.has(key)) state.cats.delete(key);
+      else state.cats.add(key);
+    }
+    syncCatDropdown();
+    render();
+    // NOTE: dropdown intentionally stays open so user can pick multiple
+  });
+});
+
+// NETWORK — multi-select; dropdown stays open
+function syncNetDropdown(){
+  const allOpt = document.querySelector('#dd-net .dd-opt[data-net="all"]');
+  allOpt.classList.toggle("active", state.nets.size === 0);
+  document.querySelectorAll('#dd-net .dd-opt[data-net]').forEach(o=>{
+    const k = o.dataset.net;
+    if(k==="all") return;
+    o.classList.toggle("active", state.nets.has(k));
+  });
+  const btn = document.querySelector('#dd-net .dd-btn');
+  btn.classList.toggle("filtered", state.nets.size > 0);
+  const lbl = btn.querySelector(".lbl");
+  const count = btn.querySelector(".count");
+  const total = CHAIN_COUNT_TOTAL || document.querySelectorAll('#dd-net .dd-opt[data-net]:not([data-net="all"])').length;
+  if(state.nets.size === 0){
+    lbl.textContent = "All Chains";
+    if(count) count.textContent = `${total}/${total}`;
+  } else if(state.nets.size === 1){
+    lbl.textContent = CHAIN_LABELS[[...state.nets][0]] || [...state.nets][0];
+    if(count) count.textContent = `1/${total}`;
+  } else {
+    lbl.textContent = `${state.nets.size} chains`;
+    if(count) count.textContent = `${state.nets.size}/${total}`;
+  }
+  const single = state.nets.size === 1 ? [...state.nets][0] : null;
+  const iconOpt = single
+    ? Array.from(document.querySelectorAll('#dd-net .dd-opt[data-net]')).find(o => o.dataset.net === single)
+    : allOpt;
+  setDropdownButtonIcon(btn, iconOpt || allOpt);
+}
+document.querySelectorAll("#dd-net .dd-opt").forEach(opt=>{
+  opt.addEventListener("click",e=>{
+    e.stopPropagation();
+    const key = opt.dataset.net;
+    if(key === "all") state.nets.clear();
+    else {
+      if(state.nets.has(key)) state.nets.delete(key);
+      else state.nets.add(key);
+    }
+    syncNetDropdown();
+    render();
+  });
+});
+// rewards — checkbox-style items
+function syncRewardsButton(){
+  const btn = document.querySelector('#dd-rw .dd-btn');
+  // Mirror the 3 dots on the toolbar button
+  const dots = btn.querySelectorAll(".rw-dot");
+  const order = ["odolo","yield","lending"];
+  dots.forEach((d,i) => d.classList.toggle("on", state.rw[order[i]]));
+  // Rewards is considered "active" whenever at least one source is enabled —
+  // which is effectively always (default has all 3 on). The subtle highlight
+  // signals "rewards are being included in the APR shown".
+  const anyOn = state.rw.lending || state.rw.odolo || state.rw.yield;
+  btn.classList.toggle("filtered", anyOn);
+}
+document.querySelectorAll("#dd-rw .rw-item").forEach(item=>{
+  item.addEventListener("click",e=>{
+    e.stopPropagation();
+    const key = item.dataset.rw;
+    state.rw[key] = !state.rw[key];
+    item.classList.toggle("active", state.rw[key]);
+    syncRewardsButton();
+    render();
+  });
+});
+// Set rewards as filtered on initial load (default = all 3 on)
+syncRewardsButton();
+
+// Quick-clear × buttons on Category + Chain filters
+document.querySelectorAll('.dd-clear').forEach(x=>{
+  x.addEventListener('click',e=>{
+    e.stopPropagation();
+    const which = x.dataset.clear;
+    if(which === "cat"){ state.cats.clear(); syncCatDropdown(); }
+    if(which === "net"){ state.nets.clear(); syncNetDropdown(); }
+    render();
+  });
+});
+
+// apr / apy
+const aprapy = document.getElementById("aprapy");
+aprapy.querySelectorAll(".opt").forEach(opt=>{
+  opt.addEventListener("click",()=>{
+    aprapy.querySelectorAll(".opt").forEach(o=>o.classList.remove("active"));
+    opt.classList.add("active");
+    state.mode = opt.dataset.val;
+    const idx = state.mode==="APY" ? 1 : 0;
+    aprapy.querySelector(".slider").style.transform = `translateX(${idx*52}px)`;
+    render();
+  });
+});
+
+// timestamp
+document.getElementById("now").textContent = new Date().toLocaleString("en-US");
+
+/* ==========================================================================
+   PROTOCOL INFO — contract addresses
+   ========================================================================== */
+const CONTRACTS = [
+  {token:"DOLO",   logo:"dolo-logo.svg",              chain:"Ethereum",  chainKey:"ethereum",  addr:"0x0F81001eF0A83ecCE5ccebf63EB302c70a39a654", explorer:"https://etherscan.io"},
+  {token:"DOLO",   logo:"dolo-logo.svg",              chain:"Berachain", chainKey:"berachain", addr:"0x0F81001eF0A83ecCE5ccebf63EB302c70a39a654", explorer:"https://berascan.com"},
+  {token:"oDOLO",  logo:"odolo-logo-official.svg",    chain:"Berachain", chainKey:"berachain", addr:"0x02E513b5B54eE216Bf836ceb471507488fC89543", explorer:"https://berascan.com"},
+  {token:"veDOLO", logo:"vedolo-logo.svg",            chain:"Berachain", chainKey:"berachain", addr:"0xCB86B75EE6133d179a12D550b09FB3cdB1e141D4", explorer:"https://berascan.com"},
+];
+const shorten = (a)=>a.slice(0,6)+"…"+a.slice(-4);
+const COPY_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+const CHECK_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const CHEV_DOWN_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+const EXT_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
+
+const __protoAddrsEl = document.getElementById("proto-addrs"); // may be removed by shared protocol footer
+if (__protoAddrsEl) __protoAddrsEl.innerHTML = CONTRACTS.map((c,i)=>`
+  <div class="proto-addr" data-idx="${i}">
+    <div class="proto-addr-left">
+      <div class="proto-token">
+        <img src="${c.logo}" alt="${c.token}" onerror="this.style.display='none'">
+        <span class="proto-token-name">${c.token}</span>
+      </div>
+      <span class="proto-chain-chip"><span class="dot dot-${c.chainKey}"></span>${c.chain}</span>
+    </div>
+    <div class="proto-addr-right">
+      <span class="proto-addr-hex addr-tooltip-wrap" data-full-addr="${c.addr}">${shorten(c.addr)}</span>
+      <button class="proto-copy" data-copy="${c.addr}" aria-label="Copy address">${COPY_ICO}</button>
+      <button class="proto-explore" data-url="${c.explorer}/token/${c.addr}" aria-label="Open in explorer">${EXT_ICO}</button>
+    </div>
+  </div>
+`).join("");
+
+// clicks: row = open explorer, button = copy
+document.querySelectorAll(".proto-addr").forEach(row=>{
+  const idx = +row.dataset.idx;
+  const c = CONTRACTS[idx];
+  row.addEventListener("click", e=>{
+    if(e.target.closest(".proto-copy") || e.target.closest(".proto-explore")) return;
+    window.open(`${c.explorer}/token/${c.addr}`, "_blank", "noopener");
+  });
+});
+document.querySelectorAll(".proto-explore").forEach(btn=>{
+  btn.addEventListener("click", e=>{
+    e.stopPropagation();
+    const url = btn.dataset.url;
+    if(url) window.open(url, "_blank", "noopener");
+  });
+});
+document.querySelectorAll(".proto-copy").forEach(btn=>{
+  btn.addEventListener("click", async e=>{
+    e.stopPropagation();
+    const addr = btn.dataset.copy;
+    try { await navigator.clipboard.writeText(addr); } catch(_) {}
+    btn.classList.add("copied");
+    btn.innerHTML = CHECK_ICO;
+    setTimeout(()=>{ btn.classList.remove("copied"); btn.innerHTML = COPY_ICO; }, 1400);
+  });
+});
+
+async function initAssetsPreview(){
+  state.loading = true;
+  state.fallback = false;
+  renderLoading();
+  const cached = readLiveAssetsCache();
+  if(cached){
+    applyAssetRows(cached.rows);
+    setCachedLiveStatus(ASSETS.length, cached.savedAt, false, cached.generatedAt);
+  }
+  try{
+    const snapshot = await loadPrebuiltAssets();
+    writeLiveAssetsCache(snapshot.rows, {generatedAt:snapshot.generatedAt, source:snapshot.source});
+    applyAssetRows(snapshot.rows);
+    setSnapshotStatus(ASSETS.length, snapshot.generatedAt);
+    return;
+  }catch(e){
+    console.warn("Assets snapshot failed; trying direct Dolomite fetch", e);
+  }
+  try{
+    const liveRows = await loadLiveAssets();
+    if(liveRows.length > 0){
+      const normalized = normalizeAssetRows(liveRows);
+      writeLiveAssetsCache(normalized, {generatedAt:new Date().toISOString(), source:"direct"});
+      applyAssetRows(normalized);
+      setLiveStatus(true, ASSETS.length);
+      return;
+    }
+    throw new Error("No live asset rows returned");
+  }catch(e){
+    console.warn("Official asset data failed; using static fallback", e);
+    if(cached){
+      setCachedLiveStatus(ASSETS.length, cached.savedAt, true, cached.generatedAt);
+      return;
+    }
+    ASSETS = normalizeAssetRows(ASSETS);
+    state.loading = false;
+    state.fallback = true;
+    document.body.classList.remove("assets-loading");
+    document.body.classList.add("assets-fallback");
+    state.expanded.clear();
+    state.calc.clear();
+    syncNetDropdown();
+    render();
+    setLiveStatus(false, ASSETS.length);
+  }
+}
+initAssetsPreview();
+</script>
+</body>
+</html>
+

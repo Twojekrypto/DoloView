@@ -1,0 +1,232 @@
+name: Refresh Berachain Borrow-Route EARN History
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'  # Coverage lane; serialized with head refresh to avoid RPC contention
+  workflow_dispatch:
+
+concurrency:
+  group: earn-berachain-canonical-history
+  queue: max
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PYTHONUNBUFFERED: '1'
+      CHAIN: berachain
+      BORROW_ROUTE_HOT_LIMIT: '250'
+      BORROW_ROUTE_CHECKPOINT_STEPS: '90'
+      BORROW_ROUTE_CHECKPOINT_SLEEP_SECONDS: '20'
+      ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+      QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+      DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+      ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+      ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+      ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Check Berachain RPC redundancy
+        run: |
+          set -euo pipefail
+          configured=0
+          for name in DRPC_BERACHAIN_RPC_ZEN QUICKNODE_BERACHAIN_RPC_2 ALCHEMY_BERACHAIN_RPC_2_JEFF ALCHEMY_BERACHAIN_RPC_2 ALCHEMY_BERACHAIN_RPC ALCHEMY_BERACHAIN_RPC_3; do
+            if [ -n "${!name:-}" ]; then
+              configured=$((configured + 1))
+            fi
+          done
+          echo "Configured Berachain RPC secrets: ${configured}/6"
+          if [ "$configured" -eq 0 ]; then
+            echo "::error title=Berachain RPC missing::Set at least ALCHEMY_BERACHAIN_RPC in repository secrets."
+            exit 1
+          fi
+          if [ "$configured" -lt 2 ]; then
+            echo "::warning title=Berachain RPC redundancy::Only ${configured} Berachain RPC secret is configured. Add a second provider such as DRPC_BERACHAIN_RPC_ZEN or QUICKNODE_BERACHAIN_RPC_2 for better failover."
+          fi
+
+      - name: Restore Berachain global runtime cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            data/earn-subaccount-history-events
+            data/earn-subaccount-history/.progress
+            data/earn-subaccount-history/.repair-plans
+            data/earn-subaccount-history/.incremental-plans
+            data/earn-subaccount-history/berachain
+          key: earn-canonical-global-runtime-berachain-${{ github.run_id }}
+          restore-keys: |
+            earn-canonical-global-runtime-berachain-
+            earn-canonical-runtime-berachain-
+
+      - name: Select Berachain borrow-route and hot wallets
+        run: |
+          set -euo pipefail
+          python3 select_earn_borrow_route_history_addresses.py \
+            --chain "$CHAIN" \
+            --output "/tmp/earn-${CHAIN}-borrow-route-existing-addresses.txt" \
+            --metadata-output "/tmp/earn-${CHAIN}-borrow-route-existing-addresses.json"
+          cat "/tmp/earn-${CHAIN}-borrow-route-existing-addresses.json"
+
+          python3 select_earn_canonical_hot_addresses.py \
+            --chain "$CHAIN" \
+            --limit "$BORROW_ROUTE_HOT_LIMIT" \
+            --priority-address-file config/earn_berachain_canonical_hot_addresses.txt \
+            --priority-address-file config/earn_canonical_priority_addresses.txt \
+            --include-priority-even-if-unknown \
+            --output "/tmp/earn-${CHAIN}-borrow-route-hot-addresses.txt" \
+            --metadata-output "/tmp/earn-${CHAIN}-borrow-route-hot-addresses.json"
+          cat "/tmp/earn-${CHAIN}-borrow-route-hot-addresses.json"
+
+          python3 - "/tmp/earn-${CHAIN}-borrow-route-refresh-addresses.txt" \
+            "/tmp/earn-${CHAIN}-borrow-route-existing-addresses.txt" \
+            "/tmp/earn-${CHAIN}-borrow-route-hot-addresses.txt" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          output = Path(sys.argv[1])
+          addresses = []
+          seen = set()
+          for raw_path in sys.argv[2:]:
+              path = Path(raw_path)
+              if not path.exists():
+                  continue
+              for raw in path.read_text(encoding="utf-8").splitlines():
+                  address = raw.strip().lower()
+                  if not address or address.startswith("#"):
+                      continue
+                  if not address.startswith("0x") or len(address) != 42:
+                      raise SystemExit(f"Invalid address in {path}: {raw}")
+                  if address not in seen:
+                      seen.add(address)
+                      addresses.append(address)
+          if not addresses:
+              raise SystemExit("No Berachain borrow-route refresh addresses found")
+          output.write_text("".join(f"{address}\n" for address in addresses), encoding="utf-8")
+          print(json.dumps({"refreshAddressCount": len(addresses)}, indent=2))
+          PY
+
+      - name: Refresh selected borrow-route canonical history
+        id: refresh
+        run: |
+          set -euo pipefail
+          status_path="/tmp/earn-${CHAIN}-global-refresh.json"
+          python3 run_earn_canonical_history_refresh.py \
+            --chain "$CHAIN" \
+            --selection-address-file "/tmp/earn-${CHAIN}-borrow-route-refresh-addresses.txt" \
+            --max-scan-workers 8 \
+            --max-materialize-workers 8 \
+            --max-incremental-scan-workers 10 \
+            --max-incremental-apply-workers 10 \
+            --max-new-backfill-workers 4 \
+            --max-steps "$BORROW_ROUTE_CHECKPOINT_STEPS" \
+            --sleep-seconds "$BORROW_ROUTE_CHECKPOINT_SLEEP_SECONDS" \
+            --allow-empty \
+            --skip-unsupported-start-block \
+            --allow-checkpoint-incomplete \
+            --status-output "$status_path"
+          cat "$status_path"
+          complete="$(python3 - "$status_path" <<'PY'
+          import json
+          import sys
+          payload = json.load(open(sys.argv[1]))
+          print("true" if payload.get("complete") else "false")
+          PY
+          )"
+          skipped="$(python3 - "$status_path" <<'PY'
+          import json
+          import sys
+          payload = json.load(open(sys.argv[1]))
+          print("true" if payload.get("skipped") else "false")
+          PY
+          )"
+          echo "complete=${complete}" >> "$GITHUB_OUTPUT"
+          echo "skipped=${skipped}" >> "$GITHUB_OUTPUT"
+          if [ "$complete" != "true" ]; then
+            echo "Global canonical history checkpoint saved; later scheduled runs will continue from cache."
+          fi
+
+      - name: Select borrow-route wallets for publication
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        run: |
+          set -euo pipefail
+          python3 select_earn_borrow_route_history_addresses.py \
+            --chain "$CHAIN" \
+            --output "/tmp/earn-${CHAIN}-borrow-route-addresses.txt" \
+            --metadata-output "/tmp/earn-${CHAIN}-borrow-route-addresses.json"
+          cat "/tmp/earn-${CHAIN}-borrow-route-addresses.json"
+
+      - name: Build borrow-route verified ledger cache
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        run: |
+          set -euo pipefail
+          if [ ! -s "/tmp/earn-${CHAIN}-borrow-route-addresses.txt" ]; then
+            echo "No borrow-route wallets to publish"
+            exit 0
+          fi
+          python3 build_earn_resolved_interest_ledger.py \
+            --chain "$CHAIN" \
+            --address-file "/tmp/earn-${CHAIN}-borrow-route-addresses.txt"
+          python3 build_earn_verified_ledger.py \
+            --chain "$CHAIN" \
+            --address-file "/tmp/earn-${CHAIN}-borrow-route-addresses.txt"
+
+      - name: Save Berachain global runtime cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            data/earn-subaccount-history-events
+            data/earn-subaccount-history/.progress
+            data/earn-subaccount-history/.repair-plans
+            data/earn-subaccount-history/.incremental-plans
+            data/earn-subaccount-history/berachain
+          key: earn-canonical-global-runtime-berachain-${{ github.run_id }}
+
+      - name: Commit and push borrow-route public history
+        if: steps.refresh.outputs.complete == 'true' && steps.refresh.outputs.skipped != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ ! -s "/tmp/earn-${CHAIN}-borrow-route-addresses.txt" ]; then
+            echo "No borrow-route wallets to publish"
+            exit 0
+          fi
+          git add -f data/earn-subaccount-history/manifest.json
+          git add -f data/earn-resolved-interest-ledger/manifest.json
+          git add -f data/earn-verified-ledger/manifest.json
+          bash scripts/stage_earn_publishable_wallet_paths.sh "$CHAIN" "/tmp/earn-${CHAIN}-borrow-route-addresses.txt"
+          if git diff --staged --quiet; then
+            echo "No borrow-route history changes to commit"
+            exit 0
+          fi
+          stash_started_seconds=$SECONDS
+          git stash push --keep-index --include-untracked --message "berachain-borrow-route-runtime" || true
+          echo "Borrow-route runtime stash completed in $((SECONDS - stash_started_seconds))s"
+          bash scripts/commit_with_fresh_earn_status.sh "Refresh Berachain borrow-route EARN history - $(date -u '+%Y-%m-%d %H:%M UTC')"

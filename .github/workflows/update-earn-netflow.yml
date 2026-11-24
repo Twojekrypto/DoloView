@@ -1,0 +1,278 @@
+name: Update Earn Netflow Data
+run-name: Update Earn Netflow Data [${{ inputs.reset_chain || inputs.chain || 'all' }}]
+
+on:
+  schedule:
+    - cron: '17 * * * *'  # Hourly chain-aware netflow refresh for non-Berachain networks
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: 'Chain to scan, or all for every non-Berachain netflow chain.'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - arbitrum
+          - ethereum
+      reset_chain:
+        description: 'Chain to re-scan from scratch. Leave empty for normal incremental update.'
+        required: false
+        default: ''
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  plan-netflow:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - name: Plan requested chains
+        id: plan
+        env:
+          REQUESTED_CHAIN: ${{ inputs.chain || 'all' }}
+          RESET_CHAIN: ${{ inputs.reset_chain }}
+        run: |
+          set -euo pipefail
+          matrix="$(python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          chains = {
+              "arbitrum": {"maxRuntimeSeconds": 3300, "partialOutputIntervalSeconds": 0},
+              "ethereum": {"maxRuntimeSeconds": 3300, "partialOutputIntervalSeconds": 0},
+          }
+          requested = (os.environ.get("REQUESTED_CHAIN") or "all").strip().lower()
+          reset = (os.environ.get("RESET_CHAIN") or "").strip().lower()
+
+          if reset:
+              selected = [reset]
+              reset_progress = True
+          elif requested in {"", "all"}:
+              selected = list(chains)
+              reset_progress = False
+          else:
+              selected = [requested]
+              reset_progress = False
+
+          unknown = [chain for chain in selected if chain not in chains]
+          if unknown:
+              print(f"Unknown EARN netflow chain(s): {', '.join(unknown)}", file=sys.stderr)
+              sys.exit(1)
+
+          include = [
+              {
+                  "chain": chain,
+                  "maxRuntimeSeconds": chains[chain]["maxRuntimeSeconds"],
+                  "partialOutputIntervalSeconds": chains[chain]["partialOutputIntervalSeconds"],
+                  "resetProgress": reset_progress,
+              }
+              for chain in selected
+          ]
+          print(json.dumps({"include": include}, separators=(",", ":")))
+          PY
+          )"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Planned EARN netflow matrix: $matrix"
+
+  update-netflow:
+    needs: plan-netflow
+    if: needs.plan-netflow.outputs.matrix != '{"include":[]}'
+    name: Update netflow [${{ matrix.chain }}]
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan-netflow.outputs.matrix) }}
+    concurrency:
+      group: earn-netflow-${{ matrix.chain }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Restore netflow progress cache
+        if: matrix.resetProgress != true
+        uses: actions/cache@v5
+        with:
+          path: data/.netflow-progress/${{ matrix.chain }}.json
+          key: netflow-progress-${{ matrix.chain }}-${{ github.run_id }}
+          restore-keys: |
+            netflow-progress-${{ matrix.chain }}-
+            netflow-progress-
+
+      - name: Reset chain progress
+        if: matrix.resetProgress == true
+        env:
+          CHAIN: ${{ matrix.chain }}
+        run: |
+          set -euo pipefail
+          echo "Resetting progress for chain: $CHAIN"
+          mkdir -p data/.netflow-progress
+          echo '{"version": 2, "last_block": 0, "netflows": {}, "cycleAccountState": {}, "cycleMarketState": {}}' > "data/.netflow-progress/${CHAIN}.json"
+
+      - name: Check secondary RPC redundancy
+        env:
+          CHAIN: ${{ matrix.chain }}
+          ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
+          ALCHEMY_ARBITRUM_RPC_KAT: ${{ secrets.ALCHEMY_ARBITRUM_RPC_KAT }}
+          ALCHEMY_ARBITRUM_RPC_DAN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_DAN }}
+          ALCHEMY_ARBITRUM_RPC_ZEN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_ZEN }}
+          ALCHEMY_ARBITRUM_RPC_2: ${{ secrets.ALCHEMY_ARBITRUM_RPC_2 }}
+          ALCHEMY_ARBITRUM_RPC_3: ${{ secrets.ALCHEMY_ARBITRUM_RPC_3 }}
+          DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+          ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+          ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+          ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+          ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+          MANTLE_RPC: ${{ secrets.MANTLE_RPC }}
+          MANTLE_RPC_2: ${{ secrets.MANTLE_RPC_2 }}
+          QUICKNODE_MANTLE_RPC: ${{ secrets.QUICKNODE_MANTLE_RPC }}
+          QUICKNODE_MANTLE_RPC_2: ${{ secrets.QUICKNODE_MANTLE_RPC_2 }}
+          MANTLE_RPC_QUICKNODE_TWOJE: ${{ secrets.MANTLE_RPC_QUICKNODE_TWOJE }}
+          DRPC_MANTLE_RPC: ${{ secrets.DRPC_MANTLE_RPC }}
+          DRPC_MANTLE_RPC_ZEN: ${{ secrets.DRPC_MANTLE_RPC_ZEN }}
+          ALCHEMY_MANTLE_RPC_ZEN: ${{ secrets.ALCHEMY_MANTLE_RPC_ZEN }}
+          ALCHEMY_MANTLE_RPC_DANU: ${{ secrets.ALCHEMY_MANTLE_RPC_DANU }}
+          ALCHEMY_MANTLE_RPC: ${{ secrets.ALCHEMY_MANTLE_RPC }}
+          ALCHEMY_MANTLE_RPC_2_JEFF: ${{ secrets.ALCHEMY_MANTLE_RPC_2_JEFF }}
+          ALCHEMY_MANTLE_RPC_2: ${{ secrets.ALCHEMY_MANTLE_RPC_2 }}
+          ALCHEMY_MANTLE_RPC_3: ${{ secrets.ALCHEMY_MANTLE_RPC_3 }}
+        run: |
+          set -euo pipefail
+          case "$CHAIN" in
+            arbitrum)
+              names=(ALCHEMY_ARBITRUM_RPC ALCHEMY_ARBITRUM_RPC_KAT ALCHEMY_ARBITRUM_RPC_DAN ALCHEMY_ARBITRUM_RPC_ZEN ALCHEMY_ARBITRUM_RPC_2 ALCHEMY_ARBITRUM_RPC_3)
+              ;;
+            ethereum)
+              names=(DRPC_ETHEREUM_RPC_2_JEFF ALCHEMY_ETHEREUM_RPC ALCHEMY_ETHEREUM_RPC_KAT ALCHEMY_ETHEREUM_RPC_DAN ALCHEMY_ETHEREUM_RPC_ZEN ALCHEMY_ETHEREUM_RPC_2 ALCHEMY_ETHEREUM_RPC_3)
+              ;;
+            mantle)
+              names=(MANTLE_RPC MANTLE_RPC_2 QUICKNODE_MANTLE_RPC QUICKNODE_MANTLE_RPC_2 MANTLE_RPC_QUICKNODE_TWOJE DRPC_MANTLE_RPC DRPC_MANTLE_RPC_ZEN ALCHEMY_MANTLE_RPC_2_JEFF ALCHEMY_MANTLE_RPC_ZEN ALCHEMY_MANTLE_RPC_DANU ALCHEMY_MANTLE_RPC ALCHEMY_MANTLE_RPC_2 ALCHEMY_MANTLE_RPC_3)
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+          configured=0
+          for name in "${names[@]}"; do
+            if [ -n "${!name:-}" ]; then
+              configured=$((configured + 1))
+            fi
+          done
+          echo "Configured ${CHAIN} RPC secrets: ${configured}/${#names[@]}"
+          if [ "$configured" -lt 2 ]; then
+            echo "::warning title=${CHAIN} RPC redundancy::Only ${configured} dedicated ${CHAIN} RPC secret(s) are configured. Add a second provider secret for better failover."
+          fi
+
+      - name: Scan earn netflow events
+        env:
+          PYTHONUNBUFFERED: '1'
+          CHAIN: ${{ matrix.chain }}
+          MAX_RUNTIME_SECONDS: ${{ matrix.maxRuntimeSeconds }}
+          PARTIAL_OUTPUT_INTERVAL_SECONDS: ${{ matrix.partialOutputIntervalSeconds }}
+          ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
+          ALCHEMY_ARBITRUM_RPC_KAT: ${{ secrets.ALCHEMY_ARBITRUM_RPC_KAT }}
+          ALCHEMY_ARBITRUM_RPC_DAN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_DAN }}
+          ALCHEMY_ARBITRUM_RPC_ZEN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_ZEN }}
+          ALCHEMY_ARBITRUM_RPC_2: ${{ secrets.ALCHEMY_ARBITRUM_RPC_2 }}
+          ALCHEMY_ARBITRUM_RPC_3: ${{ secrets.ALCHEMY_ARBITRUM_RPC_3 }}
+          DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+          ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+          ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+          ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+          ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+          MANTLE_RPC: ${{ secrets.MANTLE_RPC }}
+          MANTLE_RPC_2: ${{ secrets.MANTLE_RPC_2 }}
+          QUICKNODE_MANTLE_RPC: ${{ secrets.QUICKNODE_MANTLE_RPC }}
+          QUICKNODE_MANTLE_RPC_2: ${{ secrets.QUICKNODE_MANTLE_RPC_2 }}
+          MANTLE_RPC_QUICKNODE_TWOJE: ${{ secrets.MANTLE_RPC_QUICKNODE_TWOJE }}
+          DRPC_MANTLE_RPC: ${{ secrets.DRPC_MANTLE_RPC }}
+          DRPC_MANTLE_RPC_ZEN: ${{ secrets.DRPC_MANTLE_RPC_ZEN }}
+          ALCHEMY_MANTLE_RPC_ZEN: ${{ secrets.ALCHEMY_MANTLE_RPC_ZEN }}
+          ALCHEMY_MANTLE_RPC_DANU: ${{ secrets.ALCHEMY_MANTLE_RPC_DANU }}
+          ALCHEMY_MANTLE_RPC: ${{ secrets.ALCHEMY_MANTLE_RPC }}
+          ALCHEMY_MANTLE_RPC_2_JEFF: ${{ secrets.ALCHEMY_MANTLE_RPC_2_JEFF }}
+          ALCHEMY_MANTLE_RPC_2: ${{ secrets.ALCHEMY_MANTLE_RPC_2 }}
+          ALCHEMY_MANTLE_RPC_3: ${{ secrets.ALCHEMY_MANTLE_RPC_3 }}
+          XLAYER_RPC_QUICKNODE_TWOJE: ${{ secrets.XLAYER_RPC_QUICKNODE_TWOJE }}
+          XLAYER_RPC: ${{ secrets.XLAYER_RPC }}
+          XLAYER_RPC_2: ${{ secrets.XLAYER_RPC_2 }}
+          ALCHEMY_XLAYER_RPC_ZEN: ${{ secrets.ALCHEMY_XLAYER_RPC_ZEN }}
+          DRP_XLAYER_RPC_TWO: ${{ secrets.DRP_XLAYER_RPC_TWO }}
+        run: |
+          python3 scan_earn_netflow.py "$CHAIN" \
+            --max-runtime-seconds "$MAX_RUNTIME_SECONDS" \
+            --partial-output-interval-seconds "$PARTIAL_OUTPUT_INTERVAL_SECONDS"
+
+      - name: Save netflow progress cache
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: data/.netflow-progress/${{ matrix.chain }}.json
+          key: netflow-progress-${{ matrix.chain }}-${{ github.run_id }}
+
+      - name: Validate earn netflow data
+        env:
+          CHAIN: ${{ matrix.chain }}
+        run: |
+          set -euo pipefail
+          python3 - "$CHAIN" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          chain = sys.argv[1]
+          path = Path("data/earn-netflow") / f"{chain}.json"
+          if not path.exists():
+              raise SystemExit(f"Missing earn netflow file: {path}")
+          payload = json.loads(path.read_text())
+          assert payload.get("chain") == chain, payload.get("chain")
+          last_block = int(payload.get("lastBlock") or 0)
+          assert last_block >= 0, "missing lastBlock"
+          if chain == "xlayer" and last_block <= 0:
+              raise SystemExit("X Layer netflow did not make progress past block 0")
+          assert isinstance(payload.get("netflows") or {}, dict), "netflows must be an object"
+          print(f"Validated {chain} netflow at block {payload.get('lastBlock')} with {payload.get('addressCount')} addresses")
+          PY
+
+      - name: Commit & push chain netflow changes
+        env:
+          CHAIN: ${{ matrix.chain }}
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "data/earn-netflow/${CHAIN}.json"
+          if git diff --staged --quiet; then
+            echo "No ${CHAIN} netflow changes to commit"
+            exit 0
+          fi
+          git stash push --keep-index --include-untracked --message "netflow-progress-${CHAIN}" -- data/.netflow-progress || true
+          if bash scripts/commit_with_fresh_earn_status.sh "📊 ${CHAIN} earn netflow update: $(date -u '+%Y-%m-%d %H:%M UTC')"; then
+            git stash pop || true
+          else
+            git stash pop || true
+            exit 1
+          fi

@@ -1,0 +1,993 @@
+#!/usr/bin/env python3
+"""
+Build per-address verified EARN ledger snapshots from existing local data.
+
+Input data:
+  - data/earn-snapshots/{date}.json + manifest.json
+  - data/earn-netflow/{chain}.json
+
+Output data:
+  - data/earn-verified-ledger/{chain}/{address}.json
+  - data/earn-verified-ledger/manifest.json
+
+The generated ledger stores per-market cumulative yield plus verification
+metadata comparing snapshot-derived yield vs netflow-derived yield. The repo
+keeps the output ignored by default; workflow-managed public caches are added
+explicitly for chains where the runtime needs a fast per-wallet lookup.
+"""
+
+import argparse
+import json
+from datetime import datetime, timezone
+from decimal import Decimal
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent
+SNAPSHOT_DIR = ROOT / "data" / "earn-snapshots"
+NETFLOW_DIR = ROOT / "data" / "earn-netflow"
+HISTORY_DIR = ROOT / "data" / "earn-subaccount-history"
+RESOLVED_INTEREST_DIR = ROOT / "data" / "earn-resolved-interest-ledger"
+OUTPUT_DIR = ROOT / "data" / "earn-verified-ledger"
+HISTORICAL_PRICE_DIR = ROOT / "data" / "earn-historical-prices"
+
+
+def _read_json(path):
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _write_json(path, payload):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, separators=(",", ":"), ensure_ascii=True)
+    tmp.replace(path)
+
+
+def _write_or_remove_ledger(output_dir, chain, address, ledger, *, remove_stale=False):
+    out_path = output_dir / chain / f"{address}.json"
+    if ledger and ledger.get("markets"):
+        if out_path.is_file():
+            try:
+                existing = _read_json(out_path)
+            except (OSError, json.JSONDecodeError):
+                existing = None
+            if isinstance(existing, dict) and existing.get("generatedAt"):
+                candidate = dict(ledger)
+                candidate["generatedAt"] = existing["generatedAt"]
+                if candidate == existing:
+                    return True
+        _write_json(out_path, ledger)
+        return True
+    if remove_stale and out_path.is_file():
+        out_path.unlink()
+    return False
+
+
+def _parse_int(value, default=0):
+    try:
+        return int(str(value))
+    except Exception:
+        return default
+
+
+def _trusted_recent_cycle_netflow(flow_entry):
+    """Return cycle netflow only when its exact zero-balance start is proven."""
+    if not isinstance(flow_entry, dict):
+        return None
+    if str(flow_entry.get("cycleStartProof") or "") != "exact-zero":
+        return None
+    if _parse_int(flow_entry.get("resetPar"), None) != 0:
+        return None
+    if flow_entry.get("recentNetFlow") is None:
+        return None
+    return _parse_int(flow_entry.get("recentNetFlow"), None)
+
+
+def _is_integer_text(value):
+    if isinstance(value, bool):
+        return False
+    try:
+        int(str(value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _validate_resolved_interest_ledger(
+    payload,
+    *,
+    chain,
+    address,
+    latest_date,
+    canonical_history,
+    snapshot_comparison_block=None,
+):
+    """Return a trusted static replay artifact or None.
+
+    The public ledger may only carry an exact replay result pinned to the same
+    canonical block and snapshot used by this build. Snapshot/netflow inference
+    is deliberately rejected here.
+    """
+    if not isinstance(payload, dict):
+        return None
+    if str(payload.get("chain") or "").strip().lower() != str(chain).strip().lower():
+        return None
+    if str(payload.get("address") or "").strip().lower() != str(address).strip().lower():
+        return None
+    if str(payload.get("snapshotDate") or "") != str(latest_date or ""):
+        return None
+    if str(payload.get("strictStatus") or "").strip().lower() != "verified":
+        return None
+    if str(payload.get("strictMethod") or "").strip().lower() not in {"interest-ledger", "interest-ledger-override"}:
+        return None
+    if str(payload.get("canonicalHistoryCoverageStatus") or "").strip().lower() != "fresh":
+        return None
+
+    comparison_block = _parse_int(payload.get("comparisonBlock"), 0)
+    canonical_block = _parse_int((canonical_history or {}).get("lastScannedBlock"), 0)
+    if comparison_block <= 0 or canonical_block < comparison_block:
+        return None
+    if snapshot_comparison_block is not None and comparison_block != _parse_int(snapshot_comparison_block, 0):
+        return None
+
+    markets = payload.get("markets")
+    if not isinstance(markets, dict) or not markets:
+        return None
+    required_integer_fields = (
+        "earnYield", "settledYield", "settledSupplyYield", "settledBorrowYield",
+        "openBorrowYield", "openSupplyYield", "openCollateralYield",
+        "currentBorrowPar", "currentSupplyPar", "currentCollateralSupplyPar",
+    )
+    for market_id, market in markets.items():
+        if not str(market_id).isdigit() or not isinstance(market, dict):
+            return None
+        if str(market.get("strictStatus") or "").strip().lower() != "verified":
+            return None
+        if str(market.get("strictMethod") or "").strip().lower() not in {"interest-ledger", "interest-ledger-override"}:
+            return None
+        for field in required_integer_fields:
+            if field not in market or not _is_integer_text(market.get(field)):
+                return None
+
+    verification = payload.get("replayVerificationData") or {}
+    if not isinstance(verification, dict) or not verification:
+        return None
+    counted_market_ids = set()
+    for market_id, entry in verification.items():
+        if not isinstance(entry, dict):
+            return None
+        if entry.get("counted") is not True:
+            continue
+        counted_market_ids.add(str(market_id))
+        if str(entry.get("status") or "").strip().lower() != "verified":
+            return None
+        if entry.get("canVerify") is not True or entry.get("rawVerified") is not True:
+            return None
+        if entry.get("snapshotIncomplete") is not False:
+            return None
+        if entry.get("subgraphReplayTruncated") is True:
+            return None
+        if entry.get("replayStateAdjusted") is True:
+            return None
+    if counted_market_ids != {str(market_id) for market_id in markets}:
+        return None
+    for market_id in markets:
+        entry = verification.get(str(market_id))
+        if not isinstance(entry, dict):
+            return None
+        if str(entry.get("status") or "").strip().lower() != "verified":
+            return None
+        if entry.get("counted") is not True or entry.get("canVerify") is not True or entry.get("rawVerified") is not True:
+            return None
+        if entry.get("snapshotIncomplete") is not False:
+            return None
+
+    # A JSON round-trip both detaches the object and guarantees the public
+    # payload contains only JSON-safe values.
+    try:
+        return json.loads(json.dumps(payload, separators=(",", ":"), ensure_ascii=True))
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_resolved_interest_ledger(chain, address, latest_date, canonical_history):
+    path = RESOLVED_INTEREST_DIR / str(chain).lower() / f"{str(address).lower()}.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = _read_json(path)
+    except (OSError, json.JSONDecodeError):
+        return None
+    snapshot_payload = _read_json(SNAPSHOT_DIR / f"{latest_date}.json")
+    snapshot_comparison_block = _parse_int(
+        ((((snapshot_payload.get("chainMetadata") or {}).get(str(chain).lower()) or {}).get("blockNumber"))),
+        0,
+    )
+    if snapshot_comparison_block <= 0:
+        return None
+    return _validate_resolved_interest_ledger(
+        payload,
+        chain=chain,
+        address=address,
+        latest_date=latest_date,
+        canonical_history=canonical_history,
+        snapshot_comparison_block=snapshot_comparison_block,
+    )
+
+
+def _to_date(date_str):
+    return datetime.fromisoformat(date_str + "T00:00:00+00:00")
+
+
+def _market_sort_key(mid):
+    try:
+        return (0, int(mid))
+    except Exception:
+        return (1, str(mid))
+
+
+def _get_tolerance(decimals):
+    # Align with frontend tolerance logic: 10^(decimals-12), min 1.
+    d = max(0, _parse_int(decimals, 18))
+    return 10 ** max(0, d - 12)
+
+
+def _get_pre_snapshot_residual_tolerance(decimals):
+    # Allow a few base units of residual drift when snapshot math spans a tiny par change.
+    return max(1, _get_tolerance(decimals) * 4)
+
+
+def _history_path(chain, address):
+    return HISTORY_DIR / chain / f"{address.lower()}.json"
+
+
+def _load_canonical_history(chain, address):
+    path = _history_path(chain, address)
+    if not path.exists():
+        return None
+    payload = _read_json(path)
+    return payload if isinstance(payload, dict) else None
+
+
+def _canonical_history_coverage(history_payload, comparison_block):
+    if not isinstance(history_payload, dict):
+        return ("missing", None)
+    try:
+        last_scanned_block = int(history_payload.get("lastScannedBlock") or 0)
+    except Exception:
+        last_scanned_block = 0
+    if comparison_block and last_scanned_block < comparison_block:
+        return ("stale", last_scanned_block)
+    return ("fresh", last_scanned_block)
+
+
+def _derive_canonical_market_breakdown(history_payload, comparison_block):
+    result = {}
+    if not isinstance(history_payload, dict):
+        return result
+    accounts = history_payload.get("accounts") or {}
+    for account_key, account_state in accounts.items():
+        markets = account_state.get("markets") or {}
+        for market_id, market_state in markets.items():
+            row = result.setdefault(str(market_id), {
+                "marketId": str(market_id),
+                "historyTotalDeltaWei": 0,
+                "accountCount": 0,
+                "eventCount": 0,
+                "hasBorrowAccount": False,
+                "hasLegacyUnknownAccount": False,
+            })
+            account_total = 0
+            account_event_count = 0
+            for event in market_state.get("events") or []:
+                try:
+                    block_number = int(event.get("blockNumber"))
+                except Exception:
+                    continue
+                if comparison_block and block_number > comparison_block:
+                    continue
+                account_total += int(event.get("deltaWei") or 0)
+                account_event_count += 1
+            if account_event_count == 0:
+                continue
+            row["historyTotalDeltaWei"] += account_total
+            row["accountCount"] += 1
+            row["eventCount"] += account_event_count
+            if bool(account_state.get("hasBorrow")):
+                row["hasBorrowAccount"] = True
+            if str(account_key) == "legacy-unknown":
+                row["hasLegacyUnknownAccount"] = True
+    return result
+
+
+def _canonical_consistency_status(canonical_row, flow_entry):
+    has_history = bool(canonical_row and (canonical_row.get("eventCount") or 0) > 0)
+    has_netflow = isinstance(flow_entry, dict) and bool(flow_entry)
+    if has_history and has_netflow:
+        history_total = int(canonical_row.get("historyTotalDeltaWei") or 0)
+        netflow_total = _parse_int(flow_entry.get("t"), 0)
+        return "match" if history_total == netflow_total else "mismatch"
+    if has_history:
+        return "history_only"
+    if has_netflow:
+        return "netflow_only"
+    return "none"
+
+
+def _derive_strict_verification(raw_status, raw_method, *, canonical_coverage_status, canonical_consistency_status):
+    raw_status = str(raw_status or "unavailable")
+    raw_method = str(raw_method or "unavailable")
+    if raw_status == "verified":
+        if canonical_coverage_status != "fresh":
+            return ("coverage_incomplete", "canonical-history-coverage", "canonical_history_not_fresh")
+        if canonical_consistency_status != "match":
+            return ("mismatch", "canonical-history-mismatch", f"canonical_history_{canonical_consistency_status}")
+        return ("inferred", raw_method, "snapshot_netflow_match_requires_inference")
+    if raw_status == "pre_snapshot_carry":
+        if canonical_coverage_status != "fresh":
+            return ("coverage_incomplete", "canonical-history-coverage", "canonical_history_not_fresh")
+        if canonical_consistency_status != "match":
+            return ("mismatch", "canonical-history-mismatch", f"canonical_history_{canonical_consistency_status}")
+        return ("inferred", raw_method, "pre_snapshot_carry_requires_inference")
+    if raw_status == "mismatch":
+        if canonical_coverage_status == "fresh" and canonical_consistency_status not in {"none", "match"}:
+            return ("mismatch", "canonical-history-mismatch", f"canonical_history_{canonical_consistency_status}")
+        return ("mismatch", raw_method, "snapshot_netflow_mismatch")
+    if raw_status == "no_netflow":
+        if canonical_coverage_status != "fresh":
+            return ("coverage_incomplete", "canonical-history-coverage", "canonical_history_not_fresh")
+        return ("coverage_incomplete", raw_method, "netflow_missing_market")
+    if raw_status == "no_snapshot":
+        if canonical_coverage_status != "fresh":
+            return ("coverage_incomplete", "canonical-history-coverage", "canonical_history_not_fresh")
+        return ("coverage_incomplete", raw_method, "snapshot_missing_market")
+    return ("unavailable", raw_method, raw_status or "unavailable")
+
+
+def _collect_chain_snapshot_dates(manifest, chain):
+    dates = sorted(manifest.get("dates", []))
+    out = []
+    for date_str in dates:
+        chains = manifest.get("chains", {}).get(date_str, [])
+        if chain in chains:
+            out.append(date_str)
+    return out
+
+
+def _load_chain_snapshots(chain, chain_dates):
+    snapshots = []
+    for date_str in chain_dates:
+        path = SNAPSHOT_DIR / f"{date_str}.json"
+        if not path.exists():
+            continue
+        payload = _read_json(path)
+        chain_data = (payload.get("snapshots", {}) or {}).get(chain, {}) or {}
+        snapshots.append((date_str, chain_data))
+    return snapshots
+
+
+def _build_baseline_meta(baseline_name, baseline_t, decimals, snapshot_yield, first_par, first_wei, last_par, last_wei, has_static_par_window):
+    if snapshot_yield is None or baseline_t is None:
+        return None
+
+    baseline_yield = last_wei - baseline_t
+    diff = baseline_yield - snapshot_yield
+    pre_snapshot_meta = _get_pre_snapshot_carry_meta(
+        decimals,
+        snapshot_yield,
+        diff,
+        first_par,
+        first_wei,
+        last_par,
+        last_wei,
+        baseline_t,
+        has_static_par_window,
+    )
+    return {
+        "name": baseline_name,
+        "t": baseline_t,
+        "yield": baseline_yield,
+        "diff": diff,
+        "pre_snapshot_meta": pre_snapshot_meta,
+    }
+
+
+def _select_best_baseline(candidates, *, tolerance):
+    exact_candidates = []
+    carry_candidates = []
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        if abs(candidate["diff"]) <= tolerance:
+            exact_candidates.append(candidate)
+            continue
+        if candidate["pre_snapshot_meta"] is not None:
+            carry_candidates.append(candidate)
+
+    if exact_candidates:
+        exact_candidates.sort(
+            key=lambda candidate: (
+                abs(candidate["diff"]),
+                0 if candidate["name"] == "recent-cycle" else 1,
+            )
+        )
+        return exact_candidates[0]
+
+    if carry_candidates:
+        carry_candidates.sort(
+            key=lambda candidate: (
+                1 if candidate["pre_snapshot_meta"].get("tinyParDriftWindow") else 0,
+                abs(int(candidate["pre_snapshot_meta"].get("residual") or 0)),
+                0 if candidate["name"] == "recent-cycle" else 1,
+            )
+        )
+        return carry_candidates[0]
+
+    return None
+
+
+def _get_pre_snapshot_carry_meta(decimals, snapshot_yield, diff, first_par, first_wei, last_par, last_wei, netflow_t, has_static_par_window):
+    if snapshot_yield is None or diff is None:
+        return None
+    if first_par <= 0 or first_wei < netflow_t:
+        return None
+
+    carry = first_wei - netflow_t
+    if carry < 0:
+        return None
+
+    residual = diff - carry
+    post_snapshot_delta = last_wei - first_wei
+    exact_post_snapshot_window = snapshot_yield == post_snapshot_delta
+    if has_static_par_window and exact_post_snapshot_window:
+        return {
+            "carry": carry,
+            "residual": residual,
+            "tinyParDriftWindow": False,
+            "windowType": "exact_post_snapshot_window",
+        }
+
+    par_drift = abs(last_par - first_par)
+    if par_drift > _get_tolerance(decimals):
+        return None
+
+    if post_snapshot_delta < 0 or snapshot_yield < 0:
+        return None
+
+    if abs(residual) > _get_pre_snapshot_residual_tolerance(decimals):
+        return None
+
+    return {
+        "carry": carry,
+        "residual": residual,
+        "tinyParDriftWindow": True,
+        "windowType": "tiny_par_drift_window",
+    }
+
+
+STABLE_SYMBOLS = {
+    "USDC", "USDC.E", "USDT", "USDT0", "DAI", "FRAX", "LUSD", "USD0",
+    "USD1", "USDE", "HONEY", "MIM", "USDS",
+}
+
+
+def _decimal_text(value):
+    text = format(value.normalize(), "f")
+    return "0" if text in {"", "-0"} else text
+
+
+def _calculate_historical_yield_pnl(history, prices_by_date, *, decimals, symbol):
+    eligible = 0
+    priced = 0
+    skipped_flow = 0
+    missing_price = 0
+    total_usd = Decimal(0)
+    scale = Decimal(10) ** max(0, int(decimals))
+    stable_fallback = str(symbol or "").upper() in STABLE_SYMBOLS
+
+    for previous, current in zip(history, history[1:]):
+        previous_par = int(previous.get("par") or 0)
+        current_par = int(current.get("par") or 0)
+        if previous_par <= 0 or current_par <= 0 or previous_par != current_par:
+            skipped_flow += 1
+            continue
+        eligible += 1
+        price_raw = (prices_by_date or {}).get(str(current.get("date") or ""))
+        if price_raw in {None, ""} and stable_fallback:
+            price_raw = "1"
+        try:
+            price = Decimal(str(price_raw))
+        except Exception:
+            price = Decimal(0)
+        if price <= 0:
+            missing_price += 1
+            continue
+        interval_yield = int(current.get("wei") or 0) - int(previous.get("wei") or 0)
+        total_usd += (Decimal(interval_yield) / scale) * price
+        priced += 1
+
+    status = "unavailable"
+    if eligible > 0 and priced == eligible:
+        status = "complete"
+    elif priced > 0:
+        status = "partial"
+    return {
+        "historicalYieldUsd": _decimal_text(total_usd),
+        "historicalYieldEligibleIntervals": eligible,
+        "historicalYieldPricedIntervals": priced,
+        "historicalYieldSkippedFlowIntervals": skipped_flow,
+        "historicalYieldMissingPriceIntervals": missing_price,
+        "historicalYieldValuationStatus": status,
+        "historicalYieldValuationMethod": "daily-snapshot-constant-par",
+    }
+
+
+def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices=None):
+    address = address.lower()
+    history_by_market = {}
+    meta_by_market = {}
+    history_payload = _load_canonical_history(chain, address)
+    comparison_block = 0
+    try:
+        history_comparison_block = int((history_payload or {}).get("sourceMetadata", {}).get("lastNetflowBlock") or 0)
+    except Exception:
+        history_comparison_block = 0
+
+    for date_str, chain_data in snapshots:
+        addr_data = chain_data.get(address)
+        if not addr_data:
+            continue
+        markets = (addr_data.get("markets") or {})
+        for mid_raw, m in markets.items():
+            mid = str(mid_raw)
+            history_by_market.setdefault(mid, []).append({
+                "date": date_str,
+                "par": _parse_int(m.get("par", "0")),
+                "wei": _parse_int(m.get("wei", "0")),
+            })
+            # Keep latest-known token metadata for market.
+            meta_by_market[mid] = {
+                "token": str(m.get("token", "")).lower(),
+                "symbol": str(m.get("symbol", "UNK")),
+                "decimals": _parse_int(m.get("decimals", 18)),
+            }
+
+    addr_flows = netflow_by_addr.get(address, {}) or {}
+    if isinstance(history_payload, dict):
+        try:
+            comparison_block = max(
+                _parse_int(history_payload.get("lastScannedBlock"), 0),
+                history_comparison_block,
+            )
+        except Exception:
+            comparison_block = history_comparison_block
+    else:
+        comparison_block = history_comparison_block
+    if comparison_block <= 0:
+        comparison_block = history_comparison_block
+    canonical_coverage_status, canonical_last_scanned_block = _canonical_history_coverage(
+        history_payload,
+        history_comparison_block,
+    )
+    canonical_market_breakdown = _derive_canonical_market_breakdown(history_payload, history_comparison_block)
+    market_ids = set(history_by_market.keys()) | {str(k) for k in addr_flows.keys()}
+    if not market_ids:
+        return None
+
+    markets_out = {}
+    summary = {
+        "verified": 0,
+        "pre_snapshot_carry": 0,
+        "mismatch": 0,
+        "no_netflow": 0,
+        "no_snapshot": 0,
+        "unavailable": 0,
+    }
+    strict_summary = {
+        "verified": 0,
+        "inferred": 0,
+        "mismatch": 0,
+        "coverage_incomplete": 0,
+        "unavailable": 0,
+    }
+
+    for mid in sorted(market_ids, key=_market_sort_key):
+        hist = history_by_market.get(mid, [])
+        meta = meta_by_market.get(mid, {})
+        decimals = _parse_int(meta.get("decimals", 18))
+
+        snapshot_yield = None
+        first_par = 0
+        first_wei = 0
+        last_par = 0
+        last_wei = 0
+        first_date = ""
+        last_date = ""
+        days = 0
+        is_latest_snapshot = False
+        has_static_par_window = False
+
+        if hist:
+            cumulative = 0
+            for i in range(1, len(hist)):
+                prev = hist[i - 1]
+                curr = hist[i]
+                if prev["par"] == 0 or curr["par"] == 0:
+                    continue
+                daily = (prev["par"] * curr["wei"] - prev["wei"] * curr["par"]) // curr["par"]
+                cumulative += daily
+            snapshot_yield = cumulative
+            first_date = hist[0]["date"]
+            first_par = hist[0]["par"]
+            first_wei = hist[0]["wei"]
+            last_date = hist[-1]["date"]
+            last_par = hist[-1]["par"]
+            last_wei = hist[-1]["wei"]
+            has_static_par_window = all(point["par"] == first_par for point in hist)
+            is_latest_snapshot = (last_date == latest_date)
+            try:
+                days = max(1, (_to_date(last_date) - _to_date(first_date)).days + 1)
+            except Exception:
+                days = 0
+
+        flow_entry = addr_flows.get(mid)
+        netflow_t = None
+        recent_cycle_t = None
+        reset_par = None
+        ending_par = None
+        if isinstance(flow_entry, dict):
+            netflow_t = _parse_int(flow_entry.get("t", "0"))
+            recent_cycle_t = _trusted_recent_cycle_netflow(flow_entry)
+            reset_par = _parse_int(flow_entry.get("resetPar"), None) if flow_entry.get("resetPar") is not None else None
+            ending_par = _parse_int(flow_entry.get("endingPar"), None) if flow_entry.get("endingPar") is not None else None
+        elif flow_entry is not None:
+            netflow_t = _parse_int(flow_entry)
+
+        netflow_yield = None
+        if snapshot_yield is not None and netflow_t is not None:
+            netflow_yield = last_wei - netflow_t
+
+        recent_cycle_yield = None
+        if snapshot_yield is not None and recent_cycle_t is not None:
+            recent_cycle_yield = last_wei - recent_cycle_t
+
+        diff = None
+        if snapshot_yield is not None and netflow_yield is not None:
+            diff = netflow_yield - snapshot_yield
+
+        recent_cycle_diff = None
+        if snapshot_yield is not None and recent_cycle_yield is not None:
+            recent_cycle_diff = recent_cycle_yield - snapshot_yield
+
+        status = "unavailable"
+        method = "unavailable"
+        canonical_yield = 0
+        pre_snapshot_carry = None
+        pre_snapshot_residual = None
+        tiny_par_drift_window = False
+        verification_baseline = None
+
+        if snapshot_yield is not None and netflow_yield is not None:
+            baselines = [
+                _build_baseline_meta(
+                    "all-time-netflow",
+                    netflow_t,
+                    decimals,
+                    snapshot_yield,
+                    first_par,
+                    first_wei,
+                    last_par,
+                    last_wei,
+                    has_static_par_window,
+                )
+            ]
+            if recent_cycle_t is not None:
+                baselines.append(
+                    _build_baseline_meta(
+                        "recent-cycle",
+                        recent_cycle_t,
+                        decimals,
+                        snapshot_yield,
+                        first_par,
+                        first_wei,
+                        last_par,
+                        last_wei,
+                        has_static_par_window,
+                    )
+                )
+
+            chosen_baseline = _select_best_baseline(
+                baselines,
+                tolerance=_get_tolerance(decimals),
+            )
+
+            if chosen_baseline and abs(chosen_baseline["diff"]) <= _get_tolerance(decimals):
+                status = "verified"
+                method = (
+                    "recent-cycle+snapshot"
+                    if chosen_baseline["name"] == "recent-cycle"
+                    else "netflow+snapshot"
+                )
+                canonical_yield = chosen_baseline["yield"]
+                verification_baseline = chosen_baseline["name"]
+            elif chosen_baseline and chosen_baseline["pre_snapshot_meta"] is not None:
+                status = "pre_snapshot_carry"
+                method = (
+                    "recent-cycle+pre-snapshot-carry"
+                    if chosen_baseline["name"] == "recent-cycle"
+                    else "netflow+pre-snapshot-carry"
+                )
+                canonical_yield = chosen_baseline["yield"]
+                pre_snapshot_carry = chosen_baseline["pre_snapshot_meta"]["carry"]
+                pre_snapshot_residual = chosen_baseline["pre_snapshot_meta"]["residual"]
+                tiny_par_drift_window = chosen_baseline["pre_snapshot_meta"]["tinyParDriftWindow"]
+                verification_baseline = chosen_baseline["name"]
+            else:
+                status = "mismatch"
+                method = "snapshot-fallback"
+                canonical_yield = snapshot_yield
+
+        elif snapshot_yield is not None:
+            status = "no_netflow"
+            method = "snapshot-only"
+            canonical_yield = snapshot_yield
+        elif netflow_t is not None:
+            status = "no_snapshot"
+            method = "insufficient-history"
+            canonical_yield = 0
+
+        summary[status] = summary.get(status, 0) + 1
+        canonical_row = canonical_market_breakdown.get(mid) or {}
+        canonical_consistency_status = _canonical_consistency_status(canonical_row, flow_entry)
+        strict_status, strict_method, strict_reason = _derive_strict_verification(
+            status,
+            method,
+            canonical_coverage_status=canonical_coverage_status,
+            canonical_consistency_status=canonical_consistency_status,
+        )
+        strict_summary[strict_status] = strict_summary.get(strict_status, 0) + 1
+
+        payload = {
+            "token": str(meta.get("token", "")).lower(),
+            "symbol": str(meta.get("symbol", "UNK")),
+            "decimals": decimals,
+            "cumulativeYield": str(canonical_yield),
+            "status": status,
+            "method": method,
+            "strictStatus": strict_status,
+            "strictMethod": strict_method,
+            "strictReason": strict_reason,
+            "firstDate": first_date,
+            "firstPar": str(first_par),
+            "firstWei": str(first_wei),
+            "lastDate": last_date,
+            "lastPar": str(last_par),
+            "lastWei": str(last_wei),
+            "days": days,
+            "isLatestSnapshot": bool(is_latest_snapshot),
+            "hasStaticParWindow": bool(has_static_par_window),
+            "canonicalHistoryCoverageStatus": canonical_coverage_status,
+            "canonicalHistoryLastScannedBlock": canonical_last_scanned_block,
+            "canonicalHistoryComparisonBlock": history_comparison_block or None,
+            "canonicalHistoryConsistencyStatus": canonical_consistency_status,
+            "canonicalHistoryTotalDeltaWei": str(canonical_row.get("historyTotalDeltaWei", 0)),
+            "canonicalHistoryAccountCount": int(canonical_row.get("accountCount", 0)),
+            "canonicalHistoryEventCount": int(canonical_row.get("eventCount", 0)),
+            "canonicalHistoryHasBorrowAccount": bool(canonical_row.get("hasBorrowAccount")),
+            "canonicalHistoryHasLegacyUnknownAccount": bool(canonical_row.get("hasLegacyUnknownAccount")),
+        }
+        token_prices = ((historical_prices or {}).get(str(meta.get("token", "")).lower()) or {})
+        payload.update(_calculate_historical_yield_pnl(
+            hist,
+            token_prices,
+            decimals=decimals,
+            symbol=meta.get("symbol", ""),
+        ))
+        if snapshot_yield is not None:
+            payload["snapshotYield"] = str(snapshot_yield)
+        if netflow_yield is not None:
+            payload["netflowYield"] = str(netflow_yield)
+        if diff is not None:
+            payload["diff"] = str(diff)
+        if recent_cycle_yield is not None:
+            payload["recentCycleYield"] = str(recent_cycle_yield)
+        if recent_cycle_diff is not None:
+            payload["recentCycleDiff"] = str(recent_cycle_diff)
+        if recent_cycle_t is not None:
+            payload["recentCycleNetFlow"] = str(recent_cycle_t)
+            payload["cycleStartProof"] = "exact-zero"
+        if reset_par is not None:
+            payload["resetPar"] = str(reset_par)
+        if ending_par is not None:
+            payload["endingPar"] = str(ending_par)
+        if flow_entry is not None:
+            payload["canonicalHistoryNetflowDiffWei"] = str(
+                int(canonical_row.get("historyTotalDeltaWei", 0)) - _parse_int((flow_entry or {}).get("t"), 0)
+            )
+        if verification_baseline is not None:
+            payload["verificationBaseline"] = verification_baseline
+        if pre_snapshot_carry is not None:
+            payload["preSnapshotCarryYield"] = str(pre_snapshot_carry)
+        if pre_snapshot_residual is not None:
+            payload["preSnapshotCarryResidual"] = str(pre_snapshot_residual)
+        if pre_snapshot_carry is not None and chosen_baseline and chosen_baseline["pre_snapshot_meta"] is not None:
+            payload["preSnapshotCarryWindowType"] = str(
+                chosen_baseline["pre_snapshot_meta"].get("windowType") or ""
+            )
+        if tiny_par_drift_window:
+            payload["hasTinyParDriftWindow"] = True
+
+        markets_out[mid] = payload
+
+    ledger = {
+        "version": 2,
+        "chain": chain,
+        "address": address,
+        "snapshotDate": latest_date,
+        "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "summary": summary,
+        "strictSummary": strict_summary,
+        "canonicalHistory": {
+            "coverageStatus": canonical_coverage_status,
+            "lastScannedBlock": canonical_last_scanned_block,
+            "comparisonBlock": history_comparison_block or None,
+            "freshForNetflowComparison": canonical_coverage_status == "fresh",
+        },
+        "markets": markets_out,
+    }
+    resolved_interest_ledger = _load_resolved_interest_ledger(
+        chain,
+        address,
+        latest_date,
+        history_payload,
+    )
+    if resolved_interest_ledger:
+        ledger["resolvedInterestLedger"] = resolved_interest_ledger
+    return ledger
+
+
+def _load_netflow_for_chain(chain):
+    path = NETFLOW_DIR / f"{chain}.json"
+    if not path.exists():
+        return {"lastBlock": 0, "netflows": {}}
+    payload = _read_json(path)
+    return {
+        "lastBlock": _parse_int(payload.get("lastBlock", 0)),
+        "netflows": payload.get("netflows", {}) or {},
+    }
+
+
+def _load_historical_prices(chain):
+    path = HISTORICAL_PRICE_DIR / f"{chain}.json"
+    if not path.is_file():
+        return {}
+    payload = _read_json(path)
+    return payload.get("prices", {}) if isinstance(payload, dict) else {}
+
+
+def _discover_existing_addresses(output_dir, chain):
+    chain_dir = output_dir / chain
+    if not chain_dir.exists():
+        return set()
+    out = set()
+    for path in chain_dir.glob("*.json"):
+        address = path.stem.lower()
+        if address.startswith("0x") and len(address) == 42:
+            out.add(address)
+    return out
+
+
+def _read_address_file(path):
+    addresses = set()
+    with Path(path).open("r", encoding="utf-8") as f:
+        for line_number, raw_line in enumerate(f, start=1):
+            address = raw_line.split("#", 1)[0].strip().lower()
+            if not address:
+                continue
+            if not (address.startswith("0x") and len(address) == 42):
+                raise SystemExit(f"Invalid address in {path}:{line_number}: {address}")
+            addresses.add(address)
+    return addresses
+
+
+def _update_manifest(output_dir, chain_meta):
+    manifest_path = output_dir / "manifest.json"
+    manifest = {"version": 2, "generatedAt": "", "chains": {}}
+    if manifest_path.exists():
+        try:
+            manifest = _read_json(manifest_path)
+        except Exception:
+            manifest = {"version": 2, "generatedAt": "", "chains": {}}
+    manifest["version"] = 2
+    manifest["generatedAt"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    chains = manifest.get("chains", {})
+    for chain, meta in chain_meta.items():
+        chains[chain] = meta
+    manifest["chains"] = chains
+    _write_json(manifest_path, manifest)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Build local/private verified EARN ledger files")
+    parser.add_argument("--chain", action="append", required=True,
+                        help="Chain id (repeatable), e.g. --chain arbitrum --chain ethereum")
+    parser.add_argument("--address", action="append", default=[],
+                        help="Address to generate (repeatable). If omitted, use --all-addresses.")
+    parser.add_argument("--address-file", action="append", default=[],
+                        help="File with one wallet address per line (repeatable).")
+    parser.add_argument("--all-addresses", action="store_true",
+                        help="Generate files for all addresses seen in latest snapshot or netflow")
+    parser.add_argument("--existing-addresses", action="store_true",
+                        help="Refresh only addresses that already exist in the output directory")
+    parser.add_argument("--output-dir", default=str(OUTPUT_DIR),
+                        help="Output directory (default: data/earn-verified-ledger, kept local/private)")
+    args = parser.parse_args()
+
+    output_dir = Path(args.output_dir)
+    manifest = _read_json(SNAPSHOT_DIR / "manifest.json")
+
+    requested_addresses = {a.lower() for a in args.address if a}
+    for address_file in args.address_file:
+        requested_addresses.update(_read_address_file(address_file))
+    if not requested_addresses and not args.all_addresses and not args.existing_addresses:
+        raise SystemExit("Provide --address ..., --address-file ..., --existing-addresses, or use --all-addresses")
+
+    chain_meta = {}
+    for chain in sorted({c.lower() for c in args.chain}):
+        chain_dates = _collect_chain_snapshot_dates(manifest, chain)
+        if not chain_dates:
+            print(f"[{chain}] no snapshot dates found, skipping")
+            continue
+
+        snapshots = _load_chain_snapshots(chain, chain_dates)
+        if not snapshots:
+            print(f"[{chain}] no snapshot payloads loaded, skipping")
+            continue
+
+        latest_date, latest_chain_data = snapshots[-1]
+        netflow_payload = _load_netflow_for_chain(chain)
+        netflow_by_addr = netflow_payload["netflows"]
+        historical_prices = _load_historical_prices(chain)
+        existing_addresses = _discover_existing_addresses(output_dir, chain) if args.existing_addresses else set()
+
+        if args.all_addresses:
+            addresses = set(latest_chain_data.keys()) | set(netflow_by_addr.keys()) | requested_addresses | existing_addresses
+        else:
+            addresses = set(requested_addresses) | existing_addresses
+
+        print(f"[{chain}] snapshot={latest_date} addresses={len(addresses)}")
+        wrote = 0
+        removed = 0
+        for address in sorted(addresses):
+            if not (address.startswith("0x") and len(address) == 42):
+                continue
+            ledger = _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices)
+            out_path = output_dir / chain / f"{address}.json"
+            had_existing_output = out_path.is_file()
+            if _write_or_remove_ledger(
+                output_dir,
+                chain,
+                address,
+                ledger,
+                remove_stale=args.existing_addresses,
+            ):
+                wrote += 1
+            elif args.existing_addresses and had_existing_output:
+                removed += 1
+
+        chain_meta[chain] = {
+            "snapshotDate": latest_date,
+            "lastNetflowBlock": netflow_payload["lastBlock"],
+            "addressCount": wrote,
+        }
+        print(f"[{chain}] wrote {wrote} address ledger files; removed {removed} stale files")
+
+    if chain_meta:
+        _update_manifest(output_dir, chain_meta)
+        print(f"Updated manifest: {output_dir / 'manifest.json'}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,109 @@
+name: Earn Audit Checks
+
+on:
+  pull_request:
+    paths:
+      - 'fetch_liquidation_risk.py'
+      - 'build_borrow_earnings.py'
+      - '.github/workflows/update-liquidation-risk.yml'
+      - 'explorer_api.py'
+      - 'calculate_avg_lock.py'
+      - 'generate_exercisers.py'
+      - 'generate_dolo_liquidity.py'
+      - 'update_exercised_usd.py'
+      - '.github/workflows/update-earn-snapshots.yml'
+      - '.github/workflows/update-dolo-liquidity.yml'
+      - '.github/workflows/update-odolo-data.yml'
+      - '.github/workflows/earn-audit-checks.yml'
+      - '.github/workflows/update-dolo-price.yml'
+      - 'dolo-address-labels.js'
+      - 'dolo-preview.html'
+      - 'dashboard-core.html'
+      - 'dashboard-core.css'
+      - 'dashboard-core.js'
+      - 'route-loader.js'
+      - 'tokens.css'
+      - 'liquidation-preview.html'
+      - 'index.html'
+      - 'dolo/index.html'
+      - 'borrow/index.html'
+      - 'liquidation/index.html'
+      - 'audit_earn_asset.py'
+      - 'earn_live_config.py'
+      - 'run_earn_chain_live_rerun.py'
+      - 'run_earn_data_correctness_pipeline.py'
+      - 'run_earn_subaccount_history_incremental.py'
+      - 'run_earn_audit_checks.py'
+      - 'update_dolo_price.py'
+      - 'scripts/smoke_live_pages.py'
+      - 'config/earn_live_defaults.json'
+      - 'tests/**'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'fetch_liquidation_risk.py'
+      - 'build_borrow_earnings.py'
+      - '.github/workflows/update-liquidation-risk.yml'
+      - 'explorer_api.py'
+      - 'calculate_avg_lock.py'
+      - 'generate_exercisers.py'
+      - 'generate_dolo_liquidity.py'
+      - 'update_exercised_usd.py'
+      - '.github/workflows/update-earn-snapshots.yml'
+      - '.github/workflows/update-dolo-liquidity.yml'
+      - '.github/workflows/update-odolo-data.yml'
+      - '.github/workflows/earn-audit-checks.yml'
+      - '.github/workflows/update-dolo-price.yml'
+      - 'dolo-address-labels.js'
+      - 'dolo-preview.html'
+      - 'dashboard-core.html'
+      - 'dashboard-core.css'
+      - 'dashboard-core.js'
+      - 'route-loader.js'
+      - 'tokens.css'
+      - 'liquidation-preview.html'
+      - 'index.html'
+      - 'dolo/index.html'
+      - 'borrow/index.html'
+      - 'liquidation/index.html'
+      - 'audit_earn_asset.py'
+      - 'earn_live_config.py'
+      - 'run_earn_chain_live_rerun.py'
+      - 'run_earn_data_correctness_pipeline.py'
+      - 'run_earn_subaccount_history_incremental.py'
+      - 'run_earn_audit_checks.py'
+      - 'update_dolo_price.py'
+      - 'scripts/smoke_live_pages.py'
+      - 'config/earn_live_defaults.json'
+      - 'tests/**'
+
+jobs:
+  earn-audit-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - name: Run strict EARN audit checks
+        run: python3 run_earn_audit_checks.py
+
+      - name: Check holder history ranges and wallet changes
+        run: node --test tests/holder-distribution-contract.test.js tests/holder-range-wallet-change.test.js tests/dolo-flow-balance-display.test.js
+

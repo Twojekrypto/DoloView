@@ -1,0 +1,102 @@
+name: Update TVL Data
+
+on:
+  schedule:
+    - cron: '13 * * * *'
+    - cron: '43 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dolomite-revenue-writer
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    # Recent successful full runs take 11-14 minutes; allow RPC slowdown.
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test TVL coverage and rolling history preservation
+        run: |
+          python3 -m unittest discover -s tests -p 'test_fetch_dolomite_tvl.py'
+          python3 -m unittest discover -s tests -p 'test_fetch_dolomite_total_supply_history.py'
+          python3 -m unittest discover -s tests -p 'test_veborrow_rebate_history.py'
+          python3 -m unittest discover -s tests -p 'test_fetch_veborrow_simulation.py'
+          python3 -m unittest discover -s tests -p 'test_fetch_dolomite_revenue*.py'
+
+      - name: Refresh verified historical veDOLO rebates
+        run: python3 fetch_veborrow_rebate_history.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fetch DeFi Llama data
+        run: python3 fetch_defillama.py
+
+      - name: Fetch Official Dolomite TVL
+        run: python3 fetch_dolomite_tvl.py
+
+      - name: Fetch Full Dolomite Total Supply History
+        run: python3 fetch_dolomite_total_supply_history.py
+
+      - name: Fetch Dolomite Revenue
+        run: python3 fetch_dolomite_revenue.py
+        env:
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+          DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+
+      - name: Fetch veBorrow Simulation
+        run: python3 fetch_veborrow_simulation.py
+        env:
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+          QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+          DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+          ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+          ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+          ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+          VEBORROW_VOTES_RPC_BATCH_SIZE: '50'
+          VEBORROW_VOTES_RPC_RETRIES_PER_ENDPOINT: '2'
+          VEBORROW_VOTES_CHUNK_RETRIES: '4'
+          VEBORROW_VOTES_RETRY_DELAY_SECONDS: '12'
+
+      - name: Validate TVL data
+        run: python3 validate_data.py defillama_data.json dolomite_tvl.json dolomite_total_supply_history.json dolomite_revenue.json veborrow_simulation.json
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add veborrow_rebate_history.json defillama_data.json dolomite_tvl.json dolomite_total_supply_history.json dolomite_revenue.json data/dolomite-revenue-onchain-overrides.json veborrow_simulation.json
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "📊 Auto-update TVL: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          pushed=false
+          for i in $(seq 1 12); do
+            if git pull --rebase -X ours origin master && git push origin HEAD:master; then pushed=true; break; fi
+            sleep_for=$((5 + i))
+            if [ "$sleep_for" -gt 30 ]; then sleep_for=30; fi
+            sleep_for=$((sleep_for + (RANDOM % 4)))
+            echo "⚠️ Push attempt $i failed, retrying after ${sleep_for}s..."
+            sleep "$sleep_for"
+          done
+          if [ "$pushed" != "true" ]; then echo "::error::Failed to push after 12 attempts. TVL data NOT published"; exit 1; fi

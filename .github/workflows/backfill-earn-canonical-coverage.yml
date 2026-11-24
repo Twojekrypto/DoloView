@@ -1,0 +1,334 @@
+name: Backfill EARN Canonical Coverage
+
+on:
+  schedule:
+    - cron: '11 */2 * * *'
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: 'Chain to backfill; all runs active per-chain queues in parallel.'
+        required: false
+        type: choice
+        default: all
+        options:
+          - all
+          - ethereum
+          - arbitrum
+          - berachain
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 105
+    concurrency:
+      group: ${{ matrix.concurrency_group }}
+      queue: max
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          # Ethereum's freshness lane only advances already-built histories.
+          # Keep new-wallet archive backfills checkpointed here so four slow
+          # wallets cannot hold 3K+ current wallets behind the SLA.
+          - chain: ethereum
+            concurrency_group: earn-ethereum-canonical-coverage
+            limit: 8
+            scan_workers: 2
+            materialize_workers: 2
+          - chain: arbitrum
+            concurrency_group: earn-arbitrum-canonical-history
+            limit: 120
+            scan_workers: 12
+            materialize_workers: 12
+          - chain: berachain
+            concurrency_group: earn-berachain-canonical-history
+            limit: 200
+            scan_workers: 8
+            materialize_workers: 8
+    env:
+      PYTHONUNBUFFERED: '1'
+      CHAIN: ${{ matrix.chain }}
+      COVERAGE_LIMIT: ${{ matrix.limit }}
+      SCAN_WORKERS: ${{ matrix.scan_workers }}
+      MATERIALIZE_WORKERS: ${{ matrix.materialize_workers }}
+      MATERIAL_ACTIVE_USD_THRESHOLD: '10'
+      COVERAGE_POLICY_VERSION: material-active-v1
+      ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+      ALCHEMY_ETHEREUM_RPC_KAT: ${{ secrets.ALCHEMY_ETHEREUM_RPC_KAT }}
+      ALCHEMY_ETHEREUM_RPC_DAN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_DAN }}
+      ALCHEMY_ETHEREUM_RPC_ZEN: ${{ secrets.ALCHEMY_ETHEREUM_RPC_ZEN }}
+      ALCHEMY_ETHEREUM_RPC_2: ${{ secrets.ALCHEMY_ETHEREUM_RPC_2 }}
+      ALCHEMY_ETHEREUM_RPC_3: ${{ secrets.ALCHEMY_ETHEREUM_RPC_3 }}
+      DRPC_ETHEREUM_RPC_2_JEFF: ${{ secrets.DRPC_ETHEREUM_RPC_2_JEFF }}
+      ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC || secrets.ARBITRUM_RPC_URL || secrets.ARBITRUM_RPC }}
+      ALCHEMY_ARBITRUM_RPC_KAT: ${{ secrets.ALCHEMY_ARBITRUM_RPC_KAT }}
+      ALCHEMY_ARBITRUM_RPC_DAN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_DAN }}
+      ALCHEMY_ARBITRUM_RPC_ZEN: ${{ secrets.ALCHEMY_ARBITRUM_RPC_ZEN }}
+      ALCHEMY_ARBITRUM_RPC_2: ${{ secrets.ALCHEMY_ARBITRUM_RPC_2 }}
+      ALCHEMY_ARBITRUM_RPC_3: ${{ secrets.ALCHEMY_ARBITRUM_RPC_3 }}
+      ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC }}
+      QUICKNODE_BERACHAIN_RPC_2: ${{ secrets.QUICKNODE_BERACHAIN_RPC_2 }}
+      DRPC_BERACHAIN_RPC_ZEN: ${{ secrets.DRPC_BERACHAIN_RPC_ZEN }}
+      ALCHEMY_BERACHAIN_RPC_2_JEFF: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}
+      ALCHEMY_BERACHAIN_RPC_2: ${{ secrets.ALCHEMY_BERACHAIN_RPC_2 }}
+      ALCHEMY_BERACHAIN_RPC_3: ${{ secrets.ALCHEMY_BERACHAIN_RPC_3 }}
+      MANTLE_RPC: ${{ secrets.MANTLE_RPC }}
+      MANTLE_RPC_2: ${{ secrets.MANTLE_RPC_2 }}
+      QUICKNODE_MANTLE_RPC: ${{ secrets.QUICKNODE_MANTLE_RPC }}
+      QUICKNODE_MANTLE_RPC_2: ${{ secrets.QUICKNODE_MANTLE_RPC_2 }}
+      MANTLE_RPC_QUICKNODE_TWOJE: ${{ secrets.MANTLE_RPC_QUICKNODE_TWOJE }}
+      DRPC_MANTLE_RPC: ${{ secrets.DRPC_MANTLE_RPC }}
+      DRPC_MANTLE_RPC_ZEN: ${{ secrets.DRPC_MANTLE_RPC_ZEN }}
+      ALCHEMY_MANTLE_RPC_ZEN: ${{ secrets.ALCHEMY_MANTLE_RPC_ZEN }}
+      ALCHEMY_MANTLE_RPC_DANU: ${{ secrets.ALCHEMY_MANTLE_RPC_DANU }}
+      ALCHEMY_MANTLE_RPC: ${{ secrets.ALCHEMY_MANTLE_RPC }}
+      ALCHEMY_MANTLE_RPC_2_JEFF: ${{ secrets.ALCHEMY_MANTLE_RPC_2_JEFF }}
+      ALCHEMY_MANTLE_RPC_2: ${{ secrets.ALCHEMY_MANTLE_RPC_2 }}
+      ALCHEMY_MANTLE_RPC_3: ${{ secrets.ALCHEMY_MANTLE_RPC_3 }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Restore canonical coverage checkpoint
+        uses: actions/cache/restore@v5
+        with:
+          path: data/earn-coverage-runtime/${{ matrix.chain }}
+          key: earn-canonical-coverage-${{ env.COVERAGE_POLICY_VERSION }}-${{ matrix.chain }}-${{ github.run_id }}
+          restore-keys: |
+            earn-canonical-coverage-${{ env.COVERAGE_POLICY_VERSION }}-${{ matrix.chain }}-
+
+      - name: Select next canonical coverage cohort
+        id: select
+        run: |
+          set -euo pipefail
+          requested="${{ github.event.inputs.chain || 'all' }}"
+          selection_path="/tmp/earn-${CHAIN}-coverage-addresses.txt"
+          metadata_path="/tmp/earn-${CHAIN}-coverage-addresses.json"
+          runtime_root="data/earn-coverage-runtime/${CHAIN}"
+          active_selection="${runtime_root}/active-selection.txt"
+          if [ "$requested" != "all" ] && [ "$requested" != "$CHAIN" ]; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p "$runtime_root"
+          if [ -s "$active_selection" ]; then
+            cp "$active_selection" "$selection_path"
+            echo "Resuming active ${CHAIN} canonical cohort."
+          else
+            selector_args=(
+              python3 select_earn_canonical_hot_addresses.py
+              --chain "$CHAIN"
+              --limit "$COVERAGE_LIMIT"
+              --coverage-backfill
+              --actionable-only
+              --material-usd-threshold "$MATERIAL_ACTIVE_USD_THRESHOLD"
+              --priority-address-file config/earn_canonical_priority_addresses.txt
+              --include-priority-even-if-unknown
+              --output "$selection_path"
+              --metadata-output "$metadata_path"
+            )
+            chain_priority="config/earn_${CHAIN}_canonical_hot_addresses.txt"
+            if [ -f "$chain_priority" ]; then
+              selector_args+=(--priority-address-file "$chain_priority")
+            fi
+            "${selector_args[@]}"
+            cat "$metadata_path"
+            cp "$selection_path" "$active_selection"
+          fi
+          selected_count="$(grep -c '^0x' "$selection_path" || true)"
+          if [ "$selected_count" -eq 0 ]; then
+            rm -f "$active_selection"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          selection_hash="$(sha256sum "$selection_path" | cut -d' ' -f1)"
+          preexisting_count=0
+          while IFS= read -r address; do
+            [ -n "$address" ] || continue
+            if [ -f "data/earn-subaccount-history/${CHAIN}/${address}.json" ]; then
+              preexisting_count=$((preexisting_count + 1))
+            fi
+          done < "$selection_path"
+          new_candidate_count=$((selected_count - preexisting_count))
+          events_dir="data/earn-coverage-runtime/${CHAIN}/${selection_hash}/events"
+          history_dir="data/earn-coverage-runtime/${CHAIN}/${selection_hash}/history"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "selection_path=$selection_path" >> "$GITHUB_OUTPUT"
+          echo "selected_count=$selected_count" >> "$GITHUB_OUTPUT"
+          echo "new_candidate_count=$new_candidate_count" >> "$GITHUB_OUTPUT"
+          echo "preexisting_candidate_count=$preexisting_count" >> "$GITHUB_OUTPUT"
+          echo "selection_hash=$selection_hash" >> "$GITHUB_OUTPUT"
+          echo "events_dir=$events_dir" >> "$GITHUB_OUTPUT"
+          echo "history_dir=$history_dir" >> "$GITHUB_OUTPUT"
+
+      - name: Run one-pass canonical coverage backfill
+        id: coverage
+        if: steps.select.outputs.skipped != 'true'
+        run: |
+          set -euo pipefail
+          complete=false
+          status_path="/tmp/earn-${CHAIN}-coverage-status.json"
+          for step in $(seq 1 150); do
+            python3 run_earn_data_correctness_pipeline.py continue \
+              --chain "$CHAIN" \
+              --selection-address-file "${{ steps.select.outputs.selection_path }}" \
+              --events-dir "${{ steps.select.outputs.events_dir }}" \
+              --history-dir "${{ steps.select.outputs.history_dir }}" \
+              --max-scan-workers "$SCAN_WORKERS" \
+              --max-materialize-workers "$MATERIALIZE_WORKERS" \
+              --repair-limit "$COVERAGE_LIMIT" > "$status_path"
+            complete="$(jq -r '(.scanComplete == true) and (.materializeComplete == true) and (.repairComplete == true)' "$status_path")"
+            if [ "$complete" = "true" ]; then
+              break
+            fi
+            if [ "$step" -eq 1 ] || [ $((step % 15)) -eq 0 ]; then
+              cat "$status_path"
+            fi
+            sleep 20
+          done
+          scan_complete="$(jq -r '.scanComplete == true' "$status_path")"
+          locked_target_block="$(jq -r '.lockedTargetBlock // 0' "$status_path")"
+          echo "complete=$complete" >> "$GITHUB_OUTPUT"
+          echo "scan_complete=$scan_complete" >> "$GITHUB_OUTPUT"
+          echo "locked_target_block=$locked_target_block" >> "$GITHUB_OUTPUT"
+          if [ "$complete" != "true" ]; then
+            echo "Coverage checkpoint saved; the next scheduled run will resume the same cohort."
+          fi
+
+      - name: Select publishable canonical histories
+        id: publishable
+        if: steps.coverage.outputs.scan_complete == 'true'
+        run: |
+          set -euo pipefail
+          publishable_path="/tmp/earn-${CHAIN}-publishable-addresses.txt"
+          metadata_path="/tmp/earn-${CHAIN}-publishable-addresses.json"
+          python3 scripts/select_earn_publishable_histories.py \
+            --chain "$CHAIN" \
+            --selection-address-file "${{ steps.select.outputs.selection_path }}" \
+            --history-dir "${{ steps.select.outputs.history_dir }}" \
+            --target-block "${{ steps.coverage.outputs.locked_target_block }}" \
+            --output "$publishable_path" \
+            --metadata-output "$metadata_path"
+          count="$(grep -c '^0x' "$publishable_path" || true)"
+          if [ "${{ steps.coverage.outputs.complete }}" = "true" ] && [ "$count" -ne "${{ steps.select.outputs.selected_count }}" ]; then
+            cat "$metadata_path"
+            echo "Completed cohort exposed only $count/${{ steps.select.outputs.selected_count }} publishable histories."
+            exit 1
+          fi
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "path=$publishable_path" >> "$GITHUB_OUTPUT"
+
+      - name: Publish completed canonical histories
+        id: publish
+        if: steps.coverage.outputs.scan_complete == 'true' && steps.publishable.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          source_dir="${{ steps.select.outputs.history_dir }}/${CHAIN}"
+          target_dir="data/earn-subaccount-history/${CHAIN}"
+          mkdir -p "$target_dir"
+          new_coverage_count=0
+          updated_coverage_count=0
+          while IFS= read -r address; do
+            [ -n "$address" ] || continue
+            source_path="${source_dir}/${address}.json"
+            target_path="${target_dir}/${address}.json"
+            [ -f "$source_path" ] || { echo "Missing completed history: $source_path"; exit 1; }
+            if [ -f "$target_path" ]; then
+              updated_coverage_count=$((updated_coverage_count + 1))
+            else
+              new_coverage_count=$((new_coverage_count + 1))
+            fi
+            cp "$source_path" "$target_path"
+          done < "${{ steps.publishable.outputs.path }}"
+          python3 scripts/sync_earn_subaccount_manifest.py --chain "$CHAIN"
+          echo "new_coverage_count=$new_coverage_count" >> "$GITHUB_OUTPUT"
+          echo "updated_coverage_count=$updated_coverage_count" >> "$GITHUB_OUTPUT"
+
+      - name: Build verified ledger and public shards
+        if: steps.coverage.outputs.scan_complete == 'true' && steps.publishable.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          python3 build_earn_resolved_interest_ledger.py \
+            --chain "$CHAIN" \
+            --address-file "${{ steps.publishable.outputs.path }}"
+          python3 build_earn_verified_ledger.py \
+            --chain "$CHAIN" \
+            --address-file "${{ steps.publishable.outputs.path }}"
+          python3 build_earn_verified_ledger_shards.py \
+            --chain "$CHAIN" \
+            --address-file "${{ steps.publishable.outputs.path }}"
+
+      - name: Run EARN audit checks
+        if: steps.coverage.outputs.scan_complete == 'true' && steps.publishable.outputs.count != '0'
+        run: python3 run_earn_audit_checks.py
+
+      - name: Commit publishable canonical coverage
+        if: steps.coverage.outputs.scan_complete == 'true' && steps.publishable.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EARN_DISPATCH_PAGES_AFTER_PUSH: 'false'
+          EARN_DISPATCH_FRESHNESS_AFTER_PUSH: 'true'
+          EARN_FRESHNESS_ALLOW_REMEDIATION_AFTER_PUSH: ${{ github.event_name == 'workflow_dispatch' && github.actor == 'github-actions[bot]' && 'false' || 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/earn-subaccount-history/manifest.json data/earn-verified-ledger/manifest.json
+          git add -f data/earn-resolved-interest-ledger/manifest.json
+          bash scripts/stage_earn_publishable_wallet_paths.sh "$CHAIN" "${{ steps.publishable.outputs.path }}"
+          git add -f data/earn-verified-ledger-shards
+          bash scripts/commit_with_fresh_earn_status.sh "Backfill ${CHAIN} canonical EARN coverage - $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+      - name: Close completed canonical coverage cohort
+        if: steps.coverage.outputs.complete == 'true' && steps.publishable.outputs.count != '0'
+        run: |
+          rm -f "data/earn-coverage-runtime/${CHAIN}/active-selection.txt"
+          rm -rf "data/earn-coverage-runtime/${CHAIN}/${{ steps.select.outputs.selection_hash }}"
+
+      - name: Summarize canonical coverage progress
+        if: always() && steps.select.outputs.skipped != 'true'
+        run: |
+          {
+            echo "## ${CHAIN} canonical coverage"
+            echo ""
+            echo "| Metric | Wallets |"
+            echo "| --- | ---: |"
+            echo "| Selected cohort | ${{ steps.select.outputs.selected_count || '0' }} |"
+            echo "| New coverage candidates | ${{ steps.select.outputs.new_candidate_count || '0' }} |"
+            echo "| Existing histories selected for refresh | ${{ steps.select.outputs.preexisting_candidate_count || '0' }} |"
+            echo "| Publishable histories | ${{ steps.publishable.outputs.count || '0' }} |"
+            echo "| New historical coverage | ${{ steps.publish.outputs.new_coverage_count || '0' }} |"
+            echo "| Existing histories refreshed | ${{ steps.publish.outputs.updated_coverage_count || '0' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report incomplete canonical coverage progress
+        if: steps.coverage.outputs.complete != 'true' && steps.select.outputs.skipped != 'true'
+        run: |
+          echo "Canonical coverage remains checkpointed for ${CHAIN}."
+          find "data/earn-coverage-runtime/${CHAIN}" -maxdepth 8 -path '*/.progress/*.json' -type f -print -exec tail -n 30 {} \; || true
+          find "data/earn-coverage-runtime/${CHAIN}" -maxdepth 8 -path '*/.logs/*.log' -type f -print -exec tail -n 20 {} \; || true
+
+      - name: Save canonical coverage checkpoint
+        if: always() && steps.select.outputs.skipped != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: data/earn-coverage-runtime/${{ matrix.chain }}
+          key: earn-canonical-coverage-${{ matrix.chain }}-${{ github.run_id }}

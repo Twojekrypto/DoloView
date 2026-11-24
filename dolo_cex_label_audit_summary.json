@@ -1,0 +1,554 @@
+{
+  "generatedAt": "2026-11-23T18:53:08Z",
+  "apiStatus": "public_fallback_partial_plus_debank",
+  "debankStatus": "partial",
+  "debankRotation": {
+    "attempted": 20,
+    "candidatePool": 873,
+    "eligible": 20,
+    "excludedConfirmed": 0,
+    "newCandidates": 4,
+    "rechecks": 16,
+    "selected": 20,
+    "stateFile": "dolo_cex_label_audit_state.json"
+  },
+  "existingCexEvidence": {
+    "needsReview": [
+      {
+        "address": "0x305833cadd13a6d7febc6619304a6943a9a1ed22",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "Binance Deposit",
+        "source": ""
+      },
+      {
+        "address": "0x4e5bc1cd2c421ecfef65395b3237f90a97178c55",
+        "confidence": "high",
+        "evidenceStatus": "review_needed",
+        "label": "BingX-Linked Operational Wallet",
+        "source": "public-explorer-flow-audit-20260820"
+      },
+      {
+        "address": "0xd97107064b8c7520aae6c6e6ca75bb2aa73b670d",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "BingX-linked",
+        "source": ""
+      },
+      {
+        "address": "0x38285671612d6f0ef7c3483f500d39fa71d66a1c",
+        "confidence": "confirmed",
+        "evidenceStatus": "review_needed",
+        "label": "CEX Distributor",
+        "source": "flow-audit"
+      },
+      {
+        "address": "0x38fc9e8c73ea02f3a7de1da0760e71277f1e5e24",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "Coinbase",
+        "source": ""
+      },
+      {
+        "address": "0xb180647d5ad76abeb6be0d363f6e182bd8df46d1",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "Coinbase",
+        "source": ""
+      },
+      {
+        "address": "0xdf3100ac6c20c4a9443ece6c639c4ee91d592062",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "Coinbase",
+        "source": ""
+      },
+      {
+        "address": "0xe337c67ee9077e31aab205b25e8593b0e1c00cc4",
+        "confidence": "unknown",
+        "evidenceStatus": "review_needed",
+        "label": "Coinbase",
+        "source": ""
+      },
+      {
+        "address": "0xd5c342acbeedef81ab8e6072323bfda76172d05f",
+        "confidence": "confirmed",
+        "evidenceStatus": "review_needed",
+        "label": "MEXC Wallet",
+        "source": "flow-audit"
+      }
+    ],
+    "publicLabel": 118,
+    "total": 127
+  },
+  "confirmedCexSuggestions": [],
+  "topRankedCandidates": [
+    {
+      "address": "0x4cf9a296a2bd92fae2d1f3f465fe2355760b9c6f",
+      "chains": [
+        "all",
+        "eth"
+      ],
+      "currentBalance": 19757.26,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 19757.26,
+      "maxGrossFlow": 19757.26,
+      "periods": [
+        "1d",
+        "7d",
+        "30d",
+        "90d",
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "1d-eth-accumulators",
+        "1d-all-accumulators",
+        "7d-eth-accumulators",
+        "7d-all-accumulators",
+        "30d-eth-accumulators",
+        "30d-all-accumulators",
+        "90d-eth-accumulators",
+        "90d-all-accumulators",
+        "180d-eth-accumulators"
+      ],
+      "score": 59371.78,
+      "txCount": 1
+    },
+    {
+      "address": "0x3d63c340fa1735637e962e3b0b7d0f7cf1f722a1",
+      "chains": [
+        "all",
+        "eth"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 10563.85,
+      "maxGrossFlow": 10563.85,
+      "periods": [
+        "1d"
+      ],
+      "reasons": [
+        "1d-eth-sellers",
+        "1d-all-sellers"
+      ],
+      "score": 21227.7,
+      "txCount": 1
+    },
+    {
+      "address": "0x04c7b4e2db71b2abffe4f2131cf2754533cf32da",
+      "chains": [
+        "all",
+        "eth"
+      ],
+      "currentBalance": 85.86,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 85.86,
+      "maxGrossFlow": 26053.59,
+      "periods": [
+        "7d",
+        "30d"
+      ],
+      "reasons": [
+        "7d-eth-accumulators",
+        "7d-all-accumulators",
+        "30d-eth-accumulators"
+      ],
+      "score": 557.58,
+      "txCount": 3
+    },
+    {
+      "address": "0xbf9a634827206db63b8255c8bfc1fd9d6c885318",
+      "chains": [
+        "eth"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 27851.06,
+      "maxGrossFlow": 27851.06,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "180d-eth-sellers"
+      ],
+      "score": 55802.12,
+      "txCount": 1
+    },
+    {
+      "address": "0xd200b08284ee18067733fe03a7c1a2507b2d0c13",
+      "chains": [
+        "all",
+        "eth"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 20021.95,
+      "maxGrossFlow": 20021.95,
+      "periods": [
+        "90d",
+        "180d"
+      ],
+      "reasons": [
+        "90d-eth-sellers",
+        "90d-all-sellers",
+        "180d-eth-sellers"
+      ],
+      "score": 40143.9,
+      "txCount": 1
+    },
+    {
+      "address": "0xda33e6230ecb4872d7f073cfc704b8279e18fab3",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 8.31,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 86886.65,
+      "maxGrossFlow": 86894.96,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "180d-bera-sellers",
+        "180d-all-sellers"
+      ],
+      "score": 174481.61,
+      "txCount": 7
+    },
+    {
+      "address": "0xed9ab5bc05a0152b9dc2f7902e8369af7bc18771",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 82949.02,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 82949.02,
+      "maxGrossFlow": 96395.14,
+      "periods": [
+        "90d",
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "90d-bera-accumulators",
+        "90d-all-accumulators",
+        "180d-bera-accumulators",
+        "180d-all-accumulators"
+      ],
+      "score": 249847.06,
+      "txCount": 10
+    },
+    {
+      "address": "0x1ecb78cce1a0d9a3714c8e845b8b4b21d128ce23",
+      "chains": [
+        "all",
+        "eth"
+      ],
+      "currentBalance": 49968.44,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 49968.44,
+      "maxGrossFlow": 49968.44,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "180d-eth-accumulators",
+        "180d-all-accumulators"
+      ],
+      "score": 150305.32,
+      "txCount": 4
+    },
+    {
+      "address": "0x26097f8c89aa9313a96ad8a851eb8e1c062a12d3",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 79217.2,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 39608.6,
+      "maxGrossFlow": 39608.6,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "180d-bera-accumulators",
+        "180d-all-accumulators"
+      ],
+      "score": 158534.4,
+      "txCount": 1
+    },
+    {
+      "address": "0x279ccbc7b08ad829de8e2d564ffcfe13e6260c9c",
+      "chains": [
+        "bera"
+      ],
+      "currentBalance": 79217.2,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 0.0,
+      "maxGrossFlow": 0.0,
+      "periods": [],
+      "reasons": [
+        "top-holder"
+      ],
+      "score": 79217.2,
+      "txCount": 0
+    },
+    {
+      "address": "0x52dbcd1aa90dfcc12dc3ceb6b1480f0af60ba083",
+      "chains": [
+        "eth"
+      ],
+      "currentBalance": 22.24,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 25115.32,
+      "maxGrossFlow": 25115.32,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "180d-eth-sellers"
+      ],
+      "score": 50352.88,
+      "txCount": 1
+    },
+    {
+      "address": "0x54566691c1a6c228fbecedc5518ca3017a83efe1",
+      "chains": [
+        "bera"
+      ],
+      "currentBalance": 53588.501,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 12591.74,
+      "maxGrossFlow": 12591.74,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "180d-bera-accumulators"
+      ],
+      "score": 78871.981,
+      "txCount": 1
+    },
+    {
+      "address": "0x648349e02c549986c8ef2b75514d73040d581acc",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 81550.25,
+      "maxGrossFlow": 81550.25,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "180d-bera-sellers",
+        "180d-all-sellers"
+      ],
+      "score": 163200.5,
+      "txCount": 1
+    },
+    {
+      "address": "0x91672a5506e1f4d31243d0058d1227a0dde88df1",
+      "chains": [
+        "eth"
+      ],
+      "currentBalance": 56922.4701,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 0.0,
+      "maxGrossFlow": 0.0,
+      "periods": [],
+      "reasons": [
+        "top-holder"
+      ],
+      "score": 56922.4701,
+      "txCount": 0
+    },
+    {
+      "address": "0x97ddb4eae240cc7d1c19b391aab705ab4de1accd",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 85480.2,
+      "maxGrossFlow": 85480.2,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "180d-bera-sellers",
+        "180d-all-sellers"
+      ],
+      "score": 171060.4,
+      "txCount": 1
+    },
+    {
+      "address": "0x9ecaa6c42430f46bc382384f7f0613266cc0e04c",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 10208.7642,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 56938.59,
+      "maxGrossFlow": 73018.51,
+      "periods": [
+        "180d"
+      ],
+      "reasons": [
+        "top-holder",
+        "180d-bera-sellers",
+        "180d-all-sellers"
+      ],
+      "score": 124485.9442,
+      "txCount": 4
+    },
+    {
+      "address": "0x9ee95ce164401843717614cc317f423f022d254d",
+      "chains": [
+        "all"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 84273.27,
+      "maxGrossFlow": 84273.27,
+      "periods": [
+        "all"
+      ],
+      "reasons": [
+        "all-all-sellers"
+      ],
+      "score": 168746.54,
+      "txCount": 2
+    },
+    {
+      "address": "0xbc8819c1821bc52b5d30d2dd52f0cb6110510005",
+      "chains": [
+        "all",
+        "bera"
+      ],
+      "currentBalance": 0.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 78089.02,
+      "maxGrossFlow": 78089.02,
+      "periods": [
+        "90d",
+        "180d"
+      ],
+      "reasons": [
+        "90d-bera-sellers",
+        "90d-all-sellers",
+        "180d-bera-sellers",
+        "180d-all-sellers"
+      ],
+      "score": 156278.04,
+      "txCount": 1
+    },
+    {
+      "address": "0xe04d20c7ba3b8b13ff595e45ae8f3e192e7a5247",
+      "chains": [
+        "eth"
+      ],
+      "currentBalance": 56721.8777,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 0.0,
+      "maxGrossFlow": 0.0,
+      "periods": [],
+      "reasons": [
+        "top-holder"
+      ],
+      "score": 56721.8777,
+      "txCount": 0
+    },
+    {
+      "address": "0xe7fead6aea2d55248acdefeca39fc808581786ad",
+      "chains": [
+        "bera"
+      ],
+      "currentBalance": 166666.0,
+      "evidenceStatus": "review_needed",
+      "label": "",
+      "labelSource": "",
+      "labelType": "",
+      "maxAbsFlow": 0.0,
+      "maxGrossFlow": 0.0,
+      "periods": [],
+      "reasons": [
+        "top-holder"
+      ],
+      "score": 166666.0,
+      "txCount": 0
+    }
+  ],
+  "publication": {
+    "added": [],
+    "skipped": []
+  }
+}
