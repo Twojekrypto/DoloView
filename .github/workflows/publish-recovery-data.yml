@@ -1,6 +1,11 @@
 name: Publish DoloView recovery data
 
 on:
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/publish-recovery-data.yml
+      - scripts/build_recovery_pages_data.py
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
