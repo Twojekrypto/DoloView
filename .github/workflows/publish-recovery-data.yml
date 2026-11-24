@@ -1,0 +1,52 @@
+name: Publish DoloView recovery data
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: recovery-data-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out data producers
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install producer dependencies
+        run: python3 -m pip install -r requirements.txt
+      - name: Verify TVL validators
+        run: python3 -m unittest tests.test_fetch_dolomite_tvl tests.test_fetch_dolomite_total_supply_history
+      - name: Refresh and stage validated snapshots
+        run: python3 scripts/build_recovery_pages_data.py _data
+      - name: Upload data for Pages
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _data
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish snapshots
+        id: publish
+        uses: actions/deploy-pages@v5

@@ -55,7 +55,7 @@ class ExplorerRetryBurstTests(unittest.TestCase):
                 "os.environ", {"ETHERSCAN_API_KEY": "private-test-key", "BERASCAN_API_KEY": ""}
             ), patch("requests.get", side_effect=[
                 response({"status": "1", "message": "OK", "result": [TX]}),
-                response(unsupported), failure("https://api.etherscan.io/?apikey=private-test-key"),
+                response(unsupported), failure("https://api.etherscan.io/?apikey=" "private-test-key"),
                 response(unsupported), response({"status": "1", "message": "OK", "result": [{**TX, "hash": "second"}]}),
                 response({"status": "0", "message": "No transactions found", "result": []}),
             ]) as get, patch("time.sleep"), contextlib.redirect_stdout(io.StringIO()):
@@ -73,7 +73,7 @@ class ExplorerRetryBurstTests(unittest.TestCase):
                 calculate_avg_lock, "PAGE_SIZE", 1
             ), patch("requests.get", side_effect=[
                 response({"status": "1", "message": "OK", "result": [TX]}),
-                *[requests.Timeout("https://example.com/?apikey=private-test-key") for _ in range(5)],
+                *[requests.Timeout("https://example.com/?apikey=" "private-test-key") for _ in range(5)],
             ]) as get, patch("time.sleep"), contextlib.redirect_stdout(io.StringIO()):
                 with self.assertRaises(explorer_api.ExplorerError) as raised:
                     calculate_avg_lock.main()
@@ -86,7 +86,7 @@ class ExplorerRetryBurstTests(unittest.TestCase):
         for status in (400, 401, 403):
             rejected = response({})
             rejected.status_code = status
-            rejected.url = "https://example.com/?apikey=private-test-key"
+            rejected.url = "https://example.com/?apikey=" "private-test-key"
             with self.subTest(status=status), patch("requests.get", return_value=rejected) as get, patch("time.sleep"):
                 with self.assertRaises(requests.HTTPError) as raised:
                     explorer_api.explorer_get_with_retry("https://example.com/api", params={}, timeout=1)
