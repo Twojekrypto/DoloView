@@ -1,0 +1,30 @@
+name: Publish verified Earn dashboard files
+on:
+  workflow_run:
+    workflows: ['Publish verified Earn data to R2']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: earn-public-projection
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install requests
+      - run: python3 -m unittest tests.test_earn_web && node --test tests/earn-storage-worker.test.mjs
+      - name: Publish web files from the verified R2 archive
+        env:
+          EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
+        run: python3 -m scripts.publish_earn_web
