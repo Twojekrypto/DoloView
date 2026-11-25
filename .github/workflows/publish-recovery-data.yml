@@ -34,6 +34,7 @@ jobs:
     timeout-minutes: 32
     outputs:
       failed_feeds: ${{ steps.markets.outputs.failed_feeds }}
+      bundle_id: ${{ steps.upload.outputs.artifact_id }}
     steps:
       - name: Check out data producers
         uses: actions/checkout@v6
@@ -74,7 +75,10 @@ jobs:
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
           python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
+      - name: Identify this verified Pages publication
+        run: python3 -c 'import json,os,pathlib; pathlib.Path("_data/publisher.json").write_text(json.dumps({"run":os.environ["GITHUB_RUN_ID"],"attempt":os.environ["GITHUB_RUN_ATTEMPT"]}))'
       - name: Upload data for Pages
+        id: upload
         uses: actions/upload-pages-artifact@v5
         with:
           path: _data
@@ -100,3 +104,27 @@ jobs:
         run: |
           echo "::error::Previous data retained for $FAILED_FEEDS"
           exit 1
+
+  release-staging-space:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Release only this run's transport artifact after public readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_ID: ${{ needs.build.outputs.bundle_id }}
+        run: |
+          set -euo pipefail
+          for delay in 1 2 4 8 16 32; do
+            if curl -fsS "https://twojekrypto.github.io/DoloView/publisher.json?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-$delay" |
+               jq -e --arg run "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" '.run == $run and .attempt == $attempt' >/dev/null; then
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" |
+                jq -e --arg id "$BUNDLE_ID" '.artifacts | any((.id|tostring) == $id and .name == "github-pages")' >/dev/null
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$BUNDLE_ID"
+              exit 0
+            fi
+            sleep "$delay"
+          done
+          echo "::warning::Readback could not confirm this run yet; Pages artifact kept for its one-day retention"
