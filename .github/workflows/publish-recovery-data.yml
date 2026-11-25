@@ -8,9 +8,10 @@ on:
       - scripts/build_recovery_pages_data.py
       - scripts/recovery_market_feeds.py
       - fetch_dolo_price_history.py
+      - scripts/recovery_borrow_feeds.py
   workflow_dispatch:
   schedule:
-    - cron: '17,47 * * * *'
+    - cron: '7,22,37,52 * * * *'
 
 concurrency:
   group: recovery-data-pages
@@ -22,7 +23,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 32
     outputs:
       failed_feeds: ${{ steps.markets.outputs.failed_feeds }}
     steps:
@@ -52,6 +53,9 @@ jobs:
         id: markets
         run: |
           python3 scripts/recovery_market_feeds.py _data "$RUNNER_TEMP/failed-feeds.json"
+          python3 -m unittest tests.test_recovery_borrow_feeds tests.test_borrow_earnings
+          python3 -m unittest discover -s tests -p 'test_borrow_risk_*.py'
+          python3 scripts/recovery_borrow_feeds.py _data "$RUNNER_TEMP/failed-feeds.json"
           echo "failed_feeds=$(cat "$RUNNER_TEMP/failed-feeds.json")" >> "$GITHUB_OUTPUT"
       - name: Upload data for Pages
         uses: actions/upload-pages-artifact@v5
