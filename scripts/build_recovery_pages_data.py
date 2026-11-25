@@ -11,11 +11,13 @@ from recovery_market_feeds import previous_file
 
 
 def build(output):
-    # Rate fallback may need the prior public feed even on a clean runner.
+    # A clean checkout is an old seed. Preserve the archive accumulated since
+    # cutover before merging the official rolling window or using rate fallback.
+    for name in ('assets_live.json', 'dolomite_total_supply_history.json'):
+        prior = previous_file(name)
+        if prior is not None:
+            (ROOT / name).write_bytes(prior)
     asset_file = ROOT / 'assets_live.json'
-    prior = previous_file('assets_live.json')
-    if prior is not None:
-        asset_file.write_bytes(prior)
     statuses = [refresh_group(name, paths, commands) for name, paths, commands in GROUPS]
     if not all(statuses):
         raise ValueError("At least one feed failed its freshness or schema checks")

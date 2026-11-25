@@ -39,6 +39,10 @@ def validate_price(old, new, today):
     prices = json.loads(new)['prices']
     if not previous or not set(previous).issubset(prices):
         raise ValueError('Historical DOLO prices were dropped')
+    first, last = map(dt.date.fromisoformat, (min(prices), max(prices)))
+    if last < first or len(prices) != (last-first).days + 1 or any(
+            dt.date.fromisoformat(day).isoformat() != day for day in prices):
+        raise ValueError('Gap in daily DOLO prices')
     if max(prices) < (today - dt.timedelta(days=1)).isoformat() or max(prices) > today.isoformat():
         raise ValueError('Price feed has no recent daily quote')
 

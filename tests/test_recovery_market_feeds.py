@@ -27,9 +27,9 @@ class MarketFeedTests(unittest.TestCase):
     def test_price_needs_recent_quote_and_complete_history(self):
         day = dt.date(2026, 11, 25)
         dump = lambda values: json.dumps({'prices':dict.fromkeys(values,1)}).encode()
-        old = dump(['2026-01-10'])
-        feeds.validate_price(old,dump(['2026-01-10','2026-11-24']),day)
-        for data in [old,dump(['2026-11-25']),dump(['2026-01-10','2026-11-26'])]:
+        old = dump(['2026-11-23'])
+        feeds.validate_price(old,dump(['2026-11-23','2026-11-24']),day)
+        for data in [old,dump(['2026-11-25']),dump(['2026-11-23','2026-11-25']),dump(['2026-11-23','2026-11-24','2026-11-25','2026-11-26'])]:
             with self.assertRaises(ValueError):
                 feeds.validate_price(old,data,day)
 
