@@ -50,9 +50,9 @@ def file_digest(path):
     return digest.hexdigest()
 
 
-def collect(root):
+def collect(root, datasets=DATASETS):
     groups = defaultdict(list)
-    for dataset in sorted(DATASETS):
+    for dataset in sorted(datasets):
         target = root / 'data' / dataset
         if target.is_symlink():
             raise ValueError(f'Unexpected symlink: {target}')
@@ -115,11 +115,11 @@ def check_manifest(manifest):
     return manifest
 
 
-def pack(root, output, previous=None):
+def pack(root, output, previous=None, *, datasets=DATASETS):
     if output.exists() or output.is_symlink():
         raise FileExistsError(output)
     previous_chunks = check_manifest(previous)['chunks'] if previous is not None else {}
-    groups = collect(root)
+    groups = collect(root, datasets)
     missing = {name.partition('/')[0] for name in previous_chunks} - {
         name.partition('/')[0] for name in groups
     }

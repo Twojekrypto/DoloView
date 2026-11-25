@@ -1,0 +1,134 @@
+name: Publish verified Earn data to R2
+
+on:
+  schedule:
+    - cron: '22 */6 * * *'  # Every 6 hours, staggered
+  workflow_dispatch:
+
+concurrency:
+  group: earn-r2-writer
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update-snapshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: python3 -m pip install -r requirements.txt
+
+      - name: Test private storage and restore verified inputs
+        env:
+          EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
+        run: |
+          node --test tests/earn-storage-worker.test.mjs
+          python3 -m unittest tests.test_earn_recovery_store tests.test_recovery_data_packs tests.test_restore_recovery_seed
+          python3 -m scripts.earn_recovery_store hydrate "$RUNNER_TEMP/earn-state.json"
+
+      - name: Generate fresh earn snapshots
+        run: python3 generate_earn_snapshots.py
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Validate latest snapshot date
+        run: |
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path("data/earn-snapshots")
+          manifest = json.load((root / "manifest.json").open())
+          today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+          chains = {"arbitrum", "berachain", "ethereum"}
+
+          assert today in manifest.get("dates", []), f"Today's snapshot date missing from manifest: {today}"
+          manifest_chains = set(manifest.get("chains", {}).get(today, []))
+          missing = chains - manifest_chains
+          assert not missing, f"Manifest missing chains for {today}: {sorted(missing)}"
+
+          payload = json.load((root / f"{today}.json").open())
+          snapshot_chains = set((payload.get("snapshots") or {}).keys())
+          missing_payload = chains - snapshot_chains
+          assert not missing_payload, f"Snapshot payload missing chains for {today}: {sorted(missing_payload)}"
+          metadata_chains = set((payload.get("chainMetadata") or {}).keys())
+          missing_metadata = chains - metadata_chains
+          assert not missing_metadata, f"Snapshot metadata missing chains for {today}: {sorted(missing_metadata)}"
+          for chain in chains:
+              metadata = payload["chainMetadata"][chain]
+              assert int(metadata.get("blockNumber") or 0) > 0, f"Missing pinned block for {chain}"
+              assert metadata.get("interestIndexes"), f"Missing interest indexes for {chain}"
+          print(f"Validated earn snapshots for {today}: {sorted(snapshot_chains)}")
+          PY
+
+      - name: Refresh historical EARN prices
+        run: |
+          python3 build_earn_historical_prices.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Refresh existing strict resolved interest ledgers
+        run: |
+          python3 build_earn_resolved_interest_ledger.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain \
+            --existing-addresses
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Build active-chain verified ledger caches
+        run: |
+          python3 build_earn_verified_ledger.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain \
+            --all-addresses
+        env:
+          PYTHONUNBUFFERED: '1'
+
+      - name: Publish active-chain verified ledger shards
+        run: |
+          python3 build_earn_verified_ledger_shards.py \
+            --chain ethereum \
+            --chain arbitrum \
+            --chain berachain
+
+      - name: Audit representative EARN markets
+        run: python3 build_earn_representative_audit.py --check
+
+      - name: Validate generated earn data
+        run: |
+          python3 validate_data.py \
+            data/earn-snapshots \
+            data/earn-historical-prices \
+            data/earn-verified-ledger \
+            data/earn-verified-ledger/ethereum \
+            data/earn-verified-ledger-shards
+
+      - name: Rebuild quality and freshness reports
+        run: |
+          python3 update_earn_freshness_status.py --output data/earn-freshness/status.json
+          python3 build_earn_quality_status.py --output data/earn-quality/status.json
+
+      - name: Publish changed packs and verify readback
+        env:
+          EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
+        run: python3 -m scripts.earn_recovery_store publish "$RUNNER_TEMP/earn-state.json"

@@ -19,6 +19,7 @@ DATASETS = {
     'earn-resolved-interest-ledger',
     'supply-activity',
 }
+RESTORABLE_DATASETS = DATASETS | {'earn-historical-prices', 'earn-quality', 'earn-freshness'}
 
 
 def combine_parts(seed, manifest, archive):
@@ -54,7 +55,7 @@ def unpack(archive, destination, expected_count):
                     if member.isdir() and member.name == 'data':
                         continue
                     parts = PurePosixPath(member.name).parts
-                    if (len(parts) < 2 or parts[0] != 'data' or parts[1] not in DATASETS
+                    if (len(parts) < 2 or parts[0] != 'data' or parts[1] not in RESTORABLE_DATASETS
                             or '..' in parts):
                         raise ValueError(f'Unexpected archive path: {member.name}')
                     path = destination.joinpath(*parts)
