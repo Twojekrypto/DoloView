@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 import gzip
 import hashlib
 import json
+import re
+import time
+
+import requests
 from pathlib import Path
 import tempfile
 
@@ -23,15 +27,13 @@ def groups_to_read(name):
 
 
 def eligible(path):
-    dataset = path.parts[1]
-    if path.suffix != '.json':
-        return False
-    if dataset == SHARDS:
-        return path.name == 'manifest.json' or (
-            len(path.parts) == 4 and len(path.stem) == 2 and all(c in '0123456789abcdef' for c in path.stem))
-    if dataset == SNAPS:
-        return path.name == 'manifest.json' or (len(path.stem) == 10 and path.stem >= FIRST)
-    return path.as_posix() == 'data/earn-freshness/status.json'
+    value = path.as_posix()
+    if value in {'data/earn-freshness/status.json', f'data/{SHARDS}/manifest.json', f'data/{SNAPS}/manifest.json'}:
+        return True
+    if re.fullmatch(r'data/earn-verified-ledger-shards/(?:arbitrum|berachain|ethereum|mantle|xlayer)/[0-9a-f]{2}\.json', value):
+        return True
+    day = re.fullmatch(r'data/earn-snapshots/(\d{4}-\d{2}-\d{2})\.json', value)
+    return bool(day and day[1] >= FIRST)
 
 
 def bundle(paths, root):
@@ -44,6 +46,42 @@ def bundle(paths, root):
         entries['/' + path.as_posix()] = [len(body), len(compressed)]
         body.extend(compressed)
     return bytes(body), entries
+
+
+def check_web_response(today):
+    def read(path):
+        url = store.URL + '/data/' + path
+        for attempt in range(3):
+            try:
+                response = requests.get(url, params={'verify': time.time_ns()}, timeout=(10, 45),
+                                        allow_redirects=False)
+                response.raise_for_status()
+                if response.headers.get('Access-Control-Allow-Origin') != '*':
+                    raise ValueError('Public dashboard CORS missing for ' + path)
+                return response.json()
+            except (requests.RequestException, ValueError):
+                if attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
+    index = read(SNAPS+'/manifest.json')
+    daily = read(f'{SNAPS}/{today}.json')
+    ledger = read(SHARDS+'/manifest.json')
+    freshness = read('earn-freshness/status.json')
+    if not CHAINS.issubset(index['chains'].get(today, [])) or daily['date'] != today:
+        raise ValueError('Public Earn snapshot date is out of sync')
+    for chain in sorted(CHAINS):
+        meta = ledger['chains'][chain]
+        if (meta['snapshotDate'] != today or not daily['snapshots'][chain]
+                or int(daily['chainMetadata'][chain]['blockNumber']) <= 0 or chain not in freshness['chains']):
+            raise ValueError('Missing public Earn data for ' + chain)
+        prefix, shard = min(meta['shards'].items())
+        if shard['path'] != f'{chain}/{prefix}.json' or not re.fullmatch('[a-f0-9]{2}', prefix):
+            raise ValueError('Unexpected public wallet shard path')
+        sample = read(SHARDS+'/'+shard['path'])
+        if (sample['chain'] != chain or sample['prefix'] != prefix or sample['snapshotDate'] != today
+                or not sample['ledgers'] or len(sample['ledgers']) != shard['addressCount']):
+            raise ValueError('Public wallet shard disagrees with its index for ' + chain)
+    print('Anonymous readback verified the daily snapshot, active-chain wallet shards and freshness report.')
 
 
 def publish():
@@ -108,6 +146,7 @@ def publish():
         store.conditional_put('/web/state', store.encode(result), tag)
     if store.request('GET', '/web/state').json() != result:
         raise ValueError('Public index readback failed')
+    check_web_response(today)
     print(f"Published {len(result['files'])} web files; uploaded {total:,} compressed bytes.")
 
 

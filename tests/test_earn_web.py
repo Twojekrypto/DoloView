@@ -13,6 +13,11 @@ class PublicEarnTests(unittest.TestCase):
         self.assertFalse(eligible(Path('data/earn-snapshots/2026-11-24.json')))
         self.assertFalse(eligible(Path('data/earn-verified-ledger-shards/arbitrum/private.json')))
         self.assertTrue(eligible(Path('data/earn-snapshots/2026-11-25.json')))
+        for path in ('data/earn-snapshots/hidden/2026-11-25.json',
+                     'data/earn-verified-ledger-shards/other/ff.json',
+                     'data/earn-verified-ledger-shards/ethereum/manifest.json',
+                     'data/earn-snapshots/zzzzzzzzzz.json'):
+            self.assertFalse(eligible(Path(path)),path)
 
     def test_byte_ranges_restore_individual_original_files(self):
         with tempfile.TemporaryDirectory() as temp:
