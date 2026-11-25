@@ -8,6 +8,7 @@ import subprocess
 import tarfile
 import tempfile
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from scripts.restore_recovery_seed import DATASETS, unpack
@@ -115,7 +116,7 @@ def check_manifest(manifest):
     return manifest
 
 
-def pack(root, output, previous=None, *, datasets=DATASETS):
+def pack(root, output, previous=None, *, datasets=DATASETS, workers=1):
     if output.exists() or output.is_symlink():
         raise FileExistsError(output)
     previous_chunks = check_manifest(previous)['chunks'] if previous is not None else {}
@@ -130,19 +131,27 @@ def pack(root, output, previous=None, *, datasets=DATASETS):
         staging = Path(temporary) / 'stage'
         objects = staging / 'objects'
         objects.mkdir(parents=True)
-        for name, entries in sorted(groups.items()):
+        def build_chunk(pair):
+            name, entries = pair
             signature = [(relative, size, file_digest(path)) for path, relative, size in entries]
             content_hash = hashlib.sha256(json.dumps(signature, separators=(',', ':')).encode()).hexdigest()
             cached = previous_chunks.get(name)
             if cached and cached['contentSha256'] == content_hash and cached['files'] == len(entries):
-                chunks[name] = {**cached, 'codec': cached.get('codec', 'zst')}
-                continue
-            archive = archive_entries(entries, staging)
-            stored_hash = file_digest(archive)
-            chunks[name] = {'files': len(entries), 'contentSha256': content_hash,
-                            'sha256': stored_hash, 'bytes': archive.stat().st_size,
-                            'codec': archive.suffix[1:]}
-            archive.replace(objects / f'{stored_hash}.tar{archive.suffix}')
+                return name, {**cached, 'codec': cached.get('codec', 'zst')}
+            with tempfile.TemporaryDirectory(dir=staging) as work:
+                archive = archive_entries(entries, Path(work))
+                stored_hash = file_digest(archive)
+                record = {'files': len(entries), 'contentSha256': content_hash,
+                          'sha256': stored_hash, 'bytes': archive.stat().st_size,
+                          'codec': archive.suffix[1:]}
+                archive.replace(objects / f'{stored_hash}.tar{archive.suffix}')
+            return name, record
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for index, (name, record) in enumerate(pool.map(build_chunk, sorted(groups.items())),1):
+                chunks[name] = record
+                if workers > 1 and (index % 25 == 0 or index == len(groups)):
+                    print(f"Checked {index}/{len(groups)} archive groups", flush=True)
         manifest = {'version': 2, 'format': FORMAT,
                     'files': sum(len(entries) for entries in groups.values()), 'chunks': chunks}
         (staging / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

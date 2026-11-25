@@ -125,7 +125,7 @@ def publish(root, state):
         raise ValueError('A newer generation has already published')
     with tempfile.TemporaryDirectory() as work:
         output = Path(work) / 'packed'
-        manifest = pack(root, output, previous, datasets=DATASETS)
+        manifest = pack(root, output, previous, datasets=DATASETS, workers=2)
         if set(k for k in previous['chunks']) - set(manifest['chunks']):
             raise ValueError('Refusing to remove a previously published data group')
         if {k.split('/')[0] for k in manifest['chunks']} != DATASETS:
