@@ -27,7 +27,7 @@ def refresh(root):
     canonical = json.loads((root/'data/earn-subaccount-history/manifest.json').read_bytes())
     for chain in ready_chains(metadata, canonical, ('arbitrum','berachain','ethereum')):
         subprocess.run([sys.executable,'build_earn_resolved_interest_ledger.py','--chain',chain,
-                        '--existing-addresses'],cwd=root,check=True)
+                        '--existing-addresses','--retain-earlier-proofs'],cwd=root,check=True)
     # The public ledger builder independently requires both the same date and
     # the exact pinned block before attaching any of these proofs to a wallet.
 

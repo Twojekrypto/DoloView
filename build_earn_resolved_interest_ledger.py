@@ -588,13 +588,25 @@ def _existing_addresses(output_dir: Path, chain: str) -> set[str]:
     return {path.stem.lower() for path in chain_dir.glob("0x*.json") if len(path.stem) == 42}
 
 
-def _update_manifest(output_dir: Path, chain: str, snapshot_date: str) -> None:
+def _older_verified_proof(proof, chain, address, date, block):
+    if not isinstance(proof, dict):
+        return False
+    old_date = proof.get("snapshotDate")
+    return (proof.get("chain") == chain and proof.get("address") == address
+            and proof.get("strictStatus") == "verified"
+            and isinstance(old_date, str) and len(old_date) == 10 and old_date <= date
+            and 0 < _integer(proof.get("comparisonBlock")) < block)
+
+
+def _update_manifest(output_dir: Path, chain: str, snapshot_date: str, retained: int = 0) -> None:
     manifest_path = output_dir / "manifest.json"
     manifest = _read_json(manifest_path, {}) or {}
     chains = manifest.get("chains") or {}
     chain_dir = output_dir / chain
     address_count = len(list(chain_dir.glob("0x*.json"))) if chain_dir.is_dir() else 0
-    chains[chain] = {"snapshotDate": snapshot_date, "addressCount": address_count}
+    chains[chain] = {"snapshotDate": snapshot_date, "addressCount": address_count - retained}
+    if retained:
+        chains[chain]["retainedEarlierProofs"] = retained
     manifest.update({
         "version": 1,
         "generatedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -610,6 +622,8 @@ def main() -> int:
     parser.add_argument("--address-file", action="append", default=[])
     parser.add_argument("--all-active", action="store_true")
     parser.add_argument("--existing-addresses", action="store_true")
+    parser.add_argument("--retain-earlier-proofs", action="store_true",
+                        help="Keep a prior verified block in the private archive until a new proof is available")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR)
     parser.add_argument("--fetch-strict-rpc-evidence", action="store_true")
     parser.add_argument("--max-rpc-wallets", type=int, default=None,
@@ -681,13 +695,16 @@ def main() -> int:
 
         wrote = 0
         removed = 0
+        retained = 0
+        snapshot_block = _integer((snapshot_payload.get("chainMetadata", {}).get(chain) or {}).get("blockNumber"))
         chain_diagnostics = {}
         rpc_client = None
         rpc_wallet_count = 0
         for address in addresses:
             history = _read_json(HISTORY_DIR / chain / f"{address}.json", None)
             output_path = args.output_dir / chain / f"{address}.json"
-            reused = _reuse_resolved_ledger(_read_json(output_path, None), chain, address,
+            prior_proof = _read_json(output_path, None)
+            reused = _reuse_resolved_ledger(prior_proof, chain, address,
                                            snapshot_date, snapshot_payload, history)
             active_markets = (((snapshot_payload.get("snapshots") or {}).get(chain) or {}).get(address) or {}).get("markets") or {}
             if args.fetch_strict_rpc_evidence and reused and set(reused["markets"]) != set(active_markets):
@@ -772,6 +789,8 @@ def main() -> int:
                         diagnostics.update({"strictStatus": "verified", "reason": "exact_supply_replay"})
                 _write_json(output_path, ledger)
                 wrote += 1
+            elif args.retain_earlier_proofs and _older_verified_proof(prior_proof, chain, address, snapshot_date, snapshot_block):
+                retained += 1
             elif output_path.is_file():
                 output_path.unlink()
                 removed += 1
@@ -792,7 +811,7 @@ def main() -> int:
                 diagnostics.setdefault("address", address)
                 diagnostics.setdefault("snapshotDate", snapshot_date)
                 chain_diagnostics[address] = diagnostics
-        _update_manifest(args.output_dir, chain, snapshot_date)
+        _update_manifest(args.output_dir, chain, snapshot_date, retained)
         if args.fetch_strict_rpc_evidence:
             summary = {}
             for row in chain_diagnostics.values():
