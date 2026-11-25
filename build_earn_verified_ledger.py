@@ -192,7 +192,13 @@ def _validate_resolved_interest_ledger(
         return None
 
 
-def _load_resolved_interest_ledger(chain, address, latest_date, canonical_history):
+def _snapshot_block(chain, date_str):
+    snapshot = _read_json(SNAPSHOT_DIR / f"{date_str}.json")
+    metadata = (snapshot.get("chainMetadata") or {}).get(chain.lower()) or {}
+    return _parse_int(metadata.get("blockNumber"), 0)
+
+
+def _load_resolved_interest_ledger(chain, address, latest_date, canonical_history, snapshot_block=None):
     path = RESOLVED_INTEREST_DIR / str(chain).lower() / f"{str(address).lower()}.json"
     if not path.is_file():
         return None
@@ -200,11 +206,9 @@ def _load_resolved_interest_ledger(chain, address, latest_date, canonical_histor
         payload = _read_json(path)
     except (OSError, json.JSONDecodeError):
         return None
-    snapshot_payload = _read_json(SNAPSHOT_DIR / f"{latest_date}.json")
-    snapshot_comparison_block = _parse_int(
-        ((((snapshot_payload.get("chainMetadata") or {}).get(str(chain).lower()) or {}).get("blockNumber"))),
-        0,
-    )
+    if not isinstance(payload, dict) or payload.get("snapshotDate") != latest_date:
+        return None
+    snapshot_comparison_block = _snapshot_block(chain, latest_date) if snapshot_block is None else snapshot_block
     if snapshot_comparison_block <= 0:
         return None
     return _validate_resolved_interest_ledger(
@@ -524,7 +528,7 @@ def _calculate_historical_yield_pnl(history, prices_by_date, *, decimals, symbol
     }
 
 
-def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices=None):
+def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices=None, *, snapshot_block=None):
     address = address.lower()
     history_by_market = {}
     meta_by_market = {}
@@ -842,6 +846,7 @@ def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_add
         address,
         latest_date,
         history_payload,
+        snapshot_block,
     )
     if resolved_interest_ledger:
         ledger["resolvedInterestLedger"] = resolved_interest_ledger
@@ -947,6 +952,7 @@ def main():
             continue
 
         latest_date, latest_chain_data = snapshots[-1]
+        snapshot_block = _snapshot_block(chain, latest_date)
         netflow_payload = _load_netflow_for_chain(chain)
         netflow_by_addr = netflow_payload["netflows"]
         historical_prices = _load_historical_prices(chain)
@@ -963,7 +969,9 @@ def main():
         for address in sorted(addresses):
             if not (address.startswith("0x") and len(address) == 42):
                 continue
-            ledger = _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices)
+            ledger = _build_address_ledger(
+                address, chain, latest_date, snapshots, netflow_by_addr, historical_prices, snapshot_block=snapshot_block,
+            )
             out_path = output_dir / chain / f"{address}.json"
             had_existing_output = out_path.is_file()
             if _write_or_remove_ledger(
