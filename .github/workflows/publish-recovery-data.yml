@@ -7,6 +7,7 @@ on:
       - .github/workflows/publish-recovery-data.yml
       - scripts/build_recovery_pages_data.py
       - scripts/recovery_market_feeds.py
+      - scripts/recovery_cadence.py
       - fetch_dolo_price_history.py
       - scripts/recovery_borrow_feeds.py
   workflow_run:
@@ -137,3 +138,20 @@ jobs:
             sleep "$delay"
           done
           echo "::warning::Readback could not confirm this run yet; Pages artifact kept for its one-day retention"
+
+  catch-up:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Catch up overdue collectors without retry loops
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m unittest tests.test_recovery_cadence
+          python3 scripts/recovery_cadence.py
