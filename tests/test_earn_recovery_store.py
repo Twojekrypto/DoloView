@@ -84,3 +84,24 @@ class StorageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'newer generation'):
             store.publish(self.checkout, self.state)
         self.assertNotIn('/state',self.data)
+
+class TransportRetryTests(unittest.TestCase):
+    def test_committed_put_with_lost_response_is_verified(self):
+        import hashlib, os
+        from unittest.mock import patch, Mock
+        import requests
+        from scripts import earn_recovery_store as transport
+        body=b'content'
+        responses=[requests.Timeout(), Mock(status_code=412), Mock(status_code=200,content=body)]
+        with patch.dict(os.environ,{'EARN_STORAGE_KEY':'fixture'}), patch.object(transport.time,'sleep'), \
+             patch.object(transport.requests,'request',side_effect=responses) as network:
+            transport.conditional_put('/state',body,None)
+            self.assertEqual([x.args[0] for x in network.call_args_list],['PUT','PUT','GET'])
+
+    def test_unauthorized_request_fails_immediately(self):
+        import os
+        from unittest.mock import patch,Mock
+        from scripts import earn_recovery_store as transport
+        with patch.dict(os.environ,{'EARN_STORAGE_KEY':'fixture'}),patch.object(transport.requests,'request',return_value=Mock(status_code=403)) as network:
+            with self.assertRaisesRegex(RuntimeError,'HTTP 403'): transport.request('GET','/state')
+            self.assertEqual(network.call_count,1)

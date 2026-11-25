@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+import time
 
 import requests
 
@@ -24,14 +25,31 @@ def encode(record):
 
 
 def request(method, path, *, optional=False, **kwargs):
-    response = requests.request(method, URL + path, allow_redirects=False, timeout=(15, 120),
-                                headers={'Authorization': 'Bearer ' + os.environ['EARN_STORAGE_KEY'],
-                                         **kwargs.pop('headers', {})}, **kwargs)
-    if response.status_code == 404 and optional:
-        return None
-    if not 200 <= response.status_code < 300:
-        raise RuntimeError(f'Earn storage {method} {path}: HTTP {response.status_code}')
-    return response
+    headers = {'Authorization': 'Bearer ' + os.environ['EARN_STORAGE_KEY'], **kwargs.pop('headers', {})}
+    for attempt in range(4):
+        try:
+            response = requests.request(method, URL + path, allow_redirects=False, timeout=(15, 120),
+                                        headers=headers, **kwargs)
+        except (requests.ConnectionError, requests.Timeout):
+            if attempt == 3:
+                raise
+            time.sleep(2 ** attempt)
+            continue
+        if response.status_code == 404 and optional:
+            return None
+        if 200 <= response.status_code < 300:
+            return response
+        # A timed-out PUT can already have committed. Verify the exact bytes
+        # before accepting a precondition failure as an acknowledged retry.
+        if attempt and method == 'PUT' and response.status_code == 412:
+            saved = request('GET', path)
+            if hashlib.sha256(saved.content).hexdigest() == headers['X-Content-Sha256']:
+                return saved
+        if response.status_code not in (408, 429, 500, 502, 503, 504, 520, 522, 524) or attempt == 3:
+            raise RuntimeError(f'Earn storage {method} {path}: HTTP {response.status_code}')
+        retry = response.headers.get('Retry-After', '')
+        time.sleep(min(30, max(2 ** attempt, int(retry) if retry.isdecimal() else 0)))
+
 
 
 def locator(name, item):

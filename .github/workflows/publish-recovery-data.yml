@@ -18,7 +18,7 @@ on:
     - cron: '7,22,37,52 * * * *'
 
 concurrency:
-  group: recovery-data-pages
+  group: recovery-data-pages-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'publish' }}
   cancel-in-progress: false
 
 permissions:
