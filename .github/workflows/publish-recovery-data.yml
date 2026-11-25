@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/publish-recovery-data.yml
       - scripts/build_recovery_pages_data.py
+      - scripts/recovery_market_feeds.py
   workflow_dispatch:
   schedule:
     - cron: '17,47 * * * *'
@@ -20,7 +21,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    outputs:
+      failed_feeds: ${{ steps.markets.outputs.failed_feeds }}
     steps:
       - name: Check out data producers
         uses: actions/checkout@v6
@@ -38,6 +41,17 @@ jobs:
         run: python3 -m unittest tests.test_fetch_dolomite_tvl tests.test_fetch_dolomite_total_supply_history
       - name: Refresh and stage validated snapshots
         run: python3 scripts/build_recovery_pages_data.py _data
+      - name: Verify price, asset icon and WLFI producers
+        run: |
+          python3 -m unittest discover -s tests -p 'test_assets_*classification.py'
+          python3 -m unittest discover -s tests -p 'test_assets_market_coverage.py'
+          python3 -m unittest discover -s tests -p 'test_wlfi_markets.py'
+          python3 -m unittest discover -s tests -p 'test_recovery_market_feeds.py'
+      - name: Build supporting market feeds
+        id: markets
+        run: |
+          python3 scripts/recovery_market_feeds.py _data "$RUNNER_TEMP/failed-feeds.json"
+          echo "failed_feeds=$(cat "$RUNNER_TEMP/failed-feeds.json")" >> "$GITHUB_OUTPUT"
       - name: Upload data for Pages
         uses: actions/upload-pages-artifact@v5
         with:
@@ -57,3 +71,10 @@ jobs:
       - name: Publish snapshots
         id: publish
         uses: actions/deploy-pages@v5
+      - name: Report feeds that retained their previous data
+        if: needs.build.outputs.failed_feeds != '[]'
+        env:
+          FAILED_FEEDS: ${{ needs.build.outputs.failed_feeds }}
+        run: |
+          echo "::error::Previous data retained for $FAILED_FEEDS"
+          exit 1

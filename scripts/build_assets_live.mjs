@@ -442,7 +442,10 @@ async function buildAssets() {
   }
   const fallbackChains = [...new Set(rows.filter((row) => row.rateFallback).map((row) => row.chain))];
   const generatedAt = new Date().toISOString();
-  const fallbackSourceGeneratedAt = fallbackChains.length ? previousSnapshot?.generatedAt || null : null;
+  const repeatedFallback = fallbackChains.some(chain => previousSnapshot?.rateFallbackChains?.includes(chain));
+  const fallbackSourceGeneratedAt = fallbackChains.length
+    ? (repeatedFallback ? previousSnapshot.rateFallbackSourceGeneratedAt : previousSnapshot?.generatedAt) || null
+    : null;
   const generatedTime = Date.parse(generatedAt);
   const fallbackSourceTime = fallbackSourceGeneratedAt ? Date.parse(fallbackSourceGeneratedAt) : NaN;
   const rateFallbackMaxAgeMinutes =
