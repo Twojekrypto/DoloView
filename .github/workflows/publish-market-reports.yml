@@ -1,0 +1,33 @@
+name: Verify Supply and Rewards reports
+on:
+  push:
+    branches: [master]
+    paths: [.github/workflows/publish-market-reports.yml, scripts/recovery_reports.py]
+  schedule:
+    - cron: '39 */4 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verified-market-reports
+  cancel-in-progress: false
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m unittest tests.test_generate_supply_health tests.test_fetch_rewards_programs tests.test_recovery_reports
+      - run: python3 scripts/recovery_reports.py build verified-supply-reports.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-supply-reports
+          path: verified-supply-reports.zip
+          retention-days: 1
+          compression-level: 0

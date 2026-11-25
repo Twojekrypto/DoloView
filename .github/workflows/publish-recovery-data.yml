@@ -9,6 +9,10 @@ on:
       - scripts/recovery_market_feeds.py
       - fetch_dolo_price_history.py
       - scripts/recovery_borrow_feeds.py
+  workflow_run:
+    workflows: ['Verify Supply and Rewards reports']
+    types: [completed]
+    branches: [master]
   workflow_dispatch:
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -22,6 +26,10 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: read
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 32
     outputs:
@@ -57,6 +65,15 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_borrow_risk_*.py'
           python3 scripts/recovery_borrow_feeds.py _data "$RUNNER_TEMP/failed-feeds.json"
           echo "failed_feeds=$(cat "$RUNNER_TEMP/failed-feeds.json")" >> "$GITHUB_OUTPUT"
+      - name: Include independently verified supply history, pool health and rewards
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          reports_run=$(gh run list --workflow publish-market-reports.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$reports_run" ]; then
+            gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
+          fi
+          python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
       - name: Upload data for Pages
         uses: actions/upload-pages-artifact@v5
         with:
