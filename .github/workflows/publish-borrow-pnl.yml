@@ -1,0 +1,53 @@
+name: Verify historical Borrow P&L
+on:
+  push:
+    branches: [master]
+    paths: [.github/workflows/publish-borrow-pnl.yml, scripts/recovery_borrow_pnl.py, fetch_borrow_position_pnl.py, build_borrow_position_pnl.py, borrow_pnl_activity.py, borrow_pnl_oracle_recovery.py]
+  schedule:
+    - cron: '37 */2 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: verify-borrow-pnl
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install requests
+      - run: python3 -m unittest discover -s tests -p 'test_borrow_position_pnl*.py'
+      - name: Reuse the last verified oracle lookup cache if available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ] && gh run download "$prior" --name pnl-working-cache -D "$RUNNER_TEMP/pnl-cache"; then
+            tar --zstd -xf "$RUNNER_TEMP/pnl-cache/lookups.tar.zst"
+          fi
+      - name: Collect and verify public account histories
+        env:
+          PYTHONUNBUFFERED: 1
+        run: python3 scripts/recovery_borrow_pnl.py build verified-borrow-pnl.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-borrow-pnl
+          path: verified-borrow-pnl.zip
+          retention-days: 1
+          compression-level: 0
+      - name: Compress reusable oracle evidence
+        run: tar -I 'zstd -q -13 -T2' -cf "$RUNNER_TEMP/lookups.tar.zst" .cache/borrow-position-pnl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnl-working-cache
+          path: ${{ runner.temp }}/lookups.tar.zst
+          retention-days: 1
+          compression-level: 0

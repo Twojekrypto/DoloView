@@ -10,7 +10,7 @@ on:
       - fetch_dolo_price_history.py
       - scripts/recovery_borrow_feeds.py
   workflow_run:
-    workflows: ['Verify Supply and Rewards reports']
+    workflows: ['Verify Supply and Rewards reports', 'Verify historical Borrow P&L']
     types: [completed]
     branches: [master]
   workflow_dispatch:
@@ -75,6 +75,15 @@ jobs:
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
           python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
+      - name: Include independently verified historical Borrow P&L
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
+          fi
+          python3 scripts/recovery_borrow_pnl.py stage "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip" --output _data
       - name: Identify this verified Pages publication
         run: python3 -c 'import json,os,pathlib; pathlib.Path("_data/publisher.json").write_text(json.dumps({"run":os.environ["GITHUB_RUN_ID"],"attempt":os.environ["GITHUB_RUN_ATTEMPT"]}))'
       - name: Upload data for Pages
