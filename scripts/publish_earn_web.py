@@ -48,21 +48,7 @@ def bundle(paths, root):
     return bytes(body), entries
 
 
-def check_web_response(today):
-    def read(path):
-        url = store.URL + '/data/' + path
-        for attempt in range(3):
-            try:
-                response = requests.get(url, params={'verify': time.time_ns()}, timeout=(10, 45),
-                                        allow_redirects=False)
-                response.raise_for_status()
-                if response.headers.get('Access-Control-Allow-Origin') != '*':
-                    raise ValueError('Public dashboard CORS missing for ' + path)
-                return response.json()
-            except (requests.RequestException, ValueError):
-                if attempt == 2:
-                    raise
-                time.sleep(2 ** attempt)
+def validate_generation(today, read):
     index = read(SNAPS+'/manifest.json')
     daily = read(f'{SNAPS}/{today}.json')
     ledger = read(SHARDS+'/manifest.json')
@@ -81,6 +67,24 @@ def check_web_response(today):
         if (sample['chain'] != chain or sample['prefix'] != prefix or sample['snapshotDate'] != today
                 or not sample['ledgers'] or len(sample['ledgers']) != shard['addressCount']):
             raise ValueError('Public wallet shard disagrees with its index for ' + chain)
+
+
+def check_web_response(today):
+    def read(path):
+        url = store.URL + '/data/' + path
+        for attempt in range(3):
+            try:
+                response = requests.get(url, params={'verify': time.time_ns()}, timeout=(10, 45),
+                                        allow_redirects=False)
+                response.raise_for_status()
+                if response.headers.get('Access-Control-Allow-Origin') != '*':
+                    raise ValueError('Public dashboard CORS missing for ' + path)
+                return response.json()
+            except (requests.RequestException, ValueError):
+                if attempt == 2:
+                    raise
+                time.sleep(2 ** attempt)
+    validate_generation(today, read)
     print('Anonymous readback verified the daily snapshot, active-chain wallet shards and freshness report.')
 
 
@@ -140,6 +144,16 @@ def publish():
         raise ValueError('Public data are incomplete or out of date')
     if not set(prior['files']).issubset(result['files']):
         raise ValueError('Previously published files would disappear')
+    def read_candidate(path):
+        group, offset, length = result['files']['/data/' + path]
+        meta = result['groups'][group]
+        response = store.request('GET', f"/web/slots/{meta['slot']}/{group}")
+        if response.headers['ETag'].strip('"') != meta['etag']:
+            raise ValueError('Staged Earn data changed during verification')
+        return json.loads(gzip.decompress(response.content[offset:offset + length]))
+
+    if result != prior:
+        validate_generation(today, read_candidate)
     if store.read_current()[1] != source_etag:
         raise ValueError('Private generation changed while publishing')
     if result != prior:

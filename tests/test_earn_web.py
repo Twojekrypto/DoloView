@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from scripts.publish_earn_web import bundle, eligible, groups_to_read
+from scripts.publish_earn_web import bundle, eligible, groups_to_read, validate_generation
 
 
 class PublicEarnTests(unittest.TestCase):
@@ -29,3 +29,24 @@ class PublicEarnTests(unittest.TestCase):
             for path in paths:
                 start, size = index['/' + path.as_posix()]
                 self.assertEqual(gzip.decompress(blob[start:start+size]), (root/path).read_bytes())
+
+    def test_candidate_wallet_shard_must_match_its_chain_index(self):
+        day = '2026-11-25'
+        chains = ['arbitrum', 'berachain', 'ethereum']
+        records = {
+            'earn-snapshots/manifest.json': {'chains': {day: chains}},
+            f'earn-snapshots/{day}.json': {'date': day, 'snapshots': {c: {'wallet': {}} for c in chains},
+                                          'chainMetadata': {c: {'blockNumber': 34} for c in chains}},
+            'earn-verified-ledger-shards/manifest.json': {'chains': {}},
+            'earn-freshness/status.json': {'chains': dict.fromkeys(chains)},
+        }
+        for chain in chains:
+            path = f'{chain}/28.json'
+            records['earn-verified-ledger-shards/manifest.json']['chains'][chain] = {
+                'snapshotDate': day, 'shards': {'28': {'path': path, 'addressCount': 1}}}
+            records['earn-verified-ledger-shards/' + path] = {
+                'chain': chain, 'prefix': '28', 'snapshotDate': day, 'ledgers': {'0x28': {}}}
+        validate_generation(day, records.__getitem__)
+        records['earn-verified-ledger-shards/arbitrum/28.json']['snapshotDate'] = '2026-11-24'
+        with self.assertRaisesRegex(ValueError, 'disagrees'):
+            validate_generation(day, records.__getitem__)
