@@ -24,7 +24,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: python3 -m pip install requests
-      - run: python3 -m unittest discover -s tests -p 'test_borrow_position_pnl*.py'
+      - name: Verify the accounting engine and its archived Git publication fixtures
+        run: |
+          cp .github/workflow-reference/update-borrow-position-pnl.yml .github/workflows/update-borrow-position-pnl.yml
+          python3 -m unittest discover -s tests -p 'test_borrow_position_pnl*.py'
+          python3 -m unittest tests.test_recovery_pnl_bundle
       - name: Reuse the last verified oracle lookup cache if available
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,6 +41,10 @@ jobs:
         env:
           PYTHONUNBUFFERED: 1
         run: python3 scripts/recovery_borrow_pnl.py build verified-borrow-pnl.zip
+      - name: Verify the producer did not change during collection
+        run: |
+          git fetch --no-tags --depth=1 origin master
+          git diff --exit-code "$GITHUB_SHA" FETCH_HEAD -- fetch_borrow_position_pnl.py build_borrow_position_pnl.py borrow_pnl_oracle_recovery.py borrow_pnl_activity.py scan_earn_netflow.py rpc_usage.py scripts/recovery_borrow_pnl.py
       - uses: actions/upload-artifact@v4
         with:
           name: verified-borrow-pnl
