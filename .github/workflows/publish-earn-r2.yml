@@ -86,11 +86,8 @@ jobs:
 
       - name: Refresh existing strict resolved interest ledgers
         run: |
-          python3 build_earn_resolved_interest_ledger.py \
-            --chain ethereum \
-            --chain arbitrum \
-            --chain berachain \
-            --existing-addresses
+          python3 -m unittest tests.test_refresh_earn_proofs
+          python3 scripts/refresh_earn_proofs.py
         env:
           PYTHONUNBUFFERED: '1'
 
