@@ -239,8 +239,14 @@ def parse_merkl_v4_rewards(chain: str, payload: list[Any]) -> dict[str, Any]:
     }
 
 
+def has_eligible_market(chain: str, payload: dict) -> bool:
+    eligible = ELIGIBLE_MARKETS.get(chain, {})
+    markets = payload.get("markets") or {}
+    values = markets.values() if isinstance(markets, dict) else markets
+    return any(isinstance(m, dict) and str(m.get("token") or "").lower() in eligible for m in values)
+
+
 def ledger_addresses(chain: str) -> list[str]:
-    eligible_tokens = set(ELIGIBLE_MARKETS.get(chain, {}))
     chain_dir = LEDGER_DIR / chain
     addresses: list[str] = []
     for path in sorted(chain_dir.glob("0x*.json")):
@@ -249,13 +255,7 @@ def ledger_addresses(chain: str) -> list[str]:
         except (OSError, json.JSONDecodeError) as exc:
             print(f"warning: skipping unreadable ledger {path}: {exc}")
             continue
-        markets = payload.get("markets") or {}
-        market_values = markets.values() if isinstance(markets, dict) else markets
-        has_eligible_market = any(
-            isinstance(market, dict) and str(market.get("token") or "").lower() in eligible_tokens
-            for market in market_values
-        )
-        if has_eligible_market:
+        if has_eligible_market(chain, payload):
             addresses.append(str(payload.get("address") or path.stem).lower())
     return addresses
 
@@ -295,9 +295,10 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
-def build_cache(chain: str, limit: Optional[int], only_address: Optional[str], sleep_seconds: float, timeout: int, retries: int) -> dict[str, Any]:
+def build_cache(chain: str, limit: Optional[int], only_address: Optional[str], sleep_seconds: float, timeout: int, retries: int, *, addresses=None) -> dict[str, Any]:
     generated_at = utc_now()
-    addresses = [only_address.lower()] if only_address else ledger_addresses(chain)
+    if addresses is None:
+        addresses = [only_address.lower()] if only_address else ledger_addresses(chain)
     if limit is not None:
         addresses = addresses[:limit]
 
