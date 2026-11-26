@@ -342,6 +342,7 @@ def scan_chain_to_event_shards(
     no_resume: bool,
     progress_key: Optional[str],
     rpc_start_offset: int = 0,
+    archive_reader=None,
 ) -> dict:
     if not selected_addresses:
         raise ValueError("No addresses selected")
@@ -350,7 +351,7 @@ def scan_chain_to_event_shards(
     contract = config["margin"]
     rpcs = config["rpcs"]
     rpc_idx = [_initial_rpc_index(rpcs, progress_key, rpc_start_offset)]
-    latest_chain_block = int(get_block_number(rpcs, rpc_idx))
+    latest_chain_block = archive_reader.head if archive_reader else int(get_block_number(rpcs, rpc_idx))
     resolved_from_block = int(config["start_block"] if from_block is None else from_block)
     resolved_to_block = min(int(to_block) if to_block is not None else latest_chain_block, latest_chain_block)
     if resolved_to_block < resolved_from_block:
@@ -388,9 +389,9 @@ def scan_chain_to_event_shards(
     while current <= resolved_to_block:
         chunk_end = min(current + adaptive_chunk_size - 1, resolved_to_block)
         try:
-            logs = _sort_logs(_dedupe_logs(
-                _get_logs_with_topic_fallback(rpcs, rpc_idx, contract, ALL_EVENTS, current, chunk_end)
-            ))
+            raw_logs = (archive_reader.logs(current, chunk_end) if archive_reader else
+                        _get_logs_with_topic_fallback(rpcs, rpc_idx, contract, ALL_EVENTS, current, chunk_end))
+            logs = _sort_logs(_dedupe_logs(raw_logs))
             owners: Dict[str, List[dict]] = {}
             decoded_entry_count = 0
             selected_event_count = 0
@@ -467,6 +468,8 @@ def scan_chain_to_event_shards(
 
             current = chunk_end + 1
         except Exception as exc:
+            if archive_reader:
+                raise
             error_msg = str(exc)
             if _is_provider_span_limit(exc):
                 if adaptive_chunk_size <= 1:

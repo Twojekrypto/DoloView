@@ -4,12 +4,14 @@ import json
 import os
 import re
 import time
+import threading
 from urllib.parse import urlsplit
 
 import requests
 
 from scan_earn_netflow import ALL_EVENTS, CHAINS
 
+connections = threading.local()
 REFERENCE = '34a549f7bc4c33cf188c8cd87f5581a4c24d9483e475ca9f8521b5a34dca3af1'
 
 
@@ -28,9 +30,11 @@ class RangeLimited(Exception):
 
 
 def call(url, method, params):
+    if not hasattr(connections, 'http'):
+        connections.http = requests.Session()
     for attempt in range(5):
         try:
-            response = requests.post(url, json={'jsonrpc':'2.0','id':1,'method':method,'params':params},
+            response = connections.http.post(url, json={'jsonrpc':'2.0','id':1,'method':method,'params':params},
                                      timeout=(8, 30), allow_redirects=False)
         except requests.RequestException:
             if attempt == 4:
