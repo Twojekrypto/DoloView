@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
 import tempfile
+import time
 
 from apply_earn_subaccount_history_delta import apply_delta_histories
 from scan_earn_netflow import ALL_EVENTS, CHAINS
@@ -14,23 +15,46 @@ class ArchiveReader:
     def __init__(self, url, pool):
         self.url = url
         self.pool = pool
-        self.span = verify(url)
+        verify(url, compact=True)
         self.head = int(call(url, 'eth_blockNumber', []), 16)
 
-    def read(self, bounds):
-        first, last = bounds
+    def read(self, url, first, last):
         margin = CHAINS['berachain']['margin'].lower()
         query = {'fromBlock': hex(first), 'toBlock': hex(last), 'address': margin,
                  'topics': [list(ALL_EVENTS)]}
-        logs = call(self.url, 'eth_getLogs', [query])
+        logs = call(url, 'eth_getLogs', [query])
         if not isinstance(logs, list) or any(row['address'].lower() != margin or row.get('removed')
                 or not first <= int(row['blockNumber'], 16) <= last for row in logs):
             raise ValueError(f'Invalid historical logs for blocks {first}-{last}')
         return logs
 
     def logs(self, first, last):
-        spans = ((start, min(last, start + self.span - 1)) for start in range(first, last + 1, self.span))
-        return [row for group in self.pool.map(self.read, spans) for row in group]
+        events = []
+        for start in range(first, last+1, 1000):
+            end = min(start+999,last)
+            sources = ('https://rpc.berachain.com/', 'https://berachain.gateway.tenderly.co')
+            one, two = self.pool.map(lambda source: self.read(source, start, end), sources)
+            if log_signature(one) != log_signature(two):
+                raise ValueError(f'Public history providers disagree for blocks {start}-{end}')
+            # The private RPC permits 10 blocks per query. Check every nonempty
+            # window and one control window, including fully quiet 1,000-block spans.
+            windows = {start: []}
+            for row in one:
+                window = start + (int(row['blockNumber'],16)-start)//10*10
+                windows.setdefault(window,[]).append(row)
+            for block, expected in sorted(windows.items()):
+                actual = self.read(self.url, block, min(end,block+9))
+                if log_signature(actual) != log_signature(expected):
+                    raise ValueError(f'Authenticated history disagrees near block {block}')
+                time.sleep(0.35)
+            events.extend(one)
+        return events
+
+
+def log_signature(rows):
+    return sorted((int(row['blockNumber'],16), row['blockHash'].lower(), int(row['transactionIndex'],16),
+                   row['transactionHash'].lower(), int(row['logIndex'],16), tuple(t.lower() for t in row['topics']),
+                   row['data'].lower()) for row in rows)
 
 
 def cutoffs(chain_dir):

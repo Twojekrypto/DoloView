@@ -57,10 +57,14 @@ def call(url, method, params):
     raise RuntimeError(f'RPC rate limit persisted for {method}')
 
 
-def verify(url):
+def verify(url, *, compact=False):
     if int(call(url,'eth_chainId',[]),16) != 80094:
         raise ValueError('RPC is connected to the wrong chain')
     first, last = 7_003_001, 7_004_000
+    expected, fingerprint = 151, REFERENCE
+    if compact:
+        first, last = 7_003_221, 7_003_230
+        expected, fingerprint = 16, '212badf74bf10335b10cf6d107da858782ee7d2cb1ae346bf190deb6c4c562e0'
     items = []
     step = last-first+1
     while first <= last:
@@ -76,9 +80,9 @@ def verify(url):
         items.extend((r['blockHash'],r['transactionHash'],int(r['logIndex'],16)) for r in rows)
         first = end + 1
     digest = hashlib.sha256(json.dumps(sorted(items)).encode()).hexdigest()
-    if len(items) != 151 or digest != REFERENCE:
-        raise ValueError(f'Historical logs differ from the finalized reference ({len(items)}/151 events)')
-    print(f'Berachain Mainnet verified: 151 historical Dolomite events, exact fingerprint, request span {step} blocks.', flush=True)
+    if len(items) != expected or digest != fingerprint:
+        raise ValueError(f'Historical logs differ from the finalized reference ({len(items)}/{expected} events)')
+    print(f'Berachain Mainnet verified: {expected} historical Dolomite events, exact fingerprint, request span {step} blocks.', flush=True)
     return step
 
 

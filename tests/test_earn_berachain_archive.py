@@ -16,12 +16,27 @@ class BerachainArchiveTest(unittest.TestCase):
         with patch.object(rpc,'call',side_effect=read), self.assertRaisesRegex(ValueError,'0/151'):
             rpc.verify('https://example.test')
 
-    def test_free_plan_splits_each_range_without_dropping_the_last_block(self):
+    def test_private_rpc_checks_each_active_window_and_quiet_ranges(self):
         reader = object.__new__(ArchiveReader)
-        reader.span = 10
         reader.pool = type('Pool', (), {'map':staticmethod(map)})
-        reader.read = lambda bounds: [bounds]
-        self.assertEqual(reader.logs(101,123), [(101,110),(111,120),(121,123)])
+        reader.url = 'private'
+        rows = [dict(blockNumber=hex(111),blockHash='a',transactionIndex='0x0',
+                     transactionHash='b',logIndex='0x1',topics=['c'],data='d')]
+        private = []
+        def read(source, lo, hi):
+            if source == 'private':
+                private.append((lo,hi))
+            return [r for r in rows if lo<=int(r['blockNumber'],16)<=hi]
+        reader.read = read
+        with patch('scripts.refresh_earn_berachain.time.sleep'):
+            self.assertEqual(reader.logs(101,1102),rows)
+        self.assertEqual(private,[(101,110),(111,120),(1101,1102)])
+
+    def test_mismatching_log_contents_are_rejected(self):
+        from scripts.refresh_earn_berachain import log_signature
+        row = dict(blockNumber='0x1',blockHash='a',transactionIndex='0x0',transactionHash='b',
+                   logIndex='0x1',topics=['c'],data='0x00')
+        self.assertNotEqual(log_signature([row]),log_signature([{**row,'data':'0x01'}]))
 
     def test_supports_both_the_url_and_key_formats(self):
         key = 'x'*32
