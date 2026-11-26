@@ -25,9 +25,10 @@ def main():
     for workflow, hours in CADENCE_HOURS.items():
         if workflow == 'publish-borrow-pnl.yml' and os.environ.get('PNL_COLLECTED_HERE') == 'success':
             continue
-        state = subprocess.check_output(['gh', 'run', 'list', '--workflow', workflow, '--branch', 'master',
-                                         '--limit', '5', '--json', 'status,createdAt'])
-        if due(json.loads(state), hours, datetime.now(timezone.utc)):
+        state = subprocess.check_output(['gh', 'run', 'list', '--workflow', workflow,
+                                         '--limit', '20', '--json', 'status,createdAt,headBranch'])
+        master_runs = [row for row in json.loads(state) if row['headBranch'] == 'master'][:5]
+        if due(master_runs, hours, datetime.now(timezone.utc)):
             subprocess.run(['gh', 'workflow', 'run', workflow, '--ref', 'master'], check=True)
             print(f'Requested {workflow} after its {hours}-hour interval.')
 

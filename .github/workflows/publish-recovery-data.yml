@@ -53,7 +53,7 @@ jobs:
             echo "collect=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
           if [ -n "$prior" ]; then
             gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Checking the published P&L instead"
           fi
@@ -113,7 +113,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          reports_run=$(gh run list --workflow publish-market-reports.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          reports_run=$(gh run list --workflow publish-market-reports.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
           if [ -n "$reports_run" ]; then
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
@@ -122,7 +122,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          prior=$(gh run list --workflow publish-revenue.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          prior=$(gh run list --workflow publish-revenue.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
           if [ -n "$prior" ]; then
             gh run download "$prior" --name verified-revenue --dir "$RUNNER_TEMP/revenue" || echo "::warning::Reading previously published revenue"
           fi
@@ -131,7 +131,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          prior=$(gh run list --workflow publish-operating-income.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          prior=$(gh run list --workflow publish-operating-income.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
           if [ -n "$prior" ]; then
             gh run download "$prior" --name verified-operating-income --dir "$RUNNER_TEMP/income" || echo "::warning::Reading previously published operating income"
           fi
@@ -140,7 +140,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          prior=$(gh run list --workflow publish-earn-merkl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          prior=$(gh run list --workflow publish-earn-merkl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
           if [ -n "$prior" ]; then
             gh run download "$prior" --name verified-earn-merkl --dir "$RUNNER_TEMP/merkl" || echo "::warning::Reading previously published Merkl rewards"
           fi
@@ -153,12 +153,20 @@ jobs:
           if [ "$COLLECTED" = success ]; then
             gh run download "$GITHUB_RUN_ID" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl"
           else
-            prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            prior=$(gh run list --workflow publish-borrow-pnl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
             if [ -n "$prior" ]; then
               gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
             fi
           fi
           python3 scripts/recovery_borrow_pnl.py stage "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip" --output _data
+      - name: Require each verified report before replacing the public site
+        run: |
+          for report in data/dolomite-revenue-onchain-audit.json dolomite_revenue.json veborrow_rebate_history.json data/operating-income/latest.json data/earn-merkl-rewards/manifest.json data/supply-health/latest.json rewards_programs.json borrow_position_pnl.json; do
+            if ! test -s "_data/$report"; then
+              echo "::error::Missing required report $report"
+              exit 1
+            fi
+          done
       - name: Identify this verified Pages publication
         run: python3 -c 'import json,os,pathlib; pathlib.Path("_data/publisher.json").write_text(json.dumps({"run":os.environ["GITHUB_RUN_ID"],"attempt":os.environ["GITHUB_RUN_ATTEMPT"]}))'
       - name: Upload data for Pages
