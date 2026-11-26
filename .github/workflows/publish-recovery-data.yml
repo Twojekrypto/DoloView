@@ -118,6 +118,15 @@ jobs:
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
           python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
+      - name: Include audited protocol revenue and rebates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-revenue.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-revenue --dir "$RUNNER_TEMP/revenue" || echo "::warning::Reading previously published revenue"
+          fi
+          python3 scripts/recovery_revenue.py stage "$RUNNER_TEMP/revenue/verified-revenue.zip" _data
       - name: Include verified treasury and liquidation income
         env:
           GH_TOKEN: ${{ github.token }}
