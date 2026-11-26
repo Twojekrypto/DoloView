@@ -127,6 +127,15 @@ jobs:
             gh run download "$prior" --name verified-revenue --dir "$RUNNER_TEMP/revenue" || echo "::warning::Reading previously published revenue"
           fi
           python3 scripts/recovery_revenue.py stage "$RUNNER_TEMP/revenue/verified-revenue.zip" _data
+      - name: Include verified TVL history and onchain borrower votes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-tvl-details.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-tvl-details --dir "$RUNNER_TEMP/tvl-details" || echo "::warning::Reading previously published TVL details"
+          fi
+          python3 scripts/recovery_tvl_details.py stage "$RUNNER_TEMP/tvl-details/verified-tvl-details.zip" _data
       - name: Include verified treasury and liquidation income
         env:
           GH_TOKEN: ${{ github.token }}
@@ -161,7 +170,7 @@ jobs:
           python3 scripts/recovery_borrow_pnl.py stage "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip" --output _data
       - name: Require each verified report before replacing the public site
         run: |
-          for report in data/dolomite-revenue-onchain-audit.json dolomite_revenue.json veborrow_rebate_history.json data/operating-income/latest.json data/earn-merkl-rewards/manifest.json data/supply-health/latest.json rewards_programs.json borrow_position_pnl.json; do
+          for report in defillama_data.json veborrow_simulation.json data/dolomite-revenue-onchain-audit.json dolomite_revenue.json veborrow_rebate_history.json data/operating-income/latest.json data/earn-merkl-rewards/manifest.json data/supply-health/latest.json rewards_programs.json borrow_position_pnl.json; do
             if ! test -s "_data/$report"; then
               echo "::error::Missing required report $report"
               exit 1

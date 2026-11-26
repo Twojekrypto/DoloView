@@ -9,6 +9,7 @@ CADENCE_HOURS = {
     'publish-market-reports.yml': 4,
     'publish-earn-merkl.yml': 1,
     'publish-revenue.yml': 0.5,
+    'publish-tvl-details.yml': 0.5,
     'publish-operating-income.yml': 18,
     'publish-earn-r2.yml': 6,
 }
