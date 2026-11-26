@@ -3,13 +3,12 @@ name: Publish verified Earn data to R2
 on:
   schedule:
     - cron: '22 */6 * * *'  # Every 6 hours, staggered
-    - cron: '22 2,8,14,20 * * *'  # Replay canonical Berachain history between snapshot-only runs
   workflow_dispatch:
     inputs:
       refresh_berachain_history:
         description: Replay existing Berachain wallet histories through the fresh snapshot
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: earn-r2-writer
@@ -22,6 +21,8 @@ jobs:
   update-snapshots:
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    outputs:
+      replay_outcome: ${{ steps.bera-history.outcome }}
 
     steps:
       - name: Checkout
@@ -82,7 +83,8 @@ jobs:
           PY
 
       - name: Replay Berachain history to the validated snapshot block
-        if: inputs.refresh_berachain_history || github.event.schedule == '22 2,8,14,20 * * *'
+        id: bera-history
+        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
         env:
           ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
           PYTHONUNBUFFERED: '1'
@@ -144,3 +146,16 @@ jobs:
         env:
           EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
         run: python3 -m scripts.earn_recovery_store publish "$RUNNER_TEMP/earn-state.json"
+
+  preserve-snapshot-refresh:
+    needs: update-snapshots
+    if: failure() && github.event_name == 'schedule' && needs.update-snapshots.outputs.replay_outcome == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Refresh balances in a clean run if historical replay was unavailable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-earn-r2.yml --repo "$GITHUB_REPOSITORY" --ref master -f refresh_berachain_history=false
