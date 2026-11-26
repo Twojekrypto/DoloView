@@ -11,7 +11,7 @@ import sys
 import zipfile
 
 from recovery_market_feeds import previous_file
-from refresh_pages_snapshots import ROOT, check_freshness
+from refresh_pages_snapshots import ROOT, check_freshness, refresh_group
 
 BUNDLE = 'verified-supply-reports.zip'
 HEALTH = 'data/supply-health/latest.json'
@@ -59,21 +59,28 @@ def verify(root):
                 raise ValueError('Invalid supply history in '+path)
 
 
+def refresh_reward_quote(root):
+    if refresh_group('DOLO price', ['dolo_price.json'], [[sys.executable, 'update_dolo_price.py']], root=root):
+        return
+    quote = previous_file('dolo_price.json')
+    if quote is None:
+        raise ValueError('Cannot obtain a fresh DOLO price for Rewards')
+    (root/'dolo_price.json').write_bytes(quote)
+    check_freshness(['dolo_price.json'], root)
+    subprocess.run([sys.executable,'validate_data.py','dolo_price.json'],cwd=root,check=True)
+
+
 def refresh(target):
     previous = previous_file(BUNDLE)
     if previous is not None:
         unpack(previous, ROOT)
-    quote = previous_file('dolo_price.json')
-    if quote is None:
-        raise ValueError('Missing published DOLO price')
-    (ROOT/'dolo_price.json').write_bytes(quote)
-    check_freshness(['dolo_price.json'], ROOT)
     for command in [
         ['generate_supply_history.py','--chains','ethereum,arbitrum,berachain','--token-limit','0','--active-usd-threshold','0'],
         ['generate_supply_health.py'],
-        ['fetch_rewards_programs.py'],
     ]:
         subprocess.run([sys.executable,*command],cwd=ROOT,check=True)
+    refresh_reward_quote(ROOT)
+    subprocess.run([sys.executable,'fetch_rewards_programs.py'],cwd=ROOT,check=True)
     verify(ROOT)
     check_freshness([MARKETS,HEALTH,REWARDS], ROOT)
     paths = FIXED | {p.relative_to(ROOT).as_posix() for p in (ROOT/'data/supply-history').glob('*/*.json')}
