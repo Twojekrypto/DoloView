@@ -1,0 +1,52 @@
+name: Verify DOLO liquidity
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-dolo-liquidity
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 57
+    env:
+      LP_SCANNER_CACHE_DIR: ${{ github.workspace }}/.cache/legacy-lp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 scripts/recovery_liquidity.py prepare "$RUNNER_TEMP/previous.json"
+      - uses: actions/cache/restore@v5
+        id: cache
+        with:
+          path: .cache/legacy-lp
+          key: lp-scanner-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: lp-scanner-v1-${{ runner.os }}-
+      - name: Refresh liquidity across Berachain and Ethereum
+        timeout-minutes: 45
+        env:
+          PYTHONUNBUFFERED: '1'
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+        run: python3 generate_dolo_liquidity.py
+      - uses: actions/cache/save@v5
+        if: ${{ always() && steps.cache.outcome == 'success' && hashFiles('.cache/legacy-lp/*.json') != '' }}
+        with:
+          path: .cache/legacy-lp
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - run: python3 scripts/recovery_liquidity.py verify "$RUNNER_TEMP/previous.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-dolo-liquidity
+          path: data/dolo-liquidity.json
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 2
