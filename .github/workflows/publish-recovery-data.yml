@@ -119,6 +119,15 @@ jobs:
             gh run download "$artifact" --name verified-public-berachain-netflow --dir "$RUNNER_TEMP/netflow" || echo "::warning::Reading previously published Berachain netflows"
           fi
           python3 -m scripts.recovery_bera_flow stage --artifact "$RUNNER_TEMP/netflow/berachain.json" --output _data
+      - name: Include verified veDOLO lock and unlock history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-vedolo-flows.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-vedolo-flows --dir "$RUNNER_TEMP/vedolo" || echo "::warning::Reading previously published veDOLO flows"
+          fi
+          python3 scripts/recovery_vedolo_flows.py stage --candidate "$RUNNER_TEMP/vedolo/vedolo_flows.json"
       - name: Include independently verified supply history, pool health and rewards
         env:
           GH_TOKEN: ${{ github.token }}

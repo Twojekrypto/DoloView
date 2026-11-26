@@ -12,6 +12,7 @@ CADENCE_HOURS = {
     'publish-tvl-details.yml': 0.5,
     'publish-operating-income.yml': 18,
     'publish-earn-r2.yml': 6,
+    'publish-vedolo-flows.yml': 6,
 }
 
 
