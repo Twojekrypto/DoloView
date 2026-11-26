@@ -225,7 +225,8 @@ jobs:
 
   catch-up:
     needs: [deploy, refresh-pnl]
-    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    # A missing report must still be able to trigger its overdue producer.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
