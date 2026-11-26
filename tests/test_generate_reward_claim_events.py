@@ -305,9 +305,6 @@ class RewardClaimTimestampReuseTests(unittest.TestCase):
             self.assertIn(env_name, source)
 
     def test_reward_claim_scanner_reads_xlayer_zen_rpc_secret(self):
-        workflow = (ROOT / ".github" / "workflows" / "update-reward-claim-events.yml").read_text(encoding="utf-8")
-
-        self.assertIn("ALCHEMY_XLAYER_RPC_ZEN: ${{ secrets.ALCHEMY_XLAYER_RPC_ZEN }}", workflow)
         with patch.dict(os.environ, {"ALCHEMY_XLAYER_RPC_ZEN": "https://xlayer.example"}, clear=True):
             self.assertTrue(rce.has_configured_rpc("xlayer"))
             self.assertEqual(rce.get_endpoints("xlayer")[0], "https://xlayer.example")
@@ -343,52 +340,13 @@ class RewardClaimTimestampReuseTests(unittest.TestCase):
         with patch.dict(os.environ, {"XLAYER_RPC": "https://configured-xlayer.example"}, clear=True):
             self.assertTrue(rce.has_configured_rpc("xlayer"))
 
-    def test_cross_chain_workflow_passes_xlayer_rpc_alias(self):
-        workflow = (
-            ROOT / ".github" / "workflows" / "update-reward-claim-events.yml"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("XLAYER_RPC: ${{ secrets.XLAYER_RPC }}", workflow)
-
-    def test_odolo_flow_workflow_refreshes_berachain_claims_before_flows(self):
-        workflow = (ROOT / ".github" / "workflows" / "update-odolo-flows.yml").read_text(encoding="utf-8")
-
-        self.assertIn("fetch-depth: 1", workflow)
-        self.assertNotIn("fetch-depth: 0", workflow)
-        self.assertIn("REWARD_CLAIM_CHAINS: berachain", workflow)
-        self.assertLess(
-            workflow.index("Generate Berachain reward claim events"),
-            workflow.index("Generate oDOLO flows"),
-        )
-        self.assertNotIn("ALCHEMY_XLAYER_RPC_ZEN", workflow)
-
-    def test_cross_chain_workflow_uses_sparse_shallow_checkout_and_contract_tests(self):
-        workflow = (
-            ROOT / ".github" / "workflows" / "update-reward-claim-events.yml"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("fetch-depth: 1", workflow)
-        self.assertNotIn("fetch-depth: 0", workflow)
-        self.assertIn("sparse-checkout-cone-mode: false", workflow)
-        for required_path in (
-            "requirements.txt",
-            "generate_reward_claim_events.py",
-            "validate_data.py",
-            "vedolo_vote_power.py",
-            "tests/test_generate_reward_claim_events.py",
-            ".github/workflows/update-reward-claim-events.yml",
-            ".github/workflows/update-odolo-flows.yml",
-            "data/reward-claim-events.json",
-            "data/odolo-claim-events.json",
-            "data/reward-claim-events",
-        ):
-            with self.subTest(required_path=required_path):
-                self.assertIn(required_path, workflow)
-        self.assertIn(
-            "python3 -m unittest tests.test_generate_reward_claim_events",
-            workflow,
-        )
-        self.assertIn("REWARD_CLAIM_MAX_LOG_CHUNKS_XLAYER: '2000'", workflow)
+    def test_cross_chain_workflow_publishes_verified_primary_claims(self):
+        workflow = (ROOT / ".github" / "workflows" / "publish-reward-claims.yml").read_text()
+        self.assertIn("REWARD_CLAIM_CHAINS: arbitrum,berachain", workflow)
+        self.assertIn("ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}", workflow)
+        self.assertIn("ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}", workflow)
+        self.assertLess(workflow.index("scripts/recovery_reward_claims.py build"), workflow.index("actions/upload-artifact"))
+        self.assertNotIn("git push", workflow)
 
     def test_reward_claim_log_scan_fails_closed_on_an_unserved_chunk(self):
         config = {

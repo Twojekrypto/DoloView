@@ -1,0 +1,56 @@
+name: Verify Arbitrum and Berachain reward claims
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 */4 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: verified-reward-claims
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m unittest tests.test_generate_reward_claim_events
+      - run: python3 scripts/recovery_reward_claims.py prepare
+      - name: Refresh reward events from both active chains
+        env:
+          PYTHONUNBUFFERED: '1'
+          REWARD_CLAIM_CHAINS: arbitrum,berachain
+          REWARD_CLAIM_CHUNK_SIZE_BERACHAIN: '10000'
+          REWARD_CLAIM_CHUNK_SIZE_ARBITRUM: '250000'
+          REWARD_CLAIM_TIMESTAMP_BATCH_SIZE_BERACHAIN: '20'
+          REWARD_CLAIM_TIMESTAMP_BATCH_SIZE_ARBITRUM: '50'
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}
+          ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
+        run: python3 generate_reward_claim_events.py
+      - run: |
+          python3 validate_data.py data/reward-claim-events.json data/odolo-claim-events.json
+          python3 scripts/recovery_reward_claims.py build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-reward-claims
+          path: verified-reward-claims.zip
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Publish the verified data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master

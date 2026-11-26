@@ -128,6 +128,15 @@ jobs:
             gh run download "$prior" --name verified-vedolo-flows --dir "$RUNNER_TEMP/vedolo" || echo "::warning::Reading previously published veDOLO flows"
           fi
           python3 scripts/recovery_vedolo_flows.py stage --candidate "$RUNNER_TEMP/vedolo/vedolo_flows.json"
+      - name: Include verified cross-chain reward claims
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-reward-claims.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-reward-claims --dir "$RUNNER_TEMP/claims" || echo "::warning::Reading previously published reward claims"
+          fi
+          python3 scripts/recovery_reward_claims.py stage --candidate "$RUNNER_TEMP/claims/verified-reward-claims.zip"
       - name: Include independently verified supply history, pool health and rewards
         env:
           GH_TOKEN: ${{ github.token }}
