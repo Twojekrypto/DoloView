@@ -1,0 +1,54 @@
+name: Verify protocol revenue and onchain corrections
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13,43 * * * *'
+  push:
+    branches: [master]
+    paths: [.github/workflows/publish-revenue.yml, scripts/recovery_revenue.py, fetch_dolomite_revenue.py, audit_dolomite_revenue_onchain.py, fetch_veborrow_rebate_history.py]
+permissions:
+  contents: read
+concurrency:
+  group: verify-protocol-revenue
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - name: Check protocol revenue, rebates and onchain auditing
+        run: |
+          # Legacy regression tests also verify the four archived publisher definitions.
+          for fixture in audit-dolomite-revenue-onchain update-tvl-data update-liquidation-risk pages; do
+            cp ".github/workflow-reference/$fixture.yml" ".github/workflows/$fixture.yml"
+          done
+          python3 -m unittest discover -s tests -p 'test_fetch_dolomite_revenue*.py'
+          python3 -m unittest tests.test_audit_dolomite_revenue_onchain tests.test_veborrow_rebate_history tests.test_recovery_revenue
+      - name: Refresh and reconcile closed-day revenue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PYTHONUNBUFFERED: '1'
+        run: python3 scripts/recovery_revenue.py build verified-revenue.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-revenue
+          path: verified-revenue.zip
+          retention-days: 1
+          compression-level: 0
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master
