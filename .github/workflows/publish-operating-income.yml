@@ -1,0 +1,46 @@
+name: Verify treasury interest and liquidation income
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 0,6 * * *'
+  push:
+    branches: [master]
+    paths: [.github/workflows/publish-operating-income.yml, fetch_operating_income.py, operating_income_treasury.py, operating_income_liquidations.py, config/operating_income.json, scripts/recovery_income.py]
+permissions:
+  contents: read
+concurrency:
+  group: verify-operating-income
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - name: Check collector arithmetic and completeness
+        run: python3 -m unittest discover -s tests -p 'test_operating_income*.py'
+      - name: Collect and reconcile all three chains
+        run: |
+          python3 fetch_operating_income.py
+          python3 scripts/recovery_income.py verify data/operating-income/latest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-operating-income
+          path: data/operating-income/latest.json
+          retention-days: 2
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master

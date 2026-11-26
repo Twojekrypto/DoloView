@@ -118,6 +118,15 @@ jobs:
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
           python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
+      - name: Include verified treasury and liquidation income
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-operating-income.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-operating-income --dir "$RUNNER_TEMP/income" || echo "::warning::Reading previously published operating income"
+          fi
+          python3 scripts/recovery_income.py stage "$RUNNER_TEMP/income/latest.json" _data
       - name: Include verified Ethereum Merkl rewards
         env:
           GH_TOKEN: ${{ github.token }}
