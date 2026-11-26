@@ -790,9 +790,10 @@ def scan_logs(
             for endpoint in rpc_endpoints:
                 host = urlsplit(endpoint).hostname or "rpc"
                 family = next((name for name in ("alchemy", "drpc", "publicnode", "infura") if name in host), host)
+                if host in {"rpc.berachain.com", "rpc.berachain-apis.com"}:
+                    family = "berachain.com"
                 if family in families:
                     continue
-                families.add(family)
                 try:
                     response = rpc_call([endpoint], payload, retries_per_endpoint=1, quiet=True,
                                         describe=f"{chain_key} logs {chunk_start}-{chunk_end}")
@@ -808,6 +809,7 @@ def scan_logs(
                     if candidate:
                         rows = candidate
                         break
+                    families.add(family)
                     empty_votes += 1
                     if empty_votes >= 2:
                         rows = []

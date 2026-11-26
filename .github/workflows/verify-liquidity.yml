@@ -28,14 +28,16 @@ jobs:
         id: cache
         with:
           path: .cache/legacy-lp
-          key: lp-scanner-v1-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: lp-scanner-v1-${{ runner.os }}-
+          key: lp-scanner-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: lp-scanner-v2-${{ runner.os }}-
       - name: Refresh liquidity across Berachain and Ethereum
         timeout-minutes: 45
         env:
           PYTHONUNBUFFERED: '1'
           ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}
           ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}
         run: python3 generate_dolo_liquidity.py
       - uses: actions/cache/save@v5
         if: ${{ always() && steps.cache.outcome == 'success' && hashFiles('.cache/legacy-lp/*.json') != '' }}

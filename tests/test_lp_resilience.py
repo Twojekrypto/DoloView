@@ -173,6 +173,23 @@ class RPCResilienceTests(unittest.TestCase):
         self.assertEqual(len(seen), 2)
         self.assertEqual(cursor, 11)
 
+    def test_two_berachain_hostnames_cannot_confirm_an_empty_range(self):
+        endpoints = ['https://rpc.berachain.com', 'https://rpc.berachain-apis.com']
+        with self.assertRaisesRegex(RuntimeError, 'empty range lacks independent confirmation'):
+            lp.scan_logs('berachain', ADDRESS, [TOPIC], 10, 11, 2,
+                         rpc=lambda *args, **kwargs: {'result': []}, endpoints=endpoints)
+
+    def test_unavailable_hostname_does_not_disqualify_its_fallback(self):
+        endpoints = ['https://rpc.berachain.com', 'https://rpc.berachain-apis.com',
+                     'https://independent.invalid']
+        def rpc(urls, payload, **kwargs):
+            if urls[0] == endpoints[0]:
+                raise RuntimeError('endpoint unavailable')
+            return {'result': []}
+        rows, cursor = lp.scan_logs('berachain', ADDRESS, [TOPIC], 10, 11, 2,
+                                    rpc=rpc, endpoints=endpoints)
+        self.assertEqual((rows, cursor), ([], 11))
+
     def test_reorg_overlap_removes_old_events_instead_of_unioning_them(self):
         with tempfile.TemporaryDirectory() as directory:
             lp.scan_logs('ethereum', ADDRESS, [TOPIC], 10, 12, 3,
