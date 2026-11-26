@@ -905,6 +905,32 @@ def _reduced_chunk_size(chunk_size):
     return max(MIN_BLOCK_CHUNK, chunk_size // 2)
 
 
+def flow_category(topic0):
+    return (
+        "d" if topic0 == LOG_DEPOSIT else
+        "w" if topic0 == LOG_WITHDRAW else
+        "x" if topic0 in (LEGACY_LOG_TRANSFER, CURRENT_LOG_TRANSFER) else
+        "l" if topic0 in (LEGACY_LOG_LIQUIDATE, CURRENT_LOG_LIQUIDATE) else
+        "v" if topic0 == CURRENT_LOG_VAPORIZE else
+        "s"
+    )
+
+
+def add_flow(storage, addr, mid, delta, flow_type):
+    if addr not in storage:
+        storage[addr] = {}
+    if mid not in storage[addr]:
+        storage[addr][mid] = {"t": "0", "d": "0", "w": "0", "s": "0", "x": "0", "l": "0", "v": "0"}
+    # Ensure all keys exist (for old-format data)
+    for k in ("d", "w", "s", "x", "l", "v"):
+        if k not in storage[addr][mid]:
+            storage[addr][mid][k] = "0"
+    old_t = int(storage[addr][mid]["t"])
+    storage[addr][mid]["t"] = str(old_t + delta)
+    old_ft = int(storage[addr][mid][flow_type])
+    storage[addr][mid][flow_type] = str(old_ft + abs(delta))
+
+
 def scan_chain(
     chain_id,
     chain_config,
@@ -1059,21 +1085,6 @@ def scan_chain(
             events_in_chunk = len(all_logs)
             total_events += events_in_chunk
             
-            # Helper to add flow to netflows
-            def add_flow(storage, addr, mid, delta, flow_type):
-                if addr not in storage:
-                    storage[addr] = {}
-                if mid not in storage[addr]:
-                    storage[addr][mid] = {"t": "0", "d": "0", "w": "0", "s": "0", "x": "0", "l": "0", "v": "0"}
-                # Ensure all keys exist (for old-format data)
-                for k in ("d", "w", "s", "x", "l", "v"):
-                    if k not in storage[addr][mid]:
-                        storage[addr][mid][k] = "0"
-                old_t = int(storage[addr][mid]["t"])
-                storage[addr][mid]["t"] = str(old_t + delta)
-                old_ft = int(storage[addr][mid][flow_type])
-                storage[addr][mid][flow_type] = str(old_ft + abs(delta))
-
             def update_cycle_state(owner, account, market, delta, new_par):
                 if not cycle_state_enabled:
                     return
@@ -1109,14 +1120,7 @@ def scan_chain(
             # Process all logs
             for log in all_logs:
                 topic0 = log["topics"][0].lower()
-                flow_type = (
-                    "d" if topic0 == LOG_DEPOSIT else
-                    "w" if topic0 == LOG_WITHDRAW else
-                    "x" if topic0 in (LEGACY_LOG_TRANSFER, CURRENT_LOG_TRANSFER) else
-                    "l" if topic0 in (LEGACY_LOG_LIQUIDATE, CURRENT_LOG_LIQUIDATE) else
-                    "v" if topic0 == CURRENT_LOG_VAPORIZE else
-                    "s"
-                )
+                flow_type = flow_category(topic0)
                 entries = decode_log_entries(log)
                 if not entries:
                     continue

@@ -91,6 +91,12 @@ jobs:
         run: |
           python3 -m unittest tests.test_earn_berachain_archive tests.test_scan_earn_subaccount_history_events tests.test_apply_earn_subaccount_history_delta
           python3 -m scripts.refresh_earn_berachain
+          python3 -m unittest tests.test_scan_earn_netflow tests.test_recovery_bera_flow
+          python3 -m scripts.recovery_bera_flow refresh
+
+      - name: Restore the last verified public netflows for a balances-only run
+        if: github.event_name == 'workflow_dispatch' && !inputs.refresh_berachain_history
+        run: python3 -m scripts.recovery_bera_flow restore
 
       - name: Refresh historical EARN prices
         run: |
@@ -146,6 +152,14 @@ jobs:
         env:
           EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
         run: python3 -m scripts.earn_recovery_store publish "$RUNNER_TEMP/earn-state.json"
+
+      - name: Share verified public onchain netflows for the dashboard
+        if: steps.bera-history.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-public-berachain-netflow
+          path: data/earn-netflow/berachain.json
+          retention-days: 2
 
   preserve-snapshot-refresh:
     needs: update-snapshots

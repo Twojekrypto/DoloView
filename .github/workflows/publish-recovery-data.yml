@@ -109,6 +109,16 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_borrow_risk_*.py'
           python3 scripts/recovery_borrow_feeds.py _data "$RUNNER_TEMP/failed-feeds.json"
           echo "failed_feeds=$(cat "$RUNNER_TEMP/failed-feeds.json")" >> "$GITHUB_OUTPUT"
+      - name: Include verified public Berachain deposits and withdrawals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs=$(gh run list --workflow publish-earn-r2.yml --branch master --status success --limit 12 --json databaseId)
+          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=verified-public-berachain-netflow&per_page=20" | jq -r --argjson runs "$runs" '[.artifacts[] | select(.expired == false) | .workflow_run.id | select(. as $id | any($runs[]; .databaseId == $id))][0] // empty')
+          if [ -n "$artifact" ]; then
+            gh run download "$artifact" --name verified-public-berachain-netflow --dir "$RUNNER_TEMP/netflow" || echo "::warning::Reading previously published Berachain netflows"
+          fi
+          python3 -m scripts.recovery_bera_flow stage --artifact "$RUNNER_TEMP/netflow/berachain.json" --output _data
       - name: Include independently verified supply history, pool health and rewards
         env:
           GH_TOKEN: ${{ github.token }}

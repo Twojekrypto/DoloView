@@ -120,8 +120,8 @@ class ScanEarnNetflowTest(unittest.TestCase):
         for path in berachain_workflows:
             with self.subTest(workflow=path.name, chain="berachain"):
                 self.assertIn(
-                    "ALCHEMY_BERACHAIN_RPC_2_JEFF: "
-                    "${{ secrets.ALCHEMY_BERACHAIN_RPC_2_JEFF }}",
+                    "ALCHEMY_BERACHAIN_RPC: "
+                    "${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}",
                     path.read_text(encoding="utf-8"),
                 )
         for path in mantle_workflows:
