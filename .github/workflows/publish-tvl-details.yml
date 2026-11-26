@@ -1,0 +1,51 @@
+name: Verify TVL history and onchain borrower votes
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '13,43 * * * *'
+  push:
+    branches: [master]
+    paths: [.github/workflows/publish-tvl-details.yml, scripts/recovery_tvl_details.py, fetch_veborrow_simulation.py, fetch_defillama.py]
+permissions:
+  contents: read
+concurrency:
+  group: verify-tvl-details
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m unittest tests.test_fetch_veborrow_simulation tests.test_fetch_defillama tests.test_recovery_tvl_details
+      - name: Fetch complete TVL history and verify borrower votes
+        env:
+          VEBORROW_VOTES_RPC_BATCH_SIZE: '50'
+          VEBORROW_VOTES_RPC_RETRIES_PER_ENDPOINT: '2'
+          VEBORROW_VOTES_CHUNK_RETRIES: '4'
+          VEBORROW_VOTES_RETRY_DELAY_SECONDS: '12'
+        run: python3 scripts/recovery_tvl_details.py build verified-tvl-details.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-tvl-details
+          path: verified-tvl-details.zip
+          retention-days: 1
+          compression-level: 0
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master
