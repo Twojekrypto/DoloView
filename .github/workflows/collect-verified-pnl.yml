@@ -1,0 +1,53 @@
+name: Collect and verify historical Borrow P&L
+on:
+  workflow_call:
+concurrency:
+  group: verify-borrow-pnl
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install requests
+      - name: Verify the accounting engine and its archived Git publication fixtures
+        run: |
+          cp .github/workflow-reference/update-borrow-position-pnl.yml .github/workflows/update-borrow-position-pnl.yml
+          python3 -m unittest discover -s tests -p 'test_borrow_position_pnl*.py'
+          python3 -m unittest tests.test_recovery_pnl_bundle
+      - name: Reuse the last verified oracle lookup cache if available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ] && gh run download "$prior" --name pnl-working-cache -D "$RUNNER_TEMP/pnl-cache"; then
+            tar --zstd -xf "$RUNNER_TEMP/pnl-cache/lookups.tar.zst"
+          fi
+      - name: Collect and verify public account histories
+        env:
+          PYTHONUNBUFFERED: 1
+        run: python3 scripts/recovery_borrow_pnl.py build verified-borrow-pnl.zip
+      - name: Verify the producer did not change during collection
+        run: |
+          git fetch --no-tags --depth=1 origin master
+          git diff --exit-code "$GITHUB_SHA" FETCH_HEAD -- fetch_borrow_position_pnl.py build_borrow_position_pnl.py borrow_pnl_oracle_recovery.py borrow_pnl_activity.py scan_earn_netflow.py rpc_usage.py scripts/recovery_borrow_pnl.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-borrow-pnl
+          path: verified-borrow-pnl.zip
+          retention-days: 1
+          compression-level: 0
+      - name: Compress reusable oracle evidence
+        run: tar -I 'zstd -q -13 -T2' -cf "$RUNNER_TEMP/lookups.tar.zst" .cache/borrow-position-pnl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pnl-working-cache
+          path: ${{ runner.temp }}/lookups.tar.zst
+          retention-days: 1
+          compression-level: 0

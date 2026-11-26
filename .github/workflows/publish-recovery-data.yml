@@ -10,24 +10,66 @@ on:
       - scripts/recovery_cadence.py
       - fetch_dolo_price_history.py
       - scripts/recovery_borrow_feeds.py
-  workflow_run:
-    workflows: ['Verify Supply and Rewards reports', 'Verify historical Borrow P&L']
-    types: [completed]
-    branches: [master]
   workflow_dispatch:
+    inputs:
+      refresh_pnl:
+        description: 'Collect a new P&L snapshot before publication'
+        type: boolean
+        default: false
   schedule:
     - cron: '7,22,37,52 * * * *'
 
 concurrency:
-  group: recovery-data-pages-${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success' && github.run_id || 'publish' }}
+  group: recovery-data-pages-publish
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  check-pnl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      collect: ${{ steps.age.outputs.collect }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install requests
+      - id: age
+        name: Check the source time of the available P&L
+        env:
+          FORCE_PNL: ${{ inputs.refresh_pnl }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$FORCE_PNL" = true ]; then
+            echo "collect=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Checking the published P&L instead"
+          fi
+          collect=$(python3 scripts/recovery_borrow_pnl.py check-age "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip")
+          echo "P&L needs a fresh collection: $collect"
+          echo "collect=$collect" >> "$GITHUB_OUTPUT"
+  refresh-pnl:
+    needs: check-pnl
+    if: needs.check-pnl.outputs.collect == 'true'
+    uses: ./.github/workflows/collect-verified-pnl.yml
+    permissions:
+      contents: read
+      actions: read
   build:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: [check-pnl, refresh-pnl]
+    if: ${{ !cancelled() && needs.check-pnl.result == 'success' && (needs.refresh-pnl.result == 'success' || needs.refresh-pnl.result == 'skipped') }}
     permissions:
       actions: read
       contents: read
@@ -76,13 +118,27 @@ jobs:
             gh run download "$reports_run" --name verified-supply-reports --dir "$RUNNER_TEMP/reports" || echo "::warning::Reading previously published report bundle"
           fi
           python3 scripts/recovery_reports.py stage "$RUNNER_TEMP/reports/verified-supply-reports.zip" --output _data
-      - name: Include independently verified historical Borrow P&L
+      - name: Include verified Ethereum Merkl rewards
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          prior=$(gh run list --workflow publish-earn-merkl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
           if [ -n "$prior" ]; then
-            gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
+            gh run download "$prior" --name verified-earn-merkl --dir "$RUNNER_TEMP/merkl" || echo "::warning::Reading previously published Merkl rewards"
+          fi
+          python3 scripts/recovery_merkl.py stage "$RUNNER_TEMP/merkl/verified-earn-merkl.zip" _data
+      - name: Include independently verified historical Borrow P&L
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COLLECTED: ${{ needs.refresh-pnl.result }}
+        run: |
+          if [ "$COLLECTED" = success ]; then
+            gh run download "$GITHUB_RUN_ID" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl"
+          else
+            prior=$(gh run list --workflow publish-borrow-pnl.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            if [ -n "$prior" ]; then
+              gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
+            fi
           fi
           python3 scripts/recovery_borrow_pnl.py stage "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip" --output _data
       - name: Identify this verified Pages publication
@@ -95,6 +151,7 @@ jobs:
 
   deploy:
     needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -117,6 +174,7 @@ jobs:
 
   release-staging-space:
     needs: [build, deploy]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
@@ -140,7 +198,8 @@ jobs:
           echo "::warning::Readback could not confirm this run yet; Pages artifact kept for its one-day retention"
 
   catch-up:
-    needs: deploy
+    needs: [deploy, refresh-pnl]
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -152,6 +211,7 @@ jobs:
       - name: Catch up overdue collectors without retry loops
         env:
           GH_TOKEN: ${{ github.token }}
+          PNL_COLLECTED_HERE: ${{ needs.refresh-pnl.result }}
         run: |
           python3 -m unittest tests.test_recovery_cadence
           python3 scripts/recovery_cadence.py

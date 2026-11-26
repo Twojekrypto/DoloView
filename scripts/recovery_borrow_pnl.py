@@ -36,6 +36,16 @@ def cutoff(data):
         return json.loads(archive.read(PARENT))['sourceAsOf']
 
 
+def needs_collection(candidate, now):
+    # Reserve the publisher's 32-minute build window before the six-hour limit.
+    def fresh(data):
+        return 0 <= now - cutoff(data) <= (360 - 32) * 60
+    if candidate.is_file() and fresh(candidate.read_bytes()):
+        return False
+    published = previous_file(NAME)
+    return published is None or not fresh(published)
+
+
 def build(path):
     baseline=previous_file(NAME)
     if baseline:
@@ -60,7 +70,7 @@ def stage(candidate, output):
     old=previous_file(NAME)
     data=candidate.read_bytes() if candidate.is_file() else old
     if data is None:
-        return
+        raise ValueError("No verified public P&L is available to publish")
     if old and cutoff(old)>cutoff(data):
         data=old
     expand(data,output)
@@ -70,11 +80,13 @@ def stage(candidate, output):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode',choices=['build','stage'])
+    parser.add_argument('mode',choices=['build','stage','check-age'])
     parser.add_argument('bundle',type=Path)
     parser.add_argument('--output',type=Path)
     args=parser.parse_args()
     if args.mode=='build':
         build(args.bundle)
+    elif args.mode=='check-age':
+        print('true' if needs_collection(args.bundle,time.time()) else 'false')
     else:
         stage(args.bundle,args.output)

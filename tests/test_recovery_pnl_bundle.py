@@ -4,12 +4,36 @@ import tempfile
 import unittest
 import sys
 import zipfile
+from unittest.mock import patch
+import json
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from recovery_borrow_pnl import ACTIVITY, PARENT, expand
+from recovery_borrow_pnl import ACTIVITY, PARENT, expand, needs_collection, stage
 
 
 class PublicPnlBundleTests(unittest.TestCase):
+    def test_expired_input_collects_again_and_newer_verified_source_is_reused(self):
+        def pack(stamp):
+            stream=io.BytesIO()
+            with zipfile.ZipFile(stream, 'w') as archive:
+                archive.writestr(PARENT,json.dumps({'sourceAsOf':stamp}))
+            return stream.getvalue()
+        now=100000
+        with tempfile.TemporaryDirectory() as work:
+            candidate=Path(work)/'verified.zip'
+            with patch('recovery_borrow_pnl.previous_file',return_value=pack(now-21601)):
+                self.assertTrue(needs_collection(candidate,now))
+                candidate.write_bytes(pack(now-30))
+                self.assertFalse(needs_collection(candidate,now))
+            candidate.write_bytes(pack(now-21601))
+            with patch('recovery_borrow_pnl.previous_file',return_value=pack(now-30)):
+                self.assertFalse(needs_collection(candidate,now))
+            candidate.unlink()
+            with patch('recovery_borrow_pnl.previous_file',return_value=None):
+                self.assertTrue(needs_collection(candidate,now))
+                with self.assertRaisesRegex(ValueError, 'No verified'):
+                    stage(candidate, Path(work))
+
     def test_only_parent_and_immutable_activity_are_public(self):
         shard = ACTIVITY + '/' + 'a'*24 + '/arbitrum-3.json'
         for extra in (None, '.cache/borrow-position-pnl/a.json', '../outside'):
