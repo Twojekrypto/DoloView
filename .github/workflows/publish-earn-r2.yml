@@ -91,8 +91,8 @@ jobs:
         run: |
           python3 -m unittest tests.test_earn_berachain_archive tests.test_scan_earn_subaccount_history_events tests.test_apply_earn_subaccount_history_delta
           python3 -m scripts.refresh_earn_berachain
-          python3 -m unittest tests.test_scan_earn_netflow tests.test_recovery_bera_flow
-          python3 -m scripts.recovery_bera_flow refresh
+          python3 -m unittest tests.test_scan_earn_netflow tests.test_recovery_bera_flow tests.test_backfill_bera_wallets
+          python3 -m scripts.recovery_bera_flow refresh --include-missing-wallets
 
       - name: Restore the last verified public netflows for a balances-only run
         if: github.event_name == 'workflow_dispatch' && !inputs.refresh_berachain_history

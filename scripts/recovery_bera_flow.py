@@ -128,17 +128,25 @@ if __name__ == '__main__':
     parser.add_argument('--artifact', type=Path)
     parser.add_argument('--output', type=Path, default=ROOT)
     parser.add_argument('--block', type=int)
+    parser.add_argument('--include-missing-wallets', action='store_true')
     args = parser.parse_args()
     target = args.block
     if args.action in ('refresh', 'restore'):
         if target is None:
             snapshots = ROOT / 'data/earn-snapshots'
             date = max(json.loads((snapshots/'manifest.json').read_bytes())['dates'])
-            target = int(json.loads((snapshots/(date+'.json')).read_bytes())['chainMetadata']['berachain']['blockNumber'])
+            snapshot = json.loads((snapshots/(date+'.json')).read_bytes())
+            target = int(snapshot['chainMetadata']['berachain']['blockNumber'])
     if args.action == 'refresh':
         doc = baseline(limit=target, allow_seed_offline=True)
+        prior = (doc['lastBlock'], set(doc['netflows']))
         with ThreadPoolExecutor(max_workers=2) as pool:
             advance(doc, ArchiveReader(endpoint(), pool), target)
+        if args.include_missing_wallets:
+            if args.block is not None:
+                parser.error('Wallet histories require a pinned daily snapshot')
+            from scripts.backfill_bera_wallets import backfill
+            backfill(ROOT, snapshot, date, doc, prior, checked((ROOT / FILE).read_bytes()), apply_logs)
     else:
         doc = baseline(args.artifact, limit=target, allow_seed_offline=args.action == 'restore')
     save(doc, args.output / FILE)
