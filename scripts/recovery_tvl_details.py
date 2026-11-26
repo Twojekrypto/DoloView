@@ -70,7 +70,7 @@ def build(target):
     holder_file = 'vedolo_holders.json'
     holders = [record for record in (
         (ROOT / holder_file).read_bytes(), previous_file(holder_file),
-        previous_file(holder_file, 'https://raw.githubusercontent.com/Twojekrypto/Dolomite-dashboard/master/'),
+        previous_file(holder_file, 'https://twojekrypto.github.io/DoloView-legacy-feeds/'),
     ) if record is not None]
     def inventory_time(raw):
         doc = json.loads(raw)
