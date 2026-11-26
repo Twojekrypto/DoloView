@@ -18,10 +18,10 @@ ICONS = 'dolomite-token-icons.generated.js'
 WLFI = 'data/wlfi-markets/latest.json'
 
 
-def previous_file(name):
+def previous_file(name, base=BASE):
     for attempt in range(3):
         try:
-            response = requests.get(BASE + name, params={'recovery': int(time.time())},
+            response = requests.get(base + name, params={'recovery': int(time.time())},
                                     timeout=25, allow_redirects=False)
             if response.status_code == 404:
                 return None

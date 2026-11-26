@@ -65,6 +65,20 @@ def checked_time(raw):
 def build(target):
     previous = previous_file(BUNDLE)
     baseline = json.loads(read(previous)[LLAMA] if previous is not None else (ROOT / LLAMA).read_bytes())
+    # Borrower votes are queried onchain. Locked token amounts still use the
+    # published holder inventory, which may have advanced since the checkout.
+    holder_file = 'vedolo_holders.json'
+    holders = [record for record in (
+        (ROOT / holder_file).read_bytes(), previous_file(holder_file),
+        previous_file(holder_file, 'https://raw.githubusercontent.com/Twojekrypto/Dolomite-dashboard/master/'),
+    ) if record is not None]
+    def inventory_time(raw):
+        doc = json.loads(raw)
+        if not doc['holders'] or int(doc['snapshot_block']) <= 0:
+            raise ValueError('Incomplete veDOLO holder inventory')
+        return datetime.fromisoformat(doc['timestamp'].replace('Z', '+00:00')).replace(tzinfo=timezone.utc)
+    (ROOT / holder_file).write_bytes(max(holders, key=inventory_time))
+    subprocess.run([sys.executable, 'validate_data.py', holder_file], cwd=ROOT, check=True)
     quote = previous_file('dolo_price.json')
     if quote is not None:
         (ROOT / 'dolo_price.json').write_bytes(quote)

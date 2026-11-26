@@ -803,6 +803,7 @@ def build_snapshot():
             "eligibilityChains": ELIGIBILITY_CHAINS,
             "activeEligibilityChains": rebate_metadata.get("activeRebateChains") or [],
             "veDoloVoteSource": "onchain_getVotes_with_holder_snapshot_fallback",
+            "holderSnapshotAt": vedolo_snapshot.get("generatedAt"),
             "onchainVoteStatus": onchain_vote_metadata.get("status"),
             "onchainVoteRequestedWallets": onchain_vote_metadata.get("requestedWallets"),
             "onchainVoteFetchedWallets": onchain_vote_metadata.get("fetchedWallets"),
