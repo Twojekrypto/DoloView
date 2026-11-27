@@ -40,6 +40,21 @@ class TokenFeedPublicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'source block'):
             feeds.require_fresh_source('berachain', 100, 86000, timestamp=lambda *_: 70000)
 
+    def test_vedolo_inventory_can_use_verified_history_ahead_of_pages(self):
+        published = b'{"target_block":100}'
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / 'verified' / feeds.FLOW_INPUT
+            candidate.parent.mkdir()
+            with patch.object(feeds, 'ROOT', root), patch.object(feeds, 'previous_file', return_value=published), patch.object(
+                feeds, 'validate_vedolo_flows', side_effect=lambda raw, *_: json.loads(raw)
+            ) as validate:
+                for block in (120, 90):
+                    candidate.write_text(json.dumps({'target_block': block}))
+                    feeds.refresh_verified_vedolo_input(candidate)
+                    self.assertEqual(json.loads((root / feeds.FLOW_INPUT).read_bytes())['target_block'], max(block, 100))
+                validate.assert_any_call(b'{"target_block": 120}', {'target_block': 100})
+
     def test_activity_report_requires_all_sources_to_agree(self):
         usd = {'total_txs': 2, 'total_usdc': 30.12}
         duration = {'total_exercises': 4, 'valid_durations': 4, 'distribution': {'< 1 month': 4}}

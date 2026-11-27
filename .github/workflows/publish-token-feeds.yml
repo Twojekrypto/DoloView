@@ -75,6 +75,16 @@ jobs:
           path: ${{ matrix.checkpoint }}
           key: token-feed-v1-${{ matrix.family }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: token-feed-v1-${{ matrix.family }}-
+      - name: Reuse verified veDOLO history before Pages is updated
+        if: matrix.family == 'vedolo-inventory'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-vedolo-flows.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-vedolo-flows --dir "$RUNNER_TEMP/vedolo-flows" ||
+              echo "::warning::Reading previously published veDOLO history"
+          fi
       - name: Collect and validate the public feed
         env:
           FAMILY: ${{ matrix.family }}
@@ -89,7 +99,8 @@ jobs:
           VEDOLO_MAX_RUNTIME_SECONDS: '2200'
           DOLO_FLOWS_LOG_CHUNK_DELAY_SECONDS: '0.5'
         run: |
-          python3 scripts/recovery_token_feeds.py build "$FAMILY" "$RUNNER_TEMP/verified-token-feeds-$FAMILY.zip"
+          python3 scripts/recovery_token_feeds.py build "$FAMILY" "$RUNNER_TEMP/verified-token-feeds-$FAMILY.zip" \
+            --vedolo-flow-input "$RUNNER_TEMP/vedolo-flows/vedolo_flows.json"
       - uses: actions/upload-artifact@v4
         with:
           name: verified-token-feeds-${{ matrix.family }}

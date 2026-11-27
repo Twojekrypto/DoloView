@@ -374,6 +374,19 @@ def refresh_input(name):
         (ROOT / name).write_bytes(raw)
 
 
+def refresh_verified_vedolo_input(candidate):
+    refresh_input(FLOW_INPUT)
+    if candidate is None or not candidate.is_file():
+        return
+    path = ROOT / FLOW_INPUT
+    published = validate_vedolo_flows(path.read_bytes())
+    raw = candidate.read_bytes()
+    history = validate_vedolo_flows(raw)
+    if history['target_block'] > published['target_block']:
+        validate_vedolo_flows(raw, published)
+        path.write_bytes(raw)
+
+
 def verified_vedolo_population(flows, previous, holders, token_ids):
     """Reconcile the complete current on-chain population with lifecycle events."""
     mints = [(row['tokenId'], row['block']) for row in flows['locks'] if row['depositType'] in (1, 5)]
@@ -441,7 +454,7 @@ def refresh_dolo_flows():
     generate_dolo_flows.main()
 
 
-def collect(family):
+def collect(family, vedolo_flow_input=None):
     if family == 'dolo-holders':
         for name in ('dolo_flows.json', 'vesting_investors.json'):
             refresh_input(name)
@@ -452,7 +465,7 @@ def collect(family):
         run('scripts/recovery_token_feeds.py', 'dolo-backfill', family, timeout=9900)
         run('validate_data.py', 'dolo_holder_wallet_history.json', timeout=120)
     elif family == 'vedolo-inventory':
-        refresh_input(FLOW_INPUT)
+        refresh_verified_vedolo_input(vedolo_flow_input)
         run('scripts/recovery_token_feeds.py', 'inventory', family, timeout=5900)
         run('validate_vedolo_locked_history.py', '--flows', FLOW_INPUT, '--holders', 'vedolo_holders.json', timeout=180)
         run('generate_vedolo_vote_power_history.py', '--sync-stats', '--extend-at-inventory', timeout=1800)
@@ -491,10 +504,10 @@ def check_source_blocks(family, files, now):
         require_fresh_source('berachain', files['early_exits.json']['coverage']['toBlock'], now)
 
 
-def build(family, bundle):
+def build(family, bundle, vedolo_flow_input=None):
     previous = get_previous(family)
     write_files(previous, ROOT)
-    collect(family)
+    collect(family, vedolo_flow_input)
     now = int(time.time())
     current = validate(family, ROOT, previous, now)
     if any((ROOT / name).read_bytes() == old for name, old in previous.items()):
@@ -527,6 +540,7 @@ def main():
     parser.add_argument('family', choices=FAMILIES)
     parser.add_argument('bundle', type=Path, nargs='?')
     parser.add_argument('--output', type=Path, default=Path('_data'))
+    parser.add_argument('--vedolo-flow-input', type=Path)
     args = parser.parse_args()
     if args.mode == 'inventory':
         refresh_vedolo_inventory()
@@ -537,7 +551,7 @@ def main():
     elif args.bundle is None:
         parser.error('a bundle path is required')
     elif args.mode == 'build':
-        build(args.family, args.bundle)
+        build(args.family, args.bundle, args.vedolo_flow_input)
     else:
         stage(args.family, args.bundle, args.output)
 
