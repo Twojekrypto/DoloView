@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_pnl:
-        description: 'Collect a new P&L snapshot before publication'
+        description: 'Request a new P&L snapshot alongside publication'
         type: boolean
         default: false
   schedule:
@@ -27,49 +27,7 @@ permissions:
   contents: read
 
 jobs:
-  check-pnl:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: read
-    outputs:
-      collect: ${{ steps.age.outputs.collect }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-      - run: python3 -m pip install requests
-      - id: age
-        name: Check the source time of the available P&L
-        env:
-          FORCE_PNL: ${{ inputs.refresh_pnl }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "$FORCE_PNL" = true ]; then
-            echo "collect=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          prior=$(gh run list --workflow publish-borrow-pnl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
-          if [ -n "$prior" ]; then
-            gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Checking the published P&L instead"
-          fi
-          collect=$(python3 scripts/recovery_borrow_pnl.py check-age "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip")
-          echo "P&L needs a fresh collection: $collect"
-          echo "collect=$collect" >> "$GITHUB_OUTPUT"
-  refresh-pnl:
-    needs: check-pnl
-    if: needs.check-pnl.outputs.collect == 'true'
-    uses: ./.github/workflows/collect-verified-pnl.yml
-    permissions:
-      contents: read
-      actions: read
   build:
-    needs: [check-pnl, refresh-pnl]
-    if: ${{ !cancelled() }}
     permissions:
       actions: read
       contents: read
@@ -216,15 +174,10 @@ jobs:
       - name: Include independently verified historical Borrow P&L
         env:
           GH_TOKEN: ${{ github.token }}
-          COLLECTED: ${{ needs.refresh-pnl.result }}
         run: |
-          if [ "$COLLECTED" = success ]; then
-            gh run download "$GITHUB_RUN_ID" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl"
-          else
-            prior=$(gh run list --workflow publish-borrow-pnl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
-            if [ -n "$prior" ]; then
-              gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
-            fi
+          prior=$(gh run list --workflow publish-borrow-pnl.yml --limit 50 --json databaseId,headBranch,conclusion --jq '[.[] | select(.headBranch == "master" and .conclusion == "success")][0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-borrow-pnl --dir "$RUNNER_TEMP/pnl" || echo "::warning::Reading previously published P&L"
           fi
           python3 scripts/recovery_borrow_pnl.py stage "$RUNNER_TEMP/pnl/verified-borrow-pnl.zip" --output _data
       - name: Require each verified report before replacing the public site
@@ -292,9 +245,7 @@ jobs:
           echo "::warning::Readback could not confirm this run yet; Pages artifact kept for its one-day retention"
 
   catch-up:
-    needs: [deploy, refresh-pnl]
-    # A missing report must still be able to trigger its overdue producer.
-    if: ${{ !cancelled() }}
+    # Start overdue collectors independently of the Pages build.
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -306,7 +257,7 @@ jobs:
       - name: Catch up overdue collectors without retry loops
         env:
           GH_TOKEN: ${{ github.token }}
-          PNL_COLLECTED_HERE: ${{ needs.refresh-pnl.result }}
+          FORCE_PNL: ${{ inputs.refresh_pnl }}
         run: |
           python3 -m unittest tests.test_recovery_cadence
           python3 scripts/recovery_cadence.py

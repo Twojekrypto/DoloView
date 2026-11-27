@@ -20,9 +20,11 @@ CADENCE_HOURS = {
 }
 
 
-def due(runs, hours, now):
-    if not runs or any(run['status'] != 'completed' for run in runs):
+def due(runs, hours, now, *, force=False):
+    if any(run['status'] != 'completed' for run in runs):
         return False
+    if force or not runs:
+        return force
     latest = sorted(runs, key=lambda run: run['createdAt'], reverse=True)
     last_attempt = datetime.fromisoformat(latest[0]['createdAt'].replace('Z', '+00:00'))
     failures = 0
@@ -37,15 +39,20 @@ def due(runs, hours, now):
 
 
 def main():
+    failures = []
     for workflow, hours in CADENCE_HOURS.items():
-        if workflow == 'publish-borrow-pnl.yml' and os.environ.get('PNL_COLLECTED_HERE') == 'success':
-            continue
-        state = subprocess.check_output(['gh', 'run', 'list', '--workflow', workflow,
-                                         '--limit', '20', '--json', 'status,conclusion,createdAt,headBranch'])
-        master_runs = [row for row in json.loads(state) if row['headBranch'] == 'master'][:5]
-        if due(master_runs, hours, datetime.now(timezone.utc)):
-            subprocess.run(['gh', 'workflow', 'run', workflow, '--ref', 'master'], check=True)
-            print(f'Requested {workflow} after its {hours}-hour interval.')
+        force = workflow == 'publish-borrow-pnl.yml' and os.environ.get('FORCE_PNL') == 'true'
+        try:
+            state = subprocess.check_output(['gh', 'run', 'list', '--workflow', workflow,
+                                             '--branch', 'master', '--limit', '5',
+                                             '--json', 'status,conclusion,createdAt'])
+            if due(json.loads(state), hours, datetime.now(timezone.utc), force=force):
+                subprocess.run(['gh', 'workflow', 'run', workflow, '--ref', 'master'], check=True)
+                print(f'Requested {workflow}.')
+        except subprocess.CalledProcessError:
+            failures.append(workflow)
+    if failures:
+        raise SystemExit(f'Could not check or dispatch collectors: {", ".join(failures)}')
 
 
 if __name__ == '__main__':

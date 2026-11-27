@@ -13,6 +13,12 @@ class RecoveryCadenceTests(unittest.TestCase):
         self.assertFalse(due([old, {**old, 'status':'queued'}], 2, now))
         self.assertFalse(due([old, {**old, 'createdAt':'2026-11-25T10:03:00Z'}], 2, now))
 
+    def test_manual_refresh_requests_early_without_duplicating_an_active_run(self):
+        now = datetime(2026, 11, 25, 12, 0, tzinfo=timezone.utc)
+        recent = {'status':'completed', 'createdAt':'2026-11-25T11:58:00Z'}
+        self.assertTrue(due([recent], 2, now, force=True))
+        self.assertFalse(due([{**recent, 'status':'queued'}], 2, now, force=True))
+
     def test_failure_retries_earlier_with_bounded_backoff(self):
         now = datetime(2026, 11, 25, 12, 0, tzinfo=timezone.utc)
         failed = {'status': 'completed', 'conclusion': 'failure', 'createdAt': '2026-11-25T11:30:00Z'}
