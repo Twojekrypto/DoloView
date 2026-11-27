@@ -2,6 +2,20 @@ name: Verify public DOLO, veDOLO and oDOLO data
 
 on:
   workflow_dispatch:
+    inputs:
+      family:
+        description: Feed to verify
+        type: choice
+        default: all
+        options:
+          - all
+          - dolo-holders
+          - dolo-flows
+          - vedolo-inventory
+          - odolo-flow
+          - odolo-activity
+          - odolo-contract
+          - early-exits
   schedule:
     - cron: '23 */2 * * *'
 
@@ -9,7 +23,29 @@ permissions:
   contents: read
 
 jobs:
+  select:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      matrix: ${{ steps.feeds.outputs.matrix }}
+    steps:
+      - id: feeds
+        env:
+          FAMILY: ${{ inputs.family || 'all' }}
+        run: |
+          feeds='[
+            {"family":"dolo-holders","minutes":112,"checkpoint":"dolo_holders_state.json"},
+            {"family":"dolo-flows","minutes":178,"checkpoint":"dolo_flows_state.json"},
+            {"family":"vedolo-inventory","minutes":140,"checkpoint":"locked_cache.json\nvedolo_vote_power_history_state.json"},
+            {"family":"odolo-flow","minutes":120,"checkpoint":"odolo_flows_state.json\nodolo_flow_checkpoints\nreward_claim_events_state.json"},
+            {"family":"odolo-activity","minutes":75,"checkpoint":"exercisers_cache.json"},
+            {"family":"odolo-contract","minutes":12,"checkpoint":""},
+            {"family":"early-exits","minutes":80,"checkpoint":"early_exits_cache.json"}
+          ]'
+          selected=$(jq -ce --arg family "$FAMILY" '{include:map(select($family == "all" or .family == $family))} | select(.include|length > 0)' <<< "$feeds")
+          echo "matrix=$selected" >> "$GITHUB_OUTPUT"
   collect:
+    needs: select
     name: Verify ${{ matrix.family }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.minutes }}
@@ -18,33 +54,7 @@ jobs:
       actions: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - family: dolo-holders
-            minutes: 112
-            checkpoint: dolo_holders_state.json
-          - family: dolo-flows
-            minutes: 178
-            checkpoint: dolo_flows_state.json
-          - family: vedolo-inventory
-            minutes: 140
-            checkpoint: |
-              locked_cache.json
-              vedolo_vote_power_history_state.json
-          - family: odolo-flow
-            minutes: 120
-            checkpoint: |
-              odolo_flows_state.json
-              odolo_flow_checkpoints
-              reward_claim_events_state.json
-          - family: odolo-activity
-            minutes: 75
-            checkpoint: exercisers_cache.json
-          - family: odolo-contract
-            minutes: 12
-          - family: early-exits
-            minutes: 80
-            checkpoint: early_exits_cache.json
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     concurrency:
       group: verified-token-feeds-${{ matrix.family }}
       cancel-in-progress: false
