@@ -269,10 +269,11 @@ def _multicall(client, web3, calls, block_number, batch_size):
     return output
 
 
-def fetch_onchain_inputs():
+def fetch_onchain_inputs(block_number=None):
     client = RpcClient(chain="berachain", timeout=30, retries_per_endpoint=2)
     web3 = Web3()
-    block_number = int(client.call("eth_blockNumber", []), 16)
+    if block_number is None:
+        block_number = int(client.call("eth_blockNumber", []), 16)
     block = client.call("eth_getBlockByNumber", [hex(block_number), False])
     if not isinstance(block, dict) or not block.get("timestamp"):
         raise SimulationDataError("Pinned Berachain block metadata is unavailable")
@@ -348,16 +349,7 @@ def fetch_onchain_inputs():
     return current_holders, position_reads, fee_quotes, snapshot_timestamp, block_number, fee_calculator
 
 
-def main():
-    inputs = fetch_onchain_inputs()
-    payload = build_simulation_payload(
-        inputs[0],
-        inputs[1],
-        inputs[2],
-        snapshot_timestamp=inputs[3],
-        source_block=inputs[4],
-        fee_calculator=inputs[5],
-    )
+def write_simulation_payload(payload):
     temp_path = OUTPUT_PATH + ".tmp"
     with open(temp_path, "w", encoding="utf-8") as handle:
         json.dump(payload, handle, separators=(",", ":"))
@@ -368,6 +360,14 @@ def main():
         f"{payload['walletCount']:,} wallets, {payload['positionCount']:,} positions, "
         f"block {payload['sourceBlock']:,}"
     )
+
+
+def main():
+    holders, positions, quotes, timestamp, block, calculator = fetch_onchain_inputs()
+    write_simulation_payload(build_simulation_payload(
+        holders, positions, quotes, snapshot_timestamp=timestamp,
+        source_block=block, fee_calculator=calculator,
+    ))
 
 
 if __name__ == "__main__":

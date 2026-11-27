@@ -78,6 +78,62 @@ class TokenFeedPublicationTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(proof['matchingProviderFamilies'], 2)
 
+    def test_vedolo_population_requires_mints_burns_and_transfer_owners(self):
+        owner = '0x' + '11' * 20
+        next_owner = '0x' + '22' * 20
+        flows = {
+            'locks': [
+                {'depositType': 1, 'tokenId': 1, 'block': 10},
+                {'depositType': 5, 'tokenId': 2, 'block': 11},
+                {'depositType': 1, 'tokenId': 3, 'block': 13},
+            ],
+            'unlocks': [{'tokenId': 2, 'block': 12}],
+            'transfers': [{'tokenId': 1, 'to': next_owner, 'block': 14, 'logIndex': 1}],
+        }
+        previous = {'snapshot_block': 12, 'stats': {'nft_transfer_count': 4,
+                     'nft_transfer_min_block': 9, 'nft_transfer_max_block': 12}}
+        holders = [{'address': next_owner, 'token_ids': [1]},
+                   {'address': owner, 'token_ids': [3]}]
+        result = feeds.verified_vedolo_population(flows, previous, holders, {1, 2, 3})
+        self.assertEqual(result['active_nfts'], 2)
+        self.assertEqual(result['total_burned'], 1)
+        self.assertEqual(result['nft_transfer_count'], 6)
+        self.assertEqual(result['nft_transfer_min_block'], 9)
+        holders[0]['address'] = owner
+        with self.assertRaisesRegex(ValueError, 'owner'):
+            feeds.verified_vedolo_population(flows, previous, holders, {1, 2, 3})
+
+    def test_inventory_reuses_the_verified_block_for_positions_and_fee_quotes(self):
+        owner = '0x' + '11' * 20
+        timestamp = 1700000000
+        holders = [{'address': owner, 'token_ids': [1]}]
+        flows = {'target_block': 11, 'locks': [{'depositType': 1, 'tokenId': 1, 'block': 10}],
+                 'unlocks': [], 'transfers': []}
+        previous = {'snapshot_block': 10, 'stats': {'nft_transfer_count': 1,
+                    'nft_transfer_min_block': 10, 'nft_transfer_max_block': 10}}
+        positions, quotes = {1: {'amount': '100'}}, {1: {'fee': '10'}}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / feeds.FLOW_INPUT).write_text('flow data')
+            (root / 'vedolo_holders.json').write_text(json.dumps(previous))
+            with patch.object(feeds, 'ROOT', root), \
+                    patch.object(feeds, 'validate_vedolo_flows', return_value=flows), \
+                    patch.object(feeds, 'require_fresh_source') as freshness, \
+                    patch('update_data.VEDOLO_SNAPSHOT_BLOCK', None), \
+                    patch('update_data.main') as export_holders, \
+                    patch('generate_vedolo_early_unlock.fetch_onchain_inputs',
+                          return_value=(holders, positions, quotes, timestamp, 11, owner)) as read_positions, \
+                    patch('generate_vedolo_early_unlock.build_simulation_payload', return_value={'sourceBlock': 11}) as simulate, \
+                    patch('generate_vedolo_early_unlock.write_simulation_payload') as export_quotes:
+                feeds.refresh_vedolo_inventory()
+            self.assertEqual(freshness.call_args.args[:2], ('berachain', 11))
+            read_positions.assert_called_once_with(11)
+            self.assertEqual(export_holders.call_args.args[0][1]['active_nfts'], 1)
+            self.assertEqual(export_holders.call_args.args[1:], (positions, timestamp))
+            simulate.assert_called_once_with(holders, positions, quotes, snapshot_timestamp=timestamp,
+                                             source_block=11, fee_calculator=owner)
+            export_quotes.assert_called_once_with({'sourceBlock': 11})
+
 
 if __name__ == '__main__':
     unittest.main()

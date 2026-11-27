@@ -329,10 +329,13 @@ def validate(family, root, previous, now):
         stats = current['vedolo_stats.json']['stats']
         holders = current['vedolo_holders.json']
         vote = current['data/vedolo-vote-power-history.json']
+        simulation = current['vedolo_early_unlock.json']
         if (stats != holders['stats'] or stats.get('_stale_data')
                 or stats['unique_holders'] != len(holders['holders'])
                 or stats['active_nfts'] != sum(row['nft_count'] for row in holders['holders'])
-                or stats['total_vote_weight_block'] != vote['targetBlock']):
+                or stats['total_vote_weight_block'] != vote['targetBlock']
+                or simulation['sourceBlock'] != holders['snapshot_block']
+                or parse_timestamp(simulation['sourceTimestamp']) != parse_timestamp(holders['timestamp'])):
             raise ValueError('veDOLO inventory and canonical vote power do not reconcile')
     return current
 
@@ -370,30 +373,63 @@ def refresh_input(name):
         (ROOT / name).write_bytes(raw)
 
 
-def indexed_ownership_at(block):
-    from generate_vedolo_flows import DEPLOY_BLOCK, address_from_topic, fetch_indexed_transfer_logs
+def verified_vedolo_population(flows, previous, holders, token_ids):
+    """Reconcile the complete current on-chain population with lifecycle events."""
+    mints = [(row['tokenId'], row['block']) for row in flows['locks'] if row['depositType'] in (1, 5)]
+    burns = [(row['sourceTokenId'], row['block']) for row in flows['locks'] if row['depositType'] == 4]
+    burns.extend((row['tokenId'], row['block']) for row in flows['unlocks'])
+    mint_ids = {token_id for token_id, _ in mints}
+    burn_ids = {token_id for token_id, _ in burns}
+    owners = {tid: holder['address'].lower() for holder in holders for tid in holder['token_ids']}
+    if (mint_ids != set(token_ids) or not burn_ids <= mint_ids
+            or len(mints) != len(mint_ids) or len(burns) != len(burn_ids)
+            or len(owners) != sum(len(holder['token_ids']) for holder in holders)
+            or set(owners) != mint_ids - burn_ids):
+        raise ValueError('veDOLO on-chain position population does not match lifecycle events')
 
-    for row in fetch_indexed_transfer_logs(DEPLOY_BLOCK, block):
-        topics = row['topics']
-        if len(topics) != 4:
-            raise ValueError('Malformed veDOLO ownership Transfer event')
-        yield {'blockNumber': int(row['blockNumber'], 16),
-               'transactionIndex': int(row['logIndex'], 16),
-               'tokenID': int(topics[3], 16),
-               'from': address_from_topic(topics[1]), 'to': address_from_topic(topics[2])}
+    transfers = sorted(flows['transfers'], key=lambda row: (row['block'], row['logIndex']))
+    last_transfer = {row['tokenId']: row['to'].lower() for row in transfers}
+    if any(owners[tid] != to for tid, to in last_transfer.items() if tid in owners):
+        raise ValueError('veDOLO transfer and current on-chain owner disagree')
+
+    event_blocks = [block for _, block in mints + burns] + [row['block'] for row in transfers]
+    old_stats = previous['stats']
+    archived_events = sum(block <= previous['snapshot_block'] for block in event_blocks)
+    # Carry forward the existing explorer's initialization count for token 0
+    # if present. Holder generation ignores this non-position sentinel.
+    initialization_events = old_stats['nft_transfer_count'] - archived_events
+    if initialization_events not in (0, 1):
+        raise ValueError('veDOLO event count does not reconcile to the prior inventory checkpoint')
+    return {
+        'total_minted': len(mints),
+        'total_burned': len(burns),
+        'active_nfts': len(owners),
+        'unique_holders': len(holders),
+        'nft_transfer_count': len(event_blocks) + initialization_events,
+        'nft_transfer_min_block': min(old_stats['nft_transfer_min_block'], min(event_blocks)),
+        'nft_transfer_max_block': max(event_blocks),
+    }
 
 
 def refresh_vedolo_inventory():
     """Feed the existing snapshot generator from its verified on-chain block."""
+    from generate_vedolo_early_unlock import build_simulation_payload, fetch_onchain_inputs, write_simulation_payload
     import update_data
 
     source = validate_vedolo_flows((ROOT / FLOW_INPUT).read_bytes())
     block = source['target_block']
     require_fresh_source('berachain', block, int(time.time()))
     update_data.VEDOLO_SNAPSHOT_BLOCK = block
-    if not update_data.API_KEY:
-        update_data.fetch_all_nft_transfers = lambda: list(indexed_ownership_at(block))
-    update_data.main()
+    holders, positions, quotes, timestamp, pinned, calculator = fetch_onchain_inputs(block)
+    for holder in holders:
+        holder['nft_count'] = len(holder['token_ids'])
+    previous = json.loads((ROOT / 'vedolo_holders.json').read_bytes())
+    stats = verified_vedolo_population(source, previous, holders, positions)
+    update_data.main((holders, stats), positions, timestamp)
+    write_simulation_payload(build_simulation_payload(
+        holders, positions, quotes, snapshot_timestamp=timestamp,
+        source_block=pinned, fee_calculator=calculator,
+    ))
 
 
 def refresh_dolo_flows():
@@ -416,10 +452,9 @@ def collect(family):
         run('validate_data.py', 'dolo_holder_wallet_history.json', timeout=120)
     elif family == 'vedolo-inventory':
         refresh_input(FLOW_INPUT)
-        run('scripts/recovery_token_feeds.py', 'inventory', family, timeout=4400)
+        run('scripts/recovery_token_feeds.py', 'inventory', family, timeout=5900)
         run('validate_vedolo_locked_history.py', '--flows', FLOW_INPUT, '--holders', 'vedolo_holders.json', timeout=180)
         run('generate_vedolo_vote_power_history.py', '--sync-stats', timeout=1800)
-        run('generate_vedolo_early_unlock.py', timeout=1500)
     elif family == 'odolo-flow':
         for name in (*CLAIM_INPUTS, 'exercisers_by_address.json', FLOW_INPUT):
             refresh_input(name)

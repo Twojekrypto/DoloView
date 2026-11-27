@@ -1139,24 +1139,27 @@ def _single_rpc_vote_batch(token_ids, rpc_url):
 
 # ===== MAIN =====
 
-def main():
+def main(ownership=None, positions=None, snapshot_timestamp=None):
     print("=" * 60)
-    print("🔄 veDOLO Dashboard — Data Update (Etherscan V2)")
+    print("🔄 veDOLO Dashboard — Data Update")
     print(f"   {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
     print("=" * 60)
 
-    # Phase 1: Fetch all NFT transfers
-    try:
-        txs = fetch_all_nft_transfers()
-    except IncompleteNftTransferFetch as exc:
-        preserve_existing_vedolo_snapshot(str(exc))
+    if ownership is None:
+        # Phase 1: Fetch all NFT transfers
+        try:
+            txs = fetch_all_nft_transfers()
+        except IncompleteNftTransferFetch as exc:
+            preserve_existing_vedolo_snapshot(str(exc))
 
-    if not txs:
-        print("⚠️  No transfers found! Keeping existing data.")
-        sys.exit(0)
+        if not txs:
+            print("⚠️  No transfers found! Keeping existing data.")
+            sys.exit(0)
 
-    holders, stats = build_ownership(txs)
-    stats.update(nft_transfer_coverage_stats(txs))
+        holders, stats = build_ownership(txs)
+        stats.update(nft_transfer_coverage_stats(txs))
+    else:
+        holders, stats = ownership
 
     ownership_issues = ownership_snapshot_issues(stats)
     if ownership_issues:
@@ -1168,26 +1171,35 @@ def main():
         print("⚠️  No holders found!")
         sys.exit(0)
 
-    # Collect all active token IDs
-    all_token_ids = sorted({tid for h in holders for tid in h["token_ids"]})
-    recent_lock_fallbacks = load_recent_flow_lock_fallbacks()
-    recent_lock_ids = [tid for tid in recent_lock_fallbacks if tid in set(all_token_ids)]
-    if recent_lock_ids:
-        print(f"\n🧭 Recent veDOLO flow hints: {len(recent_lock_ids):,} active token(s)")
+    if positions is None:
+        # Collect all active token IDs
+        all_token_ids = sorted({tid for h in holders for tid in h["token_ids"]})
+        recent_lock_fallbacks = load_recent_flow_lock_fallbacks()
+        recent_lock_ids = [tid for tid in recent_lock_fallbacks if tid in set(all_token_ids)]
+        if recent_lock_ids:
+            print(f"\n🧭 Recent veDOLO flow hints: {len(recent_lock_ids):,} active token(s)")
 
-    # Phase 2: Fetch locked DOLO FIRST (cached — more reliable)
-    cache = fetch_locked_dolo(
-        all_token_ids,
-        priority_token_ids=recent_lock_ids,
-        fallback_locks=recent_lock_fallbacks,
-    )
+        # Phase 2: Fetch locked DOLO FIRST (cached — more reliable)
+        cache = fetch_locked_dolo(
+            all_token_ids,
+            priority_token_ids=recent_lock_ids,
+            fallback_locks=recent_lock_fallbacks,
+        )
 
-    # Phase 3: Fetch vote weights (uses locked cache to cross-validate zeros)
-    vote_weights = fetch_vote_weights(
-        all_token_ids,
-        locked_cache=cache,
-        priority_token_ids=recent_lock_ids,
-    )
+        # Phase 3: Fetch vote weights (uses locked cache to cross-validate zeros)
+        vote_weights = fetch_vote_weights(
+            all_token_ids,
+            locked_cache=cache,
+            priority_token_ids=recent_lock_ids,
+        )
+    else:
+        cache = {}
+        vote_weights = {}
+        for holder in holders:
+            for tid in holder["token_ids"]:
+                position = positions[tid]
+                cache[str(tid)] = {"amount": position["amount_wei"] / 10**18, "end": position["end"]}
+                vote_weights[tid] = position["vote_weight_wei"] / 10**18
 
     # Merge locked DOLO + vote weights into holders
     print("\n📊 Merging data...")
@@ -1252,6 +1264,8 @@ def main():
         print(f"     Difference: {diff_pct:.1f}%")
         stats["total_locked_dolo"] = round(onchain_locked, 2)
         total_locked_dolo = onchain_locked
+    elif positions is not None:
+        raise RuntimeError("Pinned veDOLO DOLO custody balance could not be verified")
     else:
         print(f"\n  ⚠️  Could not fetch on-chain balance — using per-holder sum as fallback")
 
@@ -1274,10 +1288,11 @@ def main():
     except Exception as e:
         print(f"   ⚠️ Could not read previous data: {e}")
 
+    snapshot_iso = datetime.utcfromtimestamp(snapshot_timestamp).isoformat() if snapshot_timestamp else None
     output = {
         "contract": VEDOLO_CONTRACT,
         "network": "berachain",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": snapshot_iso or datetime.utcnow().isoformat(),
         "stats": stats,
         "holders": holders,
     }
@@ -1290,10 +1305,10 @@ def main():
     # Save a tiny stats-only JSON for fast frontend loading (avoids parsing 5MB+ file)
     stats_file = os.path.join(DATA_DIR, "vedolo_stats.json")
     with open(stats_file, "w") as f:
-        json.dump({"stats": stats, "timestamp": datetime.utcnow().isoformat()}, f, indent=2)
+        json.dump({"stats": stats, "timestamp": snapshot_iso or datetime.utcnow().isoformat()}, f, indent=2)
 
     # Save pre-computed expiry buckets for instant Lock Expiry Timeline chart
-    now_ts = int(time.time())
+    now_ts = snapshot_timestamp or int(time.time())
     expiry_buckets = {}
     expiry_total = 0
     for h in holders:
@@ -1313,7 +1328,7 @@ def main():
         json.dump({
             "buckets": [{"label": k, "dolo": round(v, 2)} for k, v in sorted_expiry],
             "total_dolo": round(expiry_total, 2),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": snapshot_iso or datetime.utcnow().isoformat()
         }, f, indent=2)
     print(f"   Saved vedolo_expiry.json ({len(sorted_expiry)} quarters, {expiry_total:,.0f} DOLO)")
 
@@ -1341,11 +1356,9 @@ def main():
 
     print("\n✅ Update complete!")
 
-    # Auto-generate dolo_price.json for GitHub Pages (no CORS proxy needed)
-    update_dolo_price()
-
-    # Save metrics snapshot for 24h change indicators
-    save_metrics_snapshot()
+    if ownership is None:
+        update_dolo_price()
+        save_metrics_snapshot()
 
 
 def update_dolo_price():
