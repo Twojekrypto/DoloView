@@ -4330,6 +4330,19 @@ def validate_fresh_wallet_activity_config():
         )
 
 
+def retain_fresh_wallet_snapshot(path):
+    try:
+        with open(path) as stream:
+            previous = json.load(stream)
+    except FileNotFoundError:
+        return {period: [] for period in FRESH_HOLDER_PERIODS}, {
+            "asOf": None, "status": "unavailable",
+        }
+    rows = previous["fresh_holders"]
+    meta = previous["fresh_holders_meta"]
+    return rows, {**meta, "asOf": meta.get("asOf", previous["timestamp"]), "status": "retained"}
+
+
 def _explorer_first_activity_params(activity_source, address):
     chain_key = activity_source["key"]
     params = {
@@ -6722,23 +6735,29 @@ def main():
     fresh_coverage_ok, fresh_coverage_meta = fresh_holder_history_coverage(state, all_transfers, cutoff_blocks)
     if not fresh_coverage_ok:
         raise RuntimeError(f"Fresh DOLO wallet cohorts require full transfer history coverage: {fresh_coverage_meta}")
-    validate_fresh_wallet_activity_config()
-    print("\n🆕 Building fresh DOLO wallet cohorts...")
-    fresh_holders, fresh_wallet_audit = build_fresh_holders(
-        all_transfers,
-        cutoff_blocks,
-        current_blocks,
-        neutralized_flows_cache,
-        holder_history_base_ts,
-        state,
-    )
-    for period in FRESH_HOLDER_PERIODS:
-        audit_row = fresh_wallet_audit.get(period, {})
-        print(
-            f"  {period}: {len(fresh_holders.get(period, [])):,} true fresh wallet(s) "
-            f"({audit_row.get('oldWalletsExcluded', 0):,} old, "
-            f"{audit_row.get('unverifiedExcluded', 0):,} unverified excluded)"
+    retained_fresh_meta = None
+    try:
+        validate_fresh_wallet_activity_config()
+    except RuntimeError as exc:
+        print(f"::warning::{exc} Retaining the last verified fresh-wallet cohort.")
+        fresh_holders, retained_fresh_meta = retain_fresh_wallet_snapshot(OUTPUT_JSON)
+    else:
+        print("\n🆕 Building fresh DOLO wallet cohorts...")
+        fresh_holders, fresh_wallet_audit = build_fresh_holders(
+            all_transfers,
+            cutoff_blocks,
+            current_blocks,
+            neutralized_flows_cache,
+            holder_history_base_ts,
+            state,
         )
+        for period in FRESH_HOLDER_PERIODS:
+            audit_row = fresh_wallet_audit.get(period, {})
+            print(
+                f"  {period}: {len(fresh_holders.get(period, [])):,} true fresh wallet(s) "
+                f"({audit_row.get('oldWalletsExcluded', 0):,} old, "
+                f"{audit_row.get('unverifiedExcluded', 0):,} unverified excluded)"
+            )
 
     vesting_investors = extract_vesting_investors(all_transfers)
 
@@ -6869,7 +6888,9 @@ def main():
         "periods": output_periods,
         "balance_changes": balance_changes,
         "fresh_holders": fresh_holders,
-        "fresh_holders_meta": {
+        "fresh_holders_meta": retained_fresh_meta or {
+            "asOf": flow_snapshot_timestamp(period_boundaries),
+            "status": "verified",
             "source": "full_transfer_history_plus_multichain_explorer_first_tx_plus_debank_age_fallback",
             "definition": "user-controlled wallet first normal on-chain transaction across tracked EVM activity sources within the selected period, plus required conservative DeBank wallet age fallback/cross-check for fresh candidates, with current liquid DOLO plus veDOLO locked exposure above 10K DOLO",
             "includedWalletTypes": sorted(FRESH_USER_WALLET_TYPES),

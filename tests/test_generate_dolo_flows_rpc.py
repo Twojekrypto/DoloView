@@ -1,6 +1,8 @@
 import ast
+import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -35,6 +37,22 @@ def transfer_log(block, tx_hash, log_index, amount=1):
 
 
 class GenerateDoloFlowsRpcTests(unittest.TestCase):
+    def test_unavailable_wallet_age_source_preserves_only_the_old_cohort_cutoff(self):
+        rows = {period: [{'address': ALICE}] for period in flows.FRESH_HOLDER_PERIODS}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'dolo_flows.json'
+            path.write_text(json.dumps({
+                'timestamp': '2026-11-27T13:00:00Z',
+                'fresh_holders': rows, 'fresh_holders_meta': {
+                    'asOf': '2026-11-24T02:11:11Z', 'audit': {'1d': {'oldWalletsExcluded': 3}},
+                },
+            }))
+            retained, meta = flows.retain_fresh_wallet_snapshot(path)
+        self.assertEqual(retained, rows)
+        self.assertEqual(meta['asOf'], '2026-11-24T02:11:11Z')
+        self.assertEqual(meta['audit'], {'1d': {'oldWalletsExcluded': 3}})
+        self.assertEqual(meta['status'], 'retained')
+
     def test_berachain_production_quorum_uses_the_two_independent_wide_archive_routes(self):
         first = flows._rpc_families(flows.CHAINS['bera']['rpcs'], chain_key='bera')[:2]
         self.assertEqual([family for family, _ in first], ['berachain.com', 'berachain.gateway.tenderly.co'])
