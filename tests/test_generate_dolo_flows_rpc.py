@@ -35,6 +35,32 @@ def transfer_log(block, tx_hash, log_index, amount=1):
 
 
 class GenerateDoloFlowsRpcTests(unittest.TestCase):
+    def test_archive_detects_dense_range_cap_from_rpc_error_data(self):
+        response = Mock(status_code=200)
+        response.json.return_value = {'error': {'code': -32602, 'message': 'invalid params',
+                                                'data': 'Query returned more than 20000 results.'}}
+        with patch.object(flows.requests, 'post', return_value=response):
+            with self.assertRaises(flows.TransferLogRangeError):
+                flows._request_transfer_logs('https://archive.example', {'name': 'Ethereum'}, 100, 1099)
+
+    def test_dense_interval_shrinks_below_one_thousand_with_exact_quorum(self):
+        peers = ['https://one.example', 'https://two.example']
+        chains = {'eth': {'name': 'Ethereum', 'rpcs': peers, 'chunk_size': 1000}}
+        observed = []
+
+        def logs(_endpoint, _chain, start, end):
+            observed.append((start, end))
+            if end - start >= 250:
+                raise flows.TransferLogRangeError('historical result cap')
+            return [transfer_log(start, f'0x{start:064x}', 0)]
+
+        with patch.object(flows, 'CHAINS', chains), patch.object(flows, '_request_transfer_logs', side_effect=logs), \
+                patch.object(flows.time, 'sleep'):
+            transfers, failed, _ = flows.fetch_transfer_logs('eth', 100, 1099)
+        self.assertEqual(failed, 0)
+        self.assertEqual([row[3] for row in transfers], [100, 350, 600, 850])
+        self.assertEqual(observed.count((850, 1099)), 2)
+
     def test_explorer_empty_hex_index_matches_rpc_zero_without_mutating_response(self):
         expected = transfer_log(100, "0x" + "a" * 64, 0, amount=123)
         raw = dict(expected, logIndex="0x")

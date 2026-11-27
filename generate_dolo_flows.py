@@ -1398,11 +1398,11 @@ def _rpc_families(rpcs, chain_key=None):
         # Keep Alchemy as a fallback family, but do not burn through every key
         # before trying the archive endpoints on every chunk.
         priority = {
-            "eth.api.onfinality.io": 0,
-            "blockscout.com": 1,
-            "etherscan.io": 2,
-            "mainnet.gateway.tenderly.co": 3,
-            "rpc.mevblocker.io": 4,
+            "mainnet.gateway.tenderly.co": 0,
+            "rpc.mevblocker.io": 1,
+            "eth.api.onfinality.io": 2,
+            "blockscout.com": 3,
+            "etherscan.io": 4,
             "drpc.org": 5,
             "alchemy.com": 6,
         }
@@ -1486,7 +1486,9 @@ def _request_transfer_logs(endpoint, cfg, start_block, end_block):
                     )
                     time.sleep(delay)
                     continue
-                if "range" in message.lower() or "limit" in message.lower():
+                details = str(error.get("data", "")).lower()
+                if ("range" in message.lower() or "limit" in message.lower()
+                        or "returned more than" in details or "block range" in details):
                     raise TransferLogRangeError(message)
                 time.sleep(min(8.0, 0.5 * (2 ** min(attempt, 4))))
                 continue
@@ -1630,17 +1632,6 @@ def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_tr
                 except TransferLogQuorumError:
                     pass
 
-        if selected_logs is None and range_error_seen and not endpoint_results:
-            if chunk_size > 1000:
-                chunk_size = max(chunk_size // 2, 1000)
-                reduced_chunk_successes = 0
-                print(
-                    f"    ⚠️ Retrying block {current:,} with smaller chunk "
-                    f"({chunk_size:,} blocks)"
-                )
-                continue
-            selected_logs = None
-
         success = selected_logs is not None
         if success:
             agreeing_provider_families.update(selected_proof["providerFamilies"])
@@ -1665,8 +1656,12 @@ def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_tr
                 )
 
         if not success:
-            if chunk_size > 1000:
-                chunk_size = max(chunk_size // 2, 1000)
+            # Dense markets can exceed the RPC result cap even in a 1,000-block
+            # window. Shrink further only when a provider reported a range cap.
+            min_chunk = 1 if range_error_seen else 1000
+            covered = chunk_end - current + 1
+            if covered > min_chunk:
+                chunk_size = max(covered // 2, min_chunk)
                 reduced_chunk_successes = 0
                 print(
                     f"    ⚠️ {cfg['name']}: no independent RPC quorum for "
