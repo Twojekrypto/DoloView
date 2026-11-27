@@ -11,6 +11,7 @@ from update_earn_freshness_status import (
     CHAIN_POLICIES,
     NETFLOW_WORKFLOW,
     REFRESH_AFTER_MINUTES,
+    SLA_CRITICAL_AFTER_HOURS,
     STALE_AFTER_HOURS,
     VERIFIED_AFTER_HOURS,
     _canonical_coverage_status,
@@ -23,7 +24,8 @@ class EarnFreshnessStatusTest(unittest.TestCase):
     def test_policy_targets_two_hour_verified_window(self):
         self.assertEqual(30, REFRESH_AFTER_MINUTES)
         self.assertEqual(2, VERIFIED_AFTER_HOURS)
-        self.assertEqual(6, STALE_AFTER_HOURS)
+        self.assertEqual(4, STALE_AFTER_HOURS)
+        self.assertEqual(4, SLA_CRITICAL_AFTER_HOURS)
         self.assertEqual(600, CHAIN_POLICIES["ethereum"]["verifiedBlockLag"])
         self.assertEqual(28_800, CHAIN_POLICIES["arbitrum"]["verifiedBlockLag"])
         self.assertEqual(3_600, CHAIN_POLICIES["berachain"]["verifiedBlockLag"])
@@ -166,7 +168,7 @@ class EarnFreshnessStatusTest(unittest.TestCase):
                 self.assertEqual(0, canonical["coverage"]["laggingWalletCount"])
                 self.assertEqual(0, canonical["coverage"]["headFreshWalletCount"])
 
-    def test_wallet_just_outside_verified_window_is_syncing_not_six_hour_stale(self):
+    def test_wallet_just_outside_verified_window_is_syncing_before_stale_limit(self):
         wallet = "0x1111111111111111111111111111111111111111"
         status = self._wallet_status({wallet: {
             "lastScannedBlock": 999_399,
@@ -179,9 +181,9 @@ class EarnFreshnessStatusTest(unittest.TestCase):
         self.assertEqual(0, canonical["coverage"]["staleWalletCount"])
         self.assertTrue(canonical["refreshRecommended"])
 
-    def test_wallet_sla_uses_exact_six_hour_block_boundary_before_rounding(self):
+    def test_wallet_sla_uses_exact_four_hour_block_boundary_before_rounding(self):
         wallet = "0x1111111111111111111111111111111111111111"
-        for block_lag, expected_sla in ((86_399, "warning"), (86_400, "critical")):
+        for block_lag, expected_sla in ((57_599, "warning"), (57_600, "critical")):
             with self.subTest(block_lag=block_lag):
                 last_block = 1_000_000 - block_lag
                 status = self._wallet_status({wallet: {
