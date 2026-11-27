@@ -5,6 +5,7 @@ Fetches ERC-20 Transfer events via eth_getLogs for ETH and Berachain,
 calculates net inflow/outflow per address, outputs top 5 each.
 """
 import hashlib, json, time, os, sys, signal, re, shutil, subprocess, math
+from concurrent.futures import ThreadPoolExecutor
 import requests
 from cex_label_evidence import cex_label_evidence_status
 from datetime import datetime, timedelta, timezone
@@ -172,17 +173,15 @@ CHAINS = {
         # These ingresses returned an empty result for 25,957,667–25,958,666
         # while the primary mainnet RPC returned nine DOLO transfers. They
         # cannot safely participate in log quorum, even as fallback voters.
-        "rpcs": [url for url in _rpc_endpoints("berachain") if
+        "rpcs": ["https://berachain.gateway.tenderly.co"] + [url for url in _rpc_endpoints("berachain") if
                  (urlparse(url).hostname or "").lower() not in {
                      "rpc.berachain-apis.com", "berachain-rpc.publicnode.com"
                  }] + (
             [ETHERSCAN_LOG_ENDPOINT] if ETHERSCAN_API_KEY or BERASCAN_API_KEY else []
         ),
         "block_time": 2,    # ~2 seconds per block
-        # The independent official + dRPC archive pair is reliable through
-        # 6,250 blocks. Larger ranges are rejected by one or more providers;
-        # regrowing above that cap caused every verified chunk to pay for a
-        # guaranteed failed 12,500-block attempt before retrying.
+        # Official Berachain and Tenderly independently verify this width
+        # without the public dRPC plan's 100-block limit.
         "chunk_size": 6_250,
         "deploy_block": 2_900_000,   # DOLO deployed on Berachain ~block 2,925,727 (Mar 2025)
     },
@@ -1414,12 +1413,13 @@ def _rpc_families(rpcs, chain_key=None):
         # before quorum can be reached. Keyed vendors remain fallbacks.
         priority = {
             "berachain.com": 0,
-            "etherscan.io": 0.5,
-            "drpc.org": 1,
-            "quicknode.pro": 2,
-            "quiknode.pro": 2,
-            "alchemy.com": 3,
-            "publicnode.com": 4,
+            "berachain.gateway.tenderly.co": 1,
+            "etherscan.io": 2,
+            "drpc.org": 3,
+            "quicknode.pro": 4,
+            "quiknode.pro": 4,
+            "alchemy.com": 5,
+            "publicnode.com": 6,
         }
         families.sort(key=lambda item: priority.get(item[0], 100))
         for family, endpoints in families:
@@ -1541,6 +1541,54 @@ def load_verified_scan_staging(state, chain_key, start_block, end_block):
     return transfers, next_block
 
 
+def _query_transfer_log_window(cfg, families, current, chunk_end):
+    selected_logs = None
+    selected_proof = None
+    endpoint_results = []
+    range_error_seen = False
+    for _family, endpoints in families:
+        family_result = None
+        family_endpoint = None
+        for endpoint in endpoints:
+            try:
+                family_result = _request_transfer_logs(
+                    endpoint, cfg, current, chunk_end
+                )
+            except TransferLogRangeError:
+                # A provider-specific range cap must not prevent other
+                # independent providers from answering the original
+                # range. Shrink only after healthy families fail too.
+                range_error_seen = True
+                continue
+            except (ValueError, TypeError):
+                family_result = None
+                print(f"    ⚠️ {cfg['name']}: invalid Transfer response from {_family}; trying another source")
+                continue
+            if family_result is not None:
+                try:
+                    transfer_log_digest(family_result)
+                except (ValueError, TypeError):
+                    family_result = None
+                    print(f"    ⚠️ {cfg['name']}: invalid Transfer logs from {_family}; trying another source")
+                    continue
+            if family_result is not None:
+                family_endpoint = endpoint
+                break
+        if family_result is None:
+            continue
+
+        endpoint_results.append((family_endpoint, family_result))
+        if len(endpoint_results) >= RPC_LOG_QUORUM:
+            try:
+                selected_logs, selected_proof = select_transfer_log_quorum(
+                    endpoint_results
+                )
+                return selected_logs, selected_proof, range_error_seen
+            except TransferLogQuorumError:
+                pass
+    return None, None, range_error_seen
+
+
 def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_transfers_so_far=None):
     """Fetch Transfer logs only after independent RPC providers agree exactly.
 
@@ -1584,53 +1632,26 @@ def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_tr
     disagreeing_provider_families = set(staged.get("disagreeingProviderFamilies", [])) if current > start_block else set()
     minimum_matching_families = staged.get("minimumMatchingProviderFamilies") if current > start_block else None
 
+    prefetch_width = 4 if chain_key == 'bera' and total_blocks >= 500_000 else 1
+    checkpoint_every = 64 if prefetch_width > 1 else 20
+    prefetched = {}
+
     while current <= end_block:
         chunk_end = min(current + chunk_size - 1, end_block)
 
-        selected_logs = None
-        selected_proof = None
-        endpoint_results = []
-        range_error_seen = False
-        for _family, endpoints in families:
-            family_result = None
-            family_endpoint = None
-            for endpoint in endpoints:
-                try:
-                    family_result = _request_transfer_logs(
-                        endpoint, cfg, current, chunk_end
-                    )
-                except TransferLogRangeError:
-                    # A provider-specific range cap must not prevent other
-                    # independent providers from answering the original
-                    # range. Shrink only after healthy families fail too.
-                    range_error_seen = True
-                    continue
-                except (ValueError, TypeError):
-                    family_result = None
-                    print(f"    ⚠️ {cfg['name']}: invalid Transfer response from {_family}; trying another source")
-                    continue
-                if family_result is not None:
-                    try:
-                        transfer_log_digest(family_result)
-                    except (ValueError, TypeError):
-                        family_result = None
-                        print(f"    ⚠️ {cfg['name']}: invalid Transfer logs from {_family}; trying another source")
-                        continue
-                if family_result is not None:
-                    family_endpoint = endpoint
-                    break
-            if family_result is None:
-                continue
-
-            endpoint_results.append((family_endpoint, family_result))
-            if len(endpoint_results) >= RPC_LOG_QUORUM:
-                try:
-                    selected_logs, selected_proof = select_transfer_log_quorum(
-                        endpoint_results
-                    )
-                    break
-                except TransferLogQuorumError:
-                    pass
+        key = (current, chunk_end)
+        if prefetch_width > 1 and key not in prefetched:
+            # Only contiguous results are committed. Later windows in the batch
+            # remain speculative until each intervening window has quorum.
+            ranges = [(first, min(first + chunk_size - 1, end_block))
+                      for first in range(current, min(end_block + 1, current + prefetch_width * chunk_size), chunk_size)]
+            with ThreadPoolExecutor(max_workers=prefetch_width) as executor:
+                answers = list(executor.map(lambda span: _query_transfer_log_window(cfg, families, *span), ranges))
+            prefetched = dict(zip(ranges, answers))
+        if key in prefetched:
+            selected_logs, selected_proof, range_error_seen = prefetched.pop(key)
+        else:
+            selected_logs, selected_proof, range_error_seen = _query_transfer_log_window(cfg, families, *key)
 
         success = selected_logs is not None
         if success:
@@ -1698,7 +1719,7 @@ def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_tr
 
         # Checkpoint only staged, quorum-verified rows. Never move the active
         # cache cursor until the whole requested range succeeds.
-        if state is not None and chunks_done % 20 == 0:
+        if state is not None and chunks_done % checkpoint_every == 0:
             _save_verified_scan_staging(
                 state,
                 chain_key,
@@ -1720,7 +1741,8 @@ def fetch_transfer_logs(chain_key, start_block, end_block, state=None, cached_tr
         else:
             reduced_chunk_successes = 0
 
-        time.sleep(RPC_LOG_CHUNK_DELAY_SECONDS)
+        if prefetch_width == 1:
+            time.sleep(RPC_LOG_CHUNK_DELAY_SECONDS)
 
     total_chunks_attempted = chunks_done + chunks_failed
     if chunks_failed > 0:

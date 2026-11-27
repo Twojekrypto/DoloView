@@ -151,6 +151,36 @@ class RPCResilienceTests(unittest.TestCase):
         self.assertEqual(seen, [official, tenderly])
         self.assertEqual([(row['blockNumber'], row['timestamp']) for row in rows], [(50, 100)])
 
+    def test_share_transfer_replay_skips_timestamps_but_checks_exact_balances(self):
+        with patch.object(lp, '_explorer_logs', side_effect=RuntimeError('explorer unavailable')), \
+             patch.object(lp, 'rpc_single_request', return_value={'result': [log(10)]}), \
+             patch.object(lp, 'fetch_block_timestamps', side_effect=AssertionError('timestamp not needed')), \
+             patch.object(lp, '_batch_eth_call_args', return_value=({f'balance:{ALICE}': (100,)}, {})), \
+             patch.object(lp.time, 'sleep'):
+            self.assertEqual(lp._reconcile_transfer_holder_balances('berachain', 80094, ADDRESS, 10, 10, 100),
+                             {ALICE: 100})
+
+    def test_dense_checkpoint_writes_are_batched_and_flush_on_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            moves = []
+            from os import replace
+            def record(source, target):
+                state = json.loads(Path(source).read_text())
+                moves.append(state['lastScannedBlock'])
+                replace(source, target)
+            def rpc(_endpoints, payload, **_kwargs):
+                block = int(payload['params'][0]['fromBlock'], 16)
+                if block == 54:
+                    raise RuntimeError('late missing chunk')
+                return {'result': [log(block, tx=f'{block:02x}')]}
+            with patch.object(lp.os, 'replace', side_effect=record), patch.object(lp.time, 'sleep'):
+                with self.assertRaisesRegex(RuntimeError, 'late missing chunk'):
+                    lp.scan_logs('berachain', ADDRESS, [TOPIC], 1, 70, 1, rpc=rpc,
+                                 endpoints=['https://one.invalid'], cache_dir=directory)
+            self.assertEqual(moves, [25, 50, 53])
+            checkpoint, = Path(directory).glob('*.json')
+            self.assertEqual(len(json.loads(checkpoint.read_text())['logs']), 53)
+
     def test_sparse_explorer_scan_uses_wide_ranges_without_10k_request_amplification(self):
         queries = []
         session = Mock()

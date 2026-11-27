@@ -189,6 +189,13 @@ jobs:
           path: data/earn-netflow/berachain.json
           retention-days: 2
 
+  publish-dashboard:
+    needs: update-snapshots
+    if: github.ref == 'refs/heads/master'
+    uses: ./.github/workflows/earn-public-files.yml
+    secrets:
+      EARN_STORAGE_KEY: ${{ secrets.EARN_STORAGE_KEY }}
+
   preserve-snapshot-refresh:
     needs: update-snapshots
     if: failure() && github.event_name == 'schedule' && needs.update-snapshots.outputs.replay_outcome == 'failure'

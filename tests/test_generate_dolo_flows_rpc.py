@@ -35,6 +35,32 @@ def transfer_log(block, tx_hash, log_index, amount=1):
 
 
 class GenerateDoloFlowsRpcTests(unittest.TestCase):
+    def test_berachain_production_quorum_uses_the_two_independent_wide_archive_routes(self):
+        first = flows._rpc_families(flows.CHAINS['bera']['rpcs'], chain_key='bera')[:2]
+        self.assertEqual([family for family, _ in first], ['berachain.com', 'berachain.gateway.tenderly.co'])
+
+    def test_berachain_prefetch_does_not_checkpoint_later_ranges_past_a_gap(self):
+        peers = ['https://one.example', 'https://two.example']
+        chains = {'bera': {'name': 'Berachain', 'rpcs': peers, 'chunk_size': 125_000}}
+        state = {}
+
+        def logs(_endpoint, _chain, start, end):
+            if start <= 125_001 <= end:
+                return None
+            return [transfer_log(start, f'0x{start:064x}', 0)]
+
+        with patch.object(flows, 'CHAINS', chains), patch.object(
+            flows, '_request_transfer_logs', side_effect=logs
+        ) as request, patch.object(flows, 'save_state'):
+            transfers, failed, _ = flows.fetch_transfer_logs('bera', 1, 500_001, state)
+
+        self.assertEqual(failed, 1)
+        self.assertIn(250_001, [call.args[2] for call in request.call_args_list])
+        self.assertEqual([row[3] for row in transfers], [1])
+        staged = state['verified_scan_staging']['bera']
+        self.assertEqual(staged['nextBlock'], 125_001)
+        self.assertEqual([row[3] for row in staged['transfers']], [1])
+
     def test_archive_detects_dense_range_cap_from_rpc_error_data(self):
         response = Mock(status_code=200)
         response.json.return_value = {'error': {'code': -32602, 'message': 'invalid params',

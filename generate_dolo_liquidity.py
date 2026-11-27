@@ -92,6 +92,7 @@ KODIAK_V3_SUBGRAPH = (
     "d7eed6cc-ad4a-4862-8017-89893c4095d3/subgraphs/kodiak-v3/latest/gn"
 )
 BULLA_BOUNDED_LOOKBACK_BLOCKS = 1_500_000
+CHECKPOINT_INTERVAL_CHUNKS = 25
 BERACHAIN_BOUNDED_LOG_RPCS = (
     "https://rpc.berachain.com/",
     "https://berachain.gateway.tenderly.co",
@@ -667,6 +668,7 @@ def scan_logs(
     overlap: int = 128,
     fetch_chunk=None,
     deployment_block: int | None = None,
+    include_timestamps: bool = True,
 ) -> tuple[list[dict[str, Any]], int]:
     """Scan and normalize a complete inclusive log range.
 
@@ -724,6 +726,17 @@ def scan_logs(
             normalized.append(row)
         return dedupe_logs(chain_key, normalized)
 
+    def with_timestamps(rows):
+        if fetch_chunk is None or not include_timestamps:
+            return rows
+        missing = [row["blockNumber"] for row in rows if "timestamp" not in row]
+        if missing:
+            timestamps = fetch_block_timestamps(chain_key, missing)
+            for row in rows:
+                if "timestamp" not in row:
+                    row["timestamp"] = timestamps[row["blockNumber"]]
+        return rows
+
     def digest(value):
         return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
@@ -767,21 +780,27 @@ def scan_logs(
         ranges = [[start, next_block - 1]] if next_block > start else []
     print(f"LP scan {chain_key} start={start} target={end} resume={next_block}", flush=True)
 
+    def write_checkpoint():
+        if checkpoint is None:
+            return
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        logs = dedupe_logs(chain_key, collected)
+        state = {"version": 1, "filters": identity, "ranges": ranges,
+                 "lastScannedBlock": ranges[-1][1], "logs": logs, "logDigest": digest(logs)}
+        if deployment_block is not None:
+            state["deploymentBlock"] = deployment_block
+        temporary = checkpoint.with_suffix(".tmp")
+        temporary.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
+        os.replace(temporary, checkpoint)
+
     def save(low, high, rows):
         nonlocal accepted_chunks
         collected.extend(rows)
         ranges.append([low, high])
-        if checkpoint is not None:
-            checkpoint.parent.mkdir(parents=True, exist_ok=True)
-            logs = dedupe_logs(chain_key, collected)
-            state = {"version": 1, "filters": identity, "ranges": ranges,
-                     "lastScannedBlock": high, "logs": logs, "logDigest": digest(logs)}
-            if deployment_block is not None:
-                state["deploymentBlock"] = deployment_block
-            temporary = checkpoint.with_suffix(".tmp")
-            temporary.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
-            os.replace(temporary, checkpoint)
         accepted_chunks += 1
+        # A dense scan must not rewrite its entire growing ledger per leaf.
+        if accepted_chunks % CHECKPOINT_INTERVAL_CHUNKS == 0:
+            write_checkpoint()
         if accepted_chunks % config["progress_every_chunks"] == 0:
             print(f"LP scan {chain_key} progress={high} target={end} chunks={accepted_chunks}", flush=True)
 
@@ -803,8 +822,7 @@ def scan_logs(
         rows = fetch_chunk(chunk_start, chunk_end) if fetch_chunk is not None else None
         if rows is None:
             # Wide explorer windows must never become wide RPC requests.
-            # Checkpoint each bounded/adaptive RPC leaf through this same scan,
-            # rather than waiting for the whole explorer-sized window to finish.
+            # Record bounded/adaptive RPC leaves individually before checkpointing.
             if chunk_end - chunk_start + 1 > config["chunk_size"]:
                 for low, high in block_ranges(chunk_start, chunk_end, config["chunk_size"]):
                     request_range(low, high)
@@ -854,16 +872,15 @@ def scan_logs(
             if rows is None:
                 raise RuntimeError(f"{chain_key} required log chunk {chunk_start}-{chunk_end} unavailable: {sanitize_error(last_error) if last_error else 'empty range lacks independent confirmation'}") from None
             time.sleep(config["rpc_interval_seconds"])
-        rows = checked(rows, chunk_start, chunk_end)
-        if fetch_chunk is not None:
-            missing_timestamps = [row["blockNumber"] for row in rows if "timestamp" not in row]
-            if missing_timestamps:
-                timestamps = fetch_block_timestamps(chain_key, missing_timestamps)
-                rows = [{**row, "timestamp": row.get("timestamp", timestamps.get(row["blockNumber"]))} for row in rows]
-        save(chunk_start, chunk_end, rows)
+        save(chunk_start, chunk_end, with_timestamps(checked(rows, chunk_start, chunk_end)))
 
-    for chunk_start, chunk_end in block_ranges(next_block, end, chunk_size):
-        request_range(chunk_start, chunk_end)
+    with_timestamps(collected)
+    try:
+        for chunk_start, chunk_end in block_ranges(next_block, end, chunk_size):
+            request_range(chunk_start, chunk_end)
+    finally:
+        if accepted_chunks % CHECKPOINT_INTERVAL_CHUNKS:
+            write_checkpoint()
     return dedupe_logs(chain_key, collected), end
 
 
@@ -3373,7 +3390,7 @@ def _reconcile_transfer_holder_balances(
 ) -> dict[str, int]:
     """Full mint/burn/transfer replay must match every holder at the pinned block."""
     transfers = _routescan_logs(chain_id, token, event_topic("Transfer(address,address,uint256)"),
-                               from_block, to_block)
+                               from_block, to_block, include_timestamps=False)
     replayed = replay_erc20_share_balances(
         transfers, expected_total, include_zero_address_mints=True
     )
@@ -3814,6 +3831,7 @@ def _routescan_logs(
     discovery_only: bool = False,
     indexed_topics: dict[int, str] | None = None,
     deployment_block: int | None = None,
+    include_timestamps: bool = True,
 ) -> list[dict[str, Any]]:
     """Checkpoint complete filtered chunks; failed explorer chunks use public RPC."""
     chain_key = {1: "ethereum", 80094: "berachain"}.get(chain_id)
@@ -3850,7 +3868,7 @@ def _routescan_logs(
     rows, cursor = scan_logs(chain_key, address, topics, from_block, to_block, config["explorer_chunk_size"],
                              endpoints=endpoints, cache_dir=os.environ.get("LP_SCANNER_CACHE_DIR") or None,
                              overlap=config["reorg_overlap_blocks"], fetch_chunk=fetch_chunk,
-                             deployment_block=deployment_block)
+                             deployment_block=deployment_block, include_timestamps=include_timestamps)
     if cursor != to_block:
         raise RuntimeError("LP log scan did not cover the required target block")
     return rows
@@ -4190,6 +4208,7 @@ def _kodiak_farm_index(
         event_topic(KODIAK_FARM_DEPLOYED_SIGNATURE),
         chain["discoveryStartBlock"],
         latest_block,
+        include_timestamps=False,
     )
     farms = []
     seen = set()
@@ -4282,6 +4301,7 @@ def _kodiak_farms_for_island(
                     event_topic(signature),
                     farm["deploymentBlock"],
                     latest_block,
+                    include_timestamps=False,
                 )
             )
         staked_balances = replay_kodiak_farm_balances(
@@ -4315,6 +4335,7 @@ def _build_kodiak_island_rows(
         chain["discoveryStartBlock"],
         latest_block,
         indexed_topics={1: _topic_for_address(pool["identifier"])},
+        include_timestamps=False,
     )
     islands = discover_kodiak_islands(
         creation_logs,
