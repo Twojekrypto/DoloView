@@ -4,7 +4,7 @@ on:
     branches: [master]
     paths: [.github/workflows/publish-market-reports.yml, scripts/recovery_reports.py]
   schedule:
-    - cron: '39 */4 * * *'
+    - cron: '39 */2 * * *'
   workflow_dispatch:
 permissions:
   contents: read

@@ -36,16 +36,21 @@ def validate(raw, previous=None):
 def synchronize(candidate, output, mode):
     seed = (ROOT / FILE).read_bytes()
     previous = previous_file(FILE)
+    if mode == 'verify':
+        status = json.loads((ROOT / 'vedolo_flows_run_status.json').read_bytes())
+        if status['completed'] is not True:
+            raise ValueError('veDOLO scan is incomplete; retaining the published history')
+        previous_history = validate(previous) if previous is not None else None
+        history = validate(seed, previous_history)
+        if history['target_block'] != status.get('target_block'):
+            raise ValueError('veDOLO payload and scan checkpoints differ')
+        check_freshness([FILE], ROOT)
+        return
+
     previous_history = validate(previous, json.loads(seed)) if previous is not None else None
     if mode == 'prepare':
         if previous is not None:
             (ROOT / FILE).write_bytes(previous)
-        return
-    if mode == 'verify':
-        if json.loads((ROOT / 'vedolo_flows_run_status.json').read_bytes())['completed'] is not True:
-            raise ValueError('veDOLO scan is incomplete; retaining the published history')
-        validate((ROOT / FILE).read_bytes(), previous_history)
-        check_freshness([FILE], ROOT)
         return
 
     selected = previous

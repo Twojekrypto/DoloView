@@ -27,6 +27,20 @@ class RecoveryVeDoloFlowsTests(unittest.TestCase):
         with self.assertRaises((RuntimeError, ValueError)):
             validate(json.dumps(doc), self.seed)
 
+    def test_verify_validates_new_scan_against_older_published_block(self):
+        doc = copy.deepcopy(self.seed)
+        doc['target_block'] += 12_000
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / FILE).write_text(json.dumps(doc))
+            (root / 'vedolo_flows_run_status.json').write_text(json.dumps({
+                'completed': True, 'target_block': doc['target_block'],
+            }))
+            with patch('recovery_vedolo_flows.ROOT', root), \
+                    patch('recovery_vedolo_flows.previous_file', return_value=self.raw), \
+                    patch('recovery_vedolo_flows.check_freshness'):
+                synchronize(root / 'unused', root, 'verify')
+
     def test_stage_keeps_newer_published_block(self):
         doc = copy.deepcopy(self.seed)
         doc['target_block'] += 1

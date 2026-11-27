@@ -6,14 +6,14 @@ import subprocess
 
 CADENCE_HOURS = {
     'publish-borrow-pnl.yml': 2,
-    'publish-market-reports.yml': 4,
+    'publish-market-reports.yml': 2,
     'publish-earn-merkl.yml': 1,
     'publish-revenue.yml': 0.5,
     'publish-tvl-details.yml': 0.5,
-    'publish-operating-income.yml': 18,
-    'publish-earn-r2.yml': 6,
-    'publish-vedolo-flows.yml': 6,
-    'publish-reward-claims.yml': 4,
+    'publish-operating-income.yml': 2,
+    'publish-earn-r2.yml': 2,
+    'publish-vedolo-flows.yml': 2,
+    'publish-reward-claims.yml': 2,
 }
 
 

@@ -2,7 +2,7 @@ name: Verify treasury interest and liquidation income
 on:
   workflow_dispatch:
   schedule:
-    - cron: '47 0,6 * * *'
+    - cron: '47 */2 * * *'
   push:
     branches: [master]
     paths: [.github/workflows/publish-operating-income.yml, fetch_operating_income.py, operating_income_treasury.py, operating_income_liquidations.py, config/operating_income.json, scripts/recovery_income.py]

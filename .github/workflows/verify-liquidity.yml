@@ -1,6 +1,8 @@
 name: Verify DOLO liquidity
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '57 */12 * * *'
 
 permissions:
   contents: read
@@ -12,7 +14,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 57
+    timeout-minutes: 145
     env:
       LP_SCANNER_CACHE_DIR: ${{ github.workspace }}/.cache/legacy-lp
     steps:
@@ -31,10 +33,10 @@ jobs:
           key: lp-scanner-v2-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: lp-scanner-v2-${{ runner.os }}-
       - name: Refresh liquidity across Berachain and Ethereum
-        timeout-minutes: 45
+        timeout-minutes: 125
         env:
           PYTHONUNBUFFERED: '1'
-          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
           ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}

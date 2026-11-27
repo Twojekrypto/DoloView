@@ -2,7 +2,7 @@ name: Verify Arbitrum and Berachain reward claims
 on:
   workflow_dispatch:
   schedule:
-    - cron: '41 */4 * * *'
+    - cron: '41 */2 * * *'
 permissions:
   contents: read
 concurrency:
@@ -30,7 +30,7 @@ jobs:
           REWARD_CLAIM_CHUNK_SIZE_ARBITRUM: '250000'
           REWARD_CLAIM_TIMESTAMP_BATCH_SIZE_BERACHAIN: '20'
           REWARD_CLAIM_TIMESTAMP_BATCH_SIZE_ARBITRUM: '50'
-          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
           ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
         run: python3 generate_reward_claim_events.py
       - run: |
