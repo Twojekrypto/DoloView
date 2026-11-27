@@ -65,6 +65,7 @@ class RecoverySupplyActivityTests(unittest.TestCase):
         self.assertEqual(payload['periodEnd'], 1795770570)
         self.assertEqual(payload['periodStart'], 1793178570)
         self.assertEqual(payload['sourceGeneratedAt'], '2026-11-27T09:09:30Z')
+        self.assertEqual(payload['generatedAt'], '2026-11-27T09:09:30Z')
         self.assertEqual([chain['rowCount'] for chain in payload['chains']], [4, 4, 4])
         self.assertEqual([chain['sourceBlock']['number'] for chain in payload['chains']], [9901, 9902, 9903])
         self.assertEqual(payload['coverage']['includedAssets'], 3)

@@ -122,13 +122,13 @@ def build_overview(*, now=None):
         blocks = list(pool.map(source_block, CHAINS))
         now = now or datetime.now(timezone.utc)
         checked = int(now.timestamp())
-        end = min(checked, *(block['timestamp'] for block in blocks))
-        if checked - end >= MAX_AGE or any(block['timestamp'] > checked + 300 for block in blocks):
+        end = min(block['timestamp'] for block in blocks)
+        if not 0 <= checked - end < MAX_AGE or any(block['timestamp'] > checked + 300 for block in blocks):
             raise ValueError('Source blocks do not cover a current 30-day window')
         start = end - WINDOW_SECONDS
         projections = [pool.submit(chain_projection, chain, block, start, end, stamp(end))
                        for chain, block in zip(CHAINS, blocks)]
-        result = {**FORMAT, 'sourceManifest': None, 'generatedAt': stamp(checked),
+        result = {**FORMAT, 'sourceManifest': None, 'generatedAt': stamp(end),
                   'sourceGeneratedAt': stamp(end), 'periodStart': start, 'periodEnd': end,
                   'maxSourceAgeSeconds': MAX_AGE, 'chains': [], 'tokens': [], 'rows': []}
         for future in projections:
@@ -160,7 +160,7 @@ def verify(payload, *, now=None, require_fresh=True, allow_legacy=False):
     generated = parse_time(payload['generatedAt'])
     start, end = payload['periodStart'], payload['periodEnd']
     if not (positive_int(end) and positive_int(start) and end - start == WINDOW_SECONDS
-            and int(source_time.timestamp()) == end and source_time <= generated <= now):
+            and int(source_time.timestamp()) == end and source_time == generated <= now):
         raise ValueError('Invalid 30-day public supply activity cutoff')
     if require_fresh and (now - source_time).total_seconds() >= MAX_AGE:
         raise ValueError('Public supply activity source is at least four hours old')
@@ -219,13 +219,13 @@ def verify(payload, *, now=None, require_fresh=True, allow_legacy=False):
                     'skippedTokens': [], 'issues': []}
         if not legacy:
             block = entry.get('sourceBlock')
-            if not valid_block(block) or not end <= block['timestamp'] <= int(generated.timestamp()) + 300:
+            if not valid_block(block) or not end <= block['timestamp'] <= int(now.timestamp()) + 300:
                 raise ValueError(f'{chain}: invalid pinned source block')
             expected['sourceBlock'] = block
             block_times.append(block['timestamp'])
         if not count or entry != expected:
             raise ValueError(f'{chain}: incomplete source coverage')
-    if not legacy and end != min(int(generated.timestamp()), *block_times):
+    if not legacy and end != min(block_times):
         raise ValueError('Cutoff differs from indexed source coverage')
     return end
 
