@@ -92,6 +92,10 @@ KODIAK_V3_SUBGRAPH = (
     "d7eed6cc-ad4a-4862-8017-89893c4095d3/subgraphs/kodiak-v3/latest/gn"
 )
 BULLA_BOUNDED_LOOKBACK_BLOCKS = 1_500_000
+BERACHAIN_BOUNDED_LOG_RPCS = (
+    "https://rpc.berachain.com/",
+    "https://berachain.gateway.tenderly.co",
+)
 ROUTESCAN_TRANSIENT_STATUS_CODES = {429, 500, 502, 503, 504}
 _KODIAK_FARM_INDEX_CACHE: dict[tuple[str, str, int], dict[str, list[dict[str, Any]]]] = {}
 _SNAPSHOT_BLOCK: ContextVar[tuple[str, int] | None] = ContextVar("lp_snapshot_block", default=None)
@@ -255,6 +259,16 @@ def load_registry(path: str | Path) -> dict[str, Any]:
             raise ValueError(f"pool {index} poolId must be a bytes32 hex value")
         if identifier_type == "contract" and not ADDRESS_RE.fullmatch(identifier):
             raise ValueError(f"pool {index} contract identifier must be a 20-byte EVM address")
+        verification = pool.get("verification")
+        deployment = verification.get("deployment") if isinstance(verification, dict) else None
+        if deployment is not None and (
+            adapter != "brownfi-v3" or not isinstance(deployment, dict)
+            or type(deployment.get("block")) is not int
+            or deployment["block"] < chains[chain_key]["discoveryStartBlock"]
+            or not TX_HASH_RE.fullmatch(str(deployment.get("transactionHash")))
+            or not POOL_ID_RE.fullmatch(str(deployment.get("blockHash")))
+        ):
+            raise ValueError(f"pool {index} must have valid BrownFi factory deployment evidence")
         priority = pool.get("priority")
         if isinstance(priority, bool) or not isinstance(priority, int) or priority <= 0:
             raise ValueError(f"pool {index} priority must be a positive integer")
@@ -652,6 +666,7 @@ def scan_logs(
     cache_dir: str | Path | None = None,
     overlap: int = 128,
     fetch_chunk=None,
+    deployment_block: int | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """Scan and normalize a complete inclusive log range.
 
@@ -682,6 +697,8 @@ def scan_logs(
             raise ValueError("log topic filter must contain bytes32 values")
     if type(overlap) is not int or overlap <= 0:
         raise ValueError("reorg overlap must be positive")
+    if deployment_block is not None and (type(deployment_block) is not int or deployment_block < start):
+        raise ValueError("deployment block must be at or after the scan start")
     config = scanner_config()
 
     def checked(rows, low, high):
@@ -732,6 +749,10 @@ def scan_logs(
             if cached.get("logDigest") != digest(cached.get("logs")):
                 raise ValueError("cached log digest mismatch")
             old_logs = checked(cached.get("logs"), start, last)
+            if cached.get("deploymentBlock") not in (None, deployment_block):
+                raise ValueError("cached deployment block mismatch")
+            if deployment_block is not None and any(row["blockNumber"] < deployment_block for row in old_logs):
+                raise ValueError("cached log precedes the verified deployment block")
             next_block = max(start, min(last, end) - overlap + 1)
             collected = [row for row in old_logs if row["blockNumber"] < next_block]
             if next_block > start:
@@ -739,6 +760,11 @@ def scan_logs(
         except (ValueError, TypeError, AttributeError, OSError) as exc:
             raise RuntimeError(f"invalid LP scan checkpoint: {sanitize_error(exc)}") from None
 
+    # The factory receipt proves the contract could emit no logs before deployment.
+    # Keep the original coverage identity so a legacy checkpoint remains usable.
+    if deployment_block is not None and next_block < deployment_block:
+        next_block = min(deployment_block, end + 1)
+        ranges = [[start, next_block - 1]] if next_block > start else []
     print(f"LP scan {chain_key} start={start} target={end} resume={next_block}", flush=True)
 
     def save(low, high, rows):
@@ -750,6 +776,8 @@ def scan_logs(
             logs = dedupe_logs(chain_key, collected)
             state = {"version": 1, "filters": identity, "ranges": ranges,
                      "lastScannedBlock": high, "logs": logs, "logDigest": digest(logs)}
+            if deployment_block is not None:
+                state["deploymentBlock"] = deployment_block
             temporary = checkpoint.with_suffix(".tmp")
             temporary.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
             os.replace(temporary, checkpoint)
@@ -3785,6 +3813,7 @@ def _routescan_logs(
     session: requests.Session | None = None,
     discovery_only: bool = False,
     indexed_topics: dict[int, str] | None = None,
+    deployment_block: int | None = None,
 ) -> list[dict[str, Any]]:
     """Checkpoint complete filtered chunks; failed explorer chunks use public RPC."""
     chain_key = {1: "ethereum", 80094: "berachain"}.get(chain_id)
@@ -3813,9 +3842,15 @@ def _routescan_logs(
                 explorer_available = False
         return None  # RPC leaves are checkpointed by the same outer scanner.
 
+    endpoints = get_endpoints(chain_key)
+    if chain_key == "berachain":
+        # These independent operators both support the existing 10K RPC window.
+        # Prefer them for log replay without changing the order of state reads.
+        endpoints = list(dict.fromkeys([*BERACHAIN_BOUNDED_LOG_RPCS, *endpoints]))
     rows, cursor = scan_logs(chain_key, address, topics, from_block, to_block, config["explorer_chunk_size"],
-                             cache_dir=os.environ.get("LP_SCANNER_CACHE_DIR") or None,
-                             overlap=config["reorg_overlap_blocks"], fetch_chunk=fetch_chunk)
+                             endpoints=endpoints, cache_dir=os.environ.get("LP_SCANNER_CACHE_DIR") or None,
+                             overlap=config["reorg_overlap_blocks"], fetch_chunk=fetch_chunk,
+                             deployment_block=deployment_block)
     if cursor != to_block:
         raise RuntimeError("LP log scan did not cover the required target block")
     return rows
@@ -3855,6 +3890,8 @@ def _build_v2_live_source(
     chain_key = pool["chainKey"]
     chain = registry["chains"][chain_key]
     address = pool["identifier"]
+    verification = pool.get("verification")
+    deployment = (verification.get("deployment") or {}) if isinstance(verification, dict) else {}
     logs = []
     mint_signature = (
         BROWNFI_MINT_SIGNATURE
@@ -3873,6 +3910,7 @@ def _build_v2_live_source(
                 event_topic(signature),
                 chain["discoveryStartBlock"],
                 latest_block,
+                deployment_block=deployment.get("block"),
             )
         )
     logs = dedupe_logs(chain_key, logs)

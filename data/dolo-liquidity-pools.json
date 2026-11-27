@@ -181,6 +181,11 @@
       "verification": {
         "method": "onchain-interface",
         "verifiedAt": "2026-08-24",
+        "deployment": {
+          "block": 22117891,
+          "transactionHash": "0xb09ec52d452b30a4d2d5fa049682f49abac10e640a5fd6c76dd3fb4cd4f6fe21",
+          "blockHash": "0xa09abd436ce6bcfa80f2b4af7d7fe011ab2dd98cc4a82b77426e7e5457d72806"
+        },
         "name": "BrownFi V3",
         "symbol": "BF-V3",
         "factory": "0x6ccf36d3eae84b2eb608704070b90f4419bbcd28",

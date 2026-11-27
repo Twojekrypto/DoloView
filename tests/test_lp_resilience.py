@@ -106,6 +106,51 @@ class ExplorerResilienceTests(unittest.TestCase):
 
 
 class RPCResilienceTests(unittest.TestCase):
+    def test_brownfi_deployment_preserves_valid_legacy_checkpoint_and_skips_earlier_blocks(self):
+        deploy_block = 22_117_891
+        registry = lp.load_registry(Path(lp.__file__).parent / 'data/dolo-liquidity-pools.json')
+        brownfi, = (pool for pool in registry['pools'] if pool['adapter'] == 'brownfi-v3')
+        self.assertEqual(brownfi['verification'].get('deployment'), {
+            'block': deploy_block,
+            'transactionHash': '0xb09ec52d452b30a4d2d5fa049682f49abac10e640a5fd6c76dd3fb4cd4f6fe21',
+            'blockHash': '0xa09abd436ce6bcfa80f2b4af7d7fe011ab2dd98cc4a82b77426e7e5457d72806',
+        })
+        with tempfile.TemporaryDirectory() as directory:
+            start = 2_900_000
+            lp.scan_logs('berachain', ADDRESS, [TOPIC], start, 20_000_000, 18_000_000,
+                         cache_dir=directory, fetch_chunk=lambda *_: [], endpoints=[])
+            checkpoint, = Path(directory).glob('*.json')
+            cuts = []
+            def scan(first, last):
+                cuts.append((first, last))
+                return []
+            lp.scan_logs('berachain', ADDRESS, [TOPIC], start, deploy_block + 100, 10_000,
+                         cache_dir=directory, fetch_chunk=scan, endpoints=[], deployment_block=deploy_block)
+            self.assertEqual(cuts, [(deploy_block, deploy_block + 100)])
+            self.assertEqual(list(Path(directory).glob('*.json')), [checkpoint])
+            evidence = json.loads(checkpoint.read_text())
+            self.assertEqual(evidence['ranges'], [[start, deploy_block - 1], [deploy_block, deploy_block + 100]])
+            self.assertEqual(evidence['deploymentBlock'], deploy_block)
+
+    def test_berachain_rpc_fallback_prefers_supported_ranges_and_checks_an_independent_peer(self):
+        session = Mock()
+        session.get.return_value = response({'status': '0', 'message': 'chain not supported', 'result': None})
+        alchemy = 'https://berachain-mainnet.g.alchemy.com/v2/placeholder'
+        official = 'https://rpc.berachain.com/'
+        tenderly = 'https://berachain.gateway.tenderly.co'
+        seen = []
+        def rpc(endpoints, payload, **kwargs):
+            seen.extend(endpoints)
+            if endpoints == [official]:
+                return {'result': []}
+            if endpoints == [tenderly]:
+                return {'result': [log(50)]}
+            raise RuntimeError('configured provider does not support this range')
+        with patch.object(lp, 'get_endpoints', return_value=[alchemy, official]), patch.object(lp, 'rpc_single_request', side_effect=rpc), patch.object(lp, 'fetch_block_timestamps', return_value={50: 100}), patch.object(lp.time, 'sleep'):
+            rows = lp._routescan_logs(80094, ADDRESS, TOPIC, 1, 10_000, session=session)
+        self.assertEqual(seen, [official, tenderly])
+        self.assertEqual([(row['blockNumber'], row['timestamp']) for row in rows], [(50, 100)])
+
     def test_sparse_explorer_scan_uses_wide_ranges_without_10k_request_amplification(self):
         queries = []
         session = Mock()
