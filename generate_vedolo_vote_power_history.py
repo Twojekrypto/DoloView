@@ -10,6 +10,7 @@ from typing import Iterable, List, Optional, Tuple
 
 from rpc_client import get_endpoints, rpc_batch_requests, rpc_single_request
 from vedolo_vote_power import (
+    DAY_SECONDS,
     WEEK_SECONDS,
     CanonicalSnapshot,
     GlobalPoint,
@@ -17,6 +18,8 @@ from vedolo_vote_power import (
     build_vote_power_payload,
     decode_global_point,
     decode_signed_word,
+    evaluate_vote_power_at,
+    wei_to_decimal,
 )
 
 
@@ -109,14 +112,15 @@ def call_at_block(data: str, block_tag: str) -> str:
     return _require_abi_word(response["result"])
 
 
-def fetch_canonical_snapshot() -> CanonicalSnapshot:
+def fetch_canonical_snapshot(block_number: Optional[int] = None) -> CanonicalSnapshot:
     endpoints = get_endpoints("berachain")
-    latest = rpc_single_request(
-        endpoints,
-        {"jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": []},
-        describe="veDOLO target block",
-    )
-    block_number = _decode_uint(latest.get("result"), "target block")
+    if block_number is None:
+        latest = rpc_single_request(
+            endpoints,
+            {"jsonrpc": "2.0", "id": 1, "method": "eth_blockNumber", "params": []},
+            describe="veDOLO target block",
+        )
+        block_number = _decode_uint(latest.get("result"), "target block")
     block_tag = hex(block_number)
     block = rpc_single_request(
         endpoints,
@@ -141,6 +145,61 @@ def fetch_canonical_snapshot() -> CanonicalSnapshot:
             call_at_block(TOTAL_SUPPLY_SELECTOR, block_tag), "totalSupply"
         ),
     )
+
+
+def extend_verified_history(previous: dict, snapshot: CanonicalSnapshot) -> dict:
+    """Carry verified daily samples forward and read the exact anchors for new samples."""
+    from validate_data import _vedolo_vote_power_history_valid
+
+    if (not _vedolo_vote_power_history_valid(previous) or previous['targetBlock'] >= snapshot.block_number
+            or previous['targetTimestamp'] >= snapshot.timestamp
+            or snapshot.timestamp - previous['targetTimestamp'] > 7 * DAY_SECONDS):
+        raise ValueError('Previous veDOLO vote history cannot be extended safely')
+    block_tag = hex(snapshot.block_number)
+    cached_points = {}
+    cached_slopes = {}
+
+    def point(index):
+        if index not in cached_points:
+            observed = decode_global_point(_fetch_global_point_results([index], block_tag)[0])
+            if min(observed.bias, observed.slope) < 0 or observed.block > snapshot.block_number:
+                raise ValueError('Invalid pinned veDOLO point')
+            cached_points[index] = observed
+        return cached_points[index]
+
+    def at(timestamp):
+        low, high = 0, snapshot.epoch + 1
+        while low < high:
+            middle = (low + high) // 2
+            if point(middle).timestamp <= timestamp:
+                low = middle + 1
+            else:
+                high = middle
+        if low == 0:
+            raise ValueError('veDOLO vote observation has no canonical anchor')
+        anchor = point(low - 1)
+        first_week = (anchor.timestamp // WEEK_SECONDS + 1) * WEEK_SECONDS
+        needed = [week for week in range(first_week, timestamp, WEEK_SECONDS) if week not in cached_slopes]
+        if needed:
+            cached_slopes.update({week: decode_signed_word(word) for week, word in
+                                  _fetch_slope_change_results(needed, block_tag).items()})
+        return evaluate_vote_power_at(timestamp, [anchor], cached_slopes)
+
+    last_timestamp = previous['targetTimestamp']
+    if wei_to_decimal(at(last_timestamp)) != previous['points'][-1][1]:
+        raise ValueError('Prior veDOLO vote power does not match canonical history')
+    points = list(previous['points'])
+    if len(points) > 1 and last_timestamp % DAY_SECONDS:
+        points.pop()
+    next_day = (last_timestamp // DAY_SECONDS + 1) * DAY_SECONDS
+    points.extend([timestamp, wei_to_decimal(at(timestamp))] for timestamp in range(next_day, snapshot.timestamp, DAY_SECONDS))
+    total = at(snapshot.timestamp)
+    if total != snapshot.total_supply_wei:
+        raise ValueError('Extended vote history does not match pinned totalSupply')
+    points.append([snapshot.timestamp, wei_to_decimal(total)])
+    return dict(previous, targetBlock=snapshot.block_number, targetTimestamp=snapshot.timestamp,
+                totalSupplyWei=str(total), lastPointWei=str(total), lockedSupplyWei=str(snapshot.locked_supply_wei),
+                coverage={'from': previous['coverage']['from'], 'through': snapshot.timestamp}, points=points)
 
 
 def _read_cache_payload(state_path: Path) -> Optional[dict]:
@@ -434,11 +493,21 @@ def write_vote_power_history(
     sync_stats: bool = False,
     stats_path: Path = STATS_PATH,
     holders_path: Path = HOLDERS_PATH,
+    extend_at_inventory: bool = False,
 ) -> dict:
-    snapshot = fetch_canonical_snapshot()
-    points = fetch_global_points(snapshot, state_path)
-    slope_changes = fetch_slope_changes(points, snapshot, state_path)
-    payload = build_vote_power_payload(snapshot, points, slope_changes)
+    if extend_at_inventory:
+        block = json.loads(holders_path.read_bytes())['snapshot_block']
+        snapshot = fetch_canonical_snapshot(block)
+        previous = json.loads(output_path.read_bytes())
+    else:
+        snapshot = fetch_canonical_snapshot()
+        previous = None
+    if previous and 0 < snapshot.timestamp - previous['targetTimestamp'] <= 7 * DAY_SECONDS:
+        payload = extend_verified_history(previous, snapshot)
+    else:
+        points = fetch_global_points(snapshot, state_path)
+        slope_changes = fetch_slope_changes(points, snapshot, state_path)
+        payload = build_vote_power_payload(snapshot, points, slope_changes)
     _atomic_write_json(Path(output_path), payload)
     if sync_stats:
         sync_vote_weight_stats(snapshot, stats_path, holders_path)
@@ -452,5 +521,6 @@ if __name__ == "__main__":
         action="store_true",
         help="synchronize veDOLO stats files with the history snapshot",
     )
+    parser.add_argument('--extend-at-inventory', action='store_true')
     args = parser.parse_args()
-    write_vote_power_history(sync_stats=args.sync_stats)
+    write_vote_power_history(sync_stats=args.sync_stats, extend_at_inventory=args.extend_at_inventory)

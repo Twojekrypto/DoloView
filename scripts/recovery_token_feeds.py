@@ -334,6 +334,7 @@ def validate(family, root, previous, now):
                 or stats['unique_holders'] != len(holders['holders'])
                 or stats['active_nfts'] != sum(row['nft_count'] for row in holders['holders'])
                 or stats['total_vote_weight_block'] != vote['targetBlock']
+                or vote['targetBlock'] != holders['snapshot_block']
                 or simulation['sourceBlock'] != holders['snapshot_block']
                 or parse_timestamp(simulation['sourceTimestamp']) != parse_timestamp(holders['timestamp'])):
             raise ValueError('veDOLO inventory and canonical vote power do not reconcile')
@@ -454,7 +455,7 @@ def collect(family):
         refresh_input(FLOW_INPUT)
         run('scripts/recovery_token_feeds.py', 'inventory', family, timeout=5900)
         run('validate_vedolo_locked_history.py', '--flows', FLOW_INPUT, '--holders', 'vedolo_holders.json', timeout=180)
-        run('generate_vedolo_vote_power_history.py', '--sync-stats', timeout=1800)
+        run('generate_vedolo_vote_power_history.py', '--sync-stats', '--extend-at-inventory', timeout=1800)
     elif family == 'odolo-flow':
         for name in (*CLAIM_INPUTS, 'exercisers_by_address.json', FLOW_INPUT):
             refresh_input(name)

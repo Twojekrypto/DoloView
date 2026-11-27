@@ -24,6 +24,32 @@ def encode_global_point(bias, slope, timestamp, block):
 
 
 class VeDoloVotePowerTests(unittest.TestCase):
+    def test_incremental_history_matches_full_replay_at_daily_and_head_boundaries(self):
+        from generate_vedolo_vote_power_history import extend_verified_history
+
+        day = 86400
+        points = [GlobalPoint(3000000, 2, 5 * day, 1),
+                  GlobalPoint(2500000, 2, 8 * day, 2),
+                  GlobalPoint(3000000, 3, 8 * day, 3)]
+        slopes = {7 * day: -1}
+        old_ts, new_ts = 6 * day + 5, 9 * day + 42
+        old = CanonicalSnapshot(1, old_ts, evaluate_vote_power_at(old_ts, points, slopes), 5, 0)
+        new = CanonicalSnapshot(4, new_ts, evaluate_vote_power_at(new_ts, points, slopes), 6, 2)
+        previous = build_vote_power_payload(old, points[:1], slopes)
+        def get_points(indices, block):
+            self.assertEqual(block, '0x4')
+            return [encode_global_point(p.bias, p.slope, p.timestamp, p.block)
+                    for p in (points[index] for index in indices)]
+        def get_slopes(timestamps, block):
+            self.assertEqual(block, '0x4')
+            return {ts: f'0x{slopes[ts] % 2**256:064x}' for ts in timestamps}
+
+        with patch('generate_vedolo_vote_power_history._fetch_global_point_results', side_effect=get_points), \
+                patch('generate_vedolo_vote_power_history._fetch_slope_change_results', side_effect=get_slopes):
+            self.assertEqual(extend_verified_history(previous, new), build_vote_power_payload(new, points, slopes))
+            with self.assertRaisesRegex(ValueError, 'pinned totalSupply'):
+                extend_verified_history(previous, CanonicalSnapshot(4, new_ts, 1, 6, 2))
+
     def test_history_validation_rejects_booleans_in_exact_integer_fields(self):
         payload = {
             "schemaVersion": 1,
