@@ -20,6 +20,7 @@ REWARDS = 'rewards_programs.json'
 FIXED = {HEALTH, MARKETS, REWARDS, 'data/supply-health/history.json', 'data/rewards-programs-history.json'}
 TOKEN = re.compile(r'data/supply-history/[a-z_]+/0x[0-9a-f]{40}\.json')
 CHAINS = {'ethereum', 'arbitrum', 'berachain'}
+MAX_AGE_SECONDS = 4 * 3600
 
 
 def unpack(data, root):
@@ -83,6 +84,11 @@ def refresh(target):
     subprocess.run([sys.executable,'fetch_rewards_programs.py'],cwd=ROOT,check=True)
     verify(ROOT)
     check_freshness([MARKETS,HEALTH,REWARDS], ROOT)
+    now = datetime.now(timezone.utc)
+    for name in (MARKETS, HEALTH, REWARDS):
+        stamp = json.loads((ROOT / name).read_bytes())['generatedAt']
+        if not 0 <= (now - datetime.fromisoformat(stamp.replace('Z', '+00:00'))).total_seconds() <= MAX_AGE_SECONDS:
+            raise ValueError(f'Supply and Rewards report {name} falls outside the four-hour publication window')
     paths = FIXED | {p.relative_to(ROOT).as_posix() for p in (ROOT/'data/supply-history').glob('*/*.json')}
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
         for name in sorted(paths):
@@ -104,8 +110,8 @@ def stage(output, candidate):
     unpack(data, output)
     verify(output)
     (output/BUNDLE).write_bytes(data)
-    if (datetime.now(timezone.utc)-date(data)).total_seconds() > 8*3600:
-        print('::warning::Supply and rewards reports exceed eight hours; original timestamps retained')
+    if (datetime.now(timezone.utc)-date(data)).total_seconds() > MAX_AGE_SECONDS:
+        print('::warning::Supply and Rewards reports exceed four hours; original timestamps retained')
 
 
 if __name__ == '__main__':
