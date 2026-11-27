@@ -319,7 +319,7 @@ def validate_capital_proofs(row,margin):
         else:raise ValueError('Unknown complex capital proof classification')
 
 
-def _validate_snapshot(data):
+def _validate_snapshot(data, *, previously_published=False):
     chain_ids = {'ethereum': 1, 'arbitrum': 42161, 'berachain': 80094}
     families = {'deposits', 'withdrawals', 'transfers', 'trades', 'liquidations', 'vaporizations'}
     address_pattern, hash_pattern = r'0x[0-9a-f]{40}', r'0x[0-9a-f]{64}'
@@ -355,8 +355,12 @@ def _validate_snapshot(data):
             header=next((h for h in (opening,closing) if h['number']==quote['blockNumber'] and h['hash']==quote['blockHash']),None)
             if chain!='arbitrum' or header is None or ref!=str(header['number'])+':'+quote['marketId']:raise ValueError('Reconstructed quote endpoint mismatch')
 
-        if not 0 <= now - closing['timestamp'] <= data['maxAgeSeconds'] or generated.timestamp() < closing['timestamp']:
+        age = now - closing['timestamp']
+        if age < 0 or generated.timestamp() < closing['timestamp'] or (
+                not previously_published and age > data['maxAgeSeconds']):
             raise ValueError('Stale/future chain closing boundary')
+        if generated.timestamp() - closing['timestamp'] > data['maxAgeSeconds']:
+            raise ValueError('Snapshot was already stale when generated')
         target = closing['timestamp'] - data['windowSeconds']
         if not (opening['number'] < closing['number'] and following['number'] == opening['number'] + 1 and following['number'] <= closing['number'] and opening['timestamp'] <= target < following['timestamp'] <= closing['timestamp']):
             raise ValueError('Invalid thirty-day boundary proof')
@@ -517,10 +521,10 @@ def _validate_snapshot(data):
     return data
 
 
-def validate_snapshot(data):
+def validate_snapshot(data, *, previously_published=False):
     """Strict public contract, including independently recomputable TWR proof."""
     try:
-        result=_validate_snapshot(data)
+        result=_validate_snapshot(data, previously_published=previously_published)
         from borrow_pnl_activity import validate_metadata
         validate_metadata(result)
         return result
@@ -539,8 +543,9 @@ def atomic_write(path, data):
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--validate',required=True)
+    parser.add_argument('--previously-published', action='store_true')
     args=parser.parse_args()
-    data=validate_snapshot(json.loads(Path(args.validate).read_text()))
+    data=validate_snapshot(json.loads(Path(args.validate).read_text()), previously_published=args.previously_published)
     if 'activity' in data:
         from borrow_pnl_activity import validate_bundle
         validate_bundle(data,Path(args.validate).parent)

@@ -81,7 +81,13 @@ class _FakeContract:
 
 class AuditDolomiteRevenueOnchainTest(unittest.TestCase):
     def test_arbitrum_archive_fallback_finishes_when_primary_endpoints_have_no_state(self):
-        config = CHAIN_CONFIGS["arbitrum"]
+        self.assert_archive_fallback_finishes("arbitrum", "https://arbitrum.gateway.tenderly.co")
+
+    def test_berachain_archive_fallback_finishes_when_primary_endpoints_have_no_state(self):
+        self.assert_archive_fallback_finishes("berachain", "https://berachain.gateway.tenderly.co")
+
+    def assert_archive_fallback_finishes(self, chain_key, archive_endpoint):
+        config = CHAIN_CONFIGS[chain_key]
         row = {
             "marketId": 0,
             "token": "0x0000000000000000000000000000000000000001",
@@ -91,7 +97,7 @@ class AuditDolomiteRevenueOnchainTest(unittest.TestCase):
         }
 
         def provider(endpoint, _config):
-            if endpoint == "https://unavailable.invalid":
+            if endpoint != archive_endpoint:
                 raise RuntimeError("historical state is not available")
             return object()
 
@@ -99,14 +105,15 @@ class AuditDolomiteRevenueOnchainTest(unittest.TestCase):
              mock.patch("audit_dolomite_revenue_onchain.make_web3", side_effect=provider), \
              mock.patch("audit_dolomite_revenue_onchain.find_block_at_or_before", side_effect=[100, 200]), \
              mock.patch("audit_dolomite_revenue_onchain.market_interest_rows", return_value=[row]), \
-             mock.patch("audit_dolomite_revenue_onchain.fetch_historical_prices", return_value={"arbitrum:" + row["token"]: Decimal("10")}):
-            result = audit_chain_onchain("arbitrum", config, 1793059200, 1792972800)
+             mock.patch("audit_dolomite_revenue_onchain.fetch_historical_prices", return_value={chain_key + ":" + row["token"]: Decimal("10")}):
+            result = audit_chain_onchain(chain_key, config, 1793059200, 1792972800)
 
         self.assertEqual(result.get("status"), "audited")
         self.assertEqual(result.get("feesUSD"), 20.0)
         self.assertEqual(result.get("revenueUSD"), 4.0)
         self.assertEqual(result.get("fromBlock"), 100)
         self.assertEqual(result.get("toBlock"), 200)
+        self.assertEqual(result.get("rpcHost"), archive_endpoint.removeprefix("https://"))
 
     def test_default_target_date_uses_t_minus_two_closed_day(self):
         now = datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc)

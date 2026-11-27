@@ -165,6 +165,7 @@ CHAIN_CONFIGS = {
         "coinChain": "berachain",
         "mode": "standard",
         "margin": "0x003Ca23Fd5F0ca87D01F6eC6CD14A8AE60c2b97D",
+        "archiveRpcFallbacks": ["https://berachain.gateway.tenderly.co"],
     },
     "ethereum": {
         "name": "Ethereum",

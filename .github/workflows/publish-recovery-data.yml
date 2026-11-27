@@ -69,7 +69,7 @@ jobs:
       actions: read
   build:
     needs: [check-pnl, refresh-pnl]
-    if: ${{ !cancelled() && needs.check-pnl.result == 'success' && (needs.refresh-pnl.result == 'success' || needs.refresh-pnl.result == 'skipped') }}
+    if: ${{ !cancelled() }}
     permissions:
       actions: read
       contents: read
@@ -128,6 +128,15 @@ jobs:
             gh run download "$prior" --name verified-vedolo-flows --dir "$RUNNER_TEMP/vedolo" || echo "::warning::Reading previously published veDOLO flows"
           fi
           python3 scripts/recovery_vedolo_flows.py stage --candidate "$RUNNER_TEMP/vedolo/vedolo_flows.json"
+      - name: Include verified DOLO liquidity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow verify-liquidity.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-dolo-liquidity --dir "$RUNNER_TEMP/liquidity" || echo "::warning::Reading previously published DOLO liquidity"
+          fi
+          python3 scripts/recovery_liquidity.py stage "$RUNNER_TEMP/liquidity/dolo-liquidity.json"
       - name: Include verified cross-chain reward claims
         env:
           GH_TOKEN: ${{ github.token }}
@@ -137,6 +146,28 @@ jobs:
             gh run download "$prior" --name verified-reward-claims --dir "$RUNNER_TEMP/claims" || echo "::warning::Reading previously published reward claims"
           fi
           python3 scripts/recovery_reward_claims.py stage --candidate "$RUNNER_TEMP/claims/verified-reward-claims.zip"
+      - name: Include verified public token and holder reports
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for family in dolo-holders dolo-flows vedolo-inventory odolo-flow odolo-activity odolo-contract early-exits; do
+            name="verified-token-feeds-$family"
+            destination="$RUNNER_TEMP/token-feeds/$family"
+            prior=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name&per_page=20" --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_branch == "master")][0].workflow_run.id // empty')
+            if [ -n "$prior" ]; then
+              gh run download "$prior" --name "$name" --dir "$destination" || echo "::warning::Reading previously published $family"
+            fi
+            python3 scripts/recovery_token_feeds.py stage "$family" "$destination/$name.zip" --output _data
+          done
+      - name: Include the verified 30-day public market activity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prior=$(gh run list --workflow publish-supply-activity.yml --branch master --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$prior" ]; then
+            gh run download "$prior" --name verified-supply-activity --dir "$RUNNER_TEMP/supply-activity" || echo "::warning::Reading previously published supply activity"
+          fi
+          python3 scripts/recovery_supply_activity.py stage "$RUNNER_TEMP/supply-activity/overview.json" --output _data
       - name: Include independently verified supply history, pool health and rewards
         env:
           GH_TOKEN: ${{ github.token }}

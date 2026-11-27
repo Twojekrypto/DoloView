@@ -262,7 +262,7 @@ class SupplyActivityOverviewTests(unittest.TestCase):
         self.assertEqual(json.loads(target.read_text())['status'], 'unavailable')
 
     def test_workflow_preserves_overview_for_targeted_refreshes(self):
-        workflow = (Path(overview.__file__).parent / '.github/workflows/update-supply-history.yml').read_text()
+        workflow = (Path(overview.__file__).parent / '.github/workflow-reference/update-supply-history.yml').read_text()
         match = re.search(r'      - name: Generate static supply history\n        run: \|\n(.*?)(?=\n      - name:)', workflow, re.S)
         self.assertIsNotNone(match)
         block = textwrap.dedent(match.group(1))

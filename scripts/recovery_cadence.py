@@ -14,6 +14,9 @@ CADENCE_HOURS = {
     'publish-earn-r2.yml': 2,
     'publish-vedolo-flows.yml': 2,
     'publish-reward-claims.yml': 2,
+    'publish-token-feeds.yml': 2,
+    'publish-supply-activity.yml': 1,
+    'verify-liquidity.yml': 12,
 }
 
 

@@ -34,6 +34,8 @@ jobs:
       - name: Refresh and reconcile closed-day revenue
         env:
           GH_TOKEN: ${{ github.token }}
+          ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
           PYTHONUNBUFFERED: '1'
         run: python3 scripts/recovery_revenue.py build verified-revenue.zip
       - uses: actions/upload-artifact@v4

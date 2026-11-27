@@ -14,6 +14,7 @@ from refresh_pages_snapshots import ROOT
 
 NAME = 'verified-borrow-pnl.zip'
 PARENT = 'borrow_position_pnl.json'
+FRESHNESS_SECONDS = 4 * 3600
 ACTIVITY = 'data/borrow-position-pnl-history'
 SHARD = re.compile(ACTIVITY + r'/[0-9a-f]{24}/(?:ethereum|arbitrum|berachain)-[0-9a-f]\.json')
 
@@ -37,9 +38,9 @@ def cutoff(data):
 
 
 def needs_collection(candidate, now):
-    # Reserve the publisher's 32-minute build window before the six-hour limit.
+    # Reserve the publisher's 32-minute build window before the four-hour limit.
     def fresh(data):
-        return 0 <= now - cutoff(data) <= (360 - 32) * 60
+        return 0 <= now - cutoff(data) <= FRESHNESS_SECONDS - 32 * 60
     if candidate.is_file() and fresh(candidate.read_bytes()):
         return False
     published = previous_file(NAME)
@@ -67,14 +68,19 @@ def build(path):
 
 
 def stage(candidate, output):
-    old=previous_file(NAME)
-    data=candidate.read_bytes() if candidate.is_file() else old
+    old = previous_file(NAME)
+    data = candidate.read_bytes() if candidate.is_file() else None
+    if data is not None and not 0 <= time.time() - cutoff(data) <= FRESHNESS_SECONDS:
+        data = None
+    if old is not None and (data is None or cutoff(old) >= cutoff(data)):
+        data = old
     if data is None:
         raise ValueError("No verified public P&L is available to publish")
-    if old and cutoff(old)>cutoff(data):
-        data=old
-    expand(data,output)
-    subprocess.run([sys.executable,str(ROOT/'build_borrow_position_pnl.py'),'--validate',str(output/PARENT)],check=True)
+    expand(data, output)
+    command = [sys.executable, str(ROOT/'build_borrow_position_pnl.py'), '--validate', str(output/PARENT)]
+    if data is old:
+        command.append('--previously-published')
+    subprocess.run(command, check=True)
     (output/NAME).write_bytes(data)
 
 

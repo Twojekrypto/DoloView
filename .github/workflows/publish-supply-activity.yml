@@ -1,0 +1,55 @@
+name: Verify public supply deposits and withdrawals
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '26 * * * *'
+  push:
+    branches: [master]
+    paths:
+      - .github/workflows/publish-supply-activity.yml
+      - scripts/recovery_supply_activity.py
+      - generate_supply_activity.py
+      - generate_supply_activity_overview.py
+      - wlfi_markets.py
+      - tests/test_recovery_supply_activity.py
+
+permissions:
+  contents: read
+concurrency:
+  group: verify-supply-activity
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m unittest discover -s tests -p 'test_recovery_supply_activity.py'
+      - name: Verify the complete indexed 30-day market feed
+        run: |
+          python3 scripts/recovery_supply_activity.py build overview.json
+          python3 scripts/recovery_supply_activity.py verify overview.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-supply-activity
+          path: overview.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master

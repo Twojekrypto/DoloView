@@ -34,6 +34,26 @@ class PublicPnlBundleTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'No verified'):
                     stage(candidate, Path(work))
 
+    def test_stale_candidate_keeps_public_bytes_and_never_passes_as_fresh(self):
+        shard = ACTIVITY + '/' + 'a'*24 + '/arbitrum-3.json'
+        def pack(stamp):
+            stream = io.BytesIO()
+            with zipfile.ZipFile(stream, 'w') as archive:
+                archive.writestr(PARENT, json.dumps({'sourceAsOf':stamp}))
+                archive.writestr(shard, '{}')
+            return stream.getvalue()
+        now = 100000
+        old = pack(now-21601)
+        with tempfile.TemporaryDirectory() as work:
+            candidate = Path(work)/'candidate.zip'
+            candidate.write_bytes(pack(now-14401))
+            with patch('recovery_borrow_pnl.previous_file', return_value=old), \
+                    patch('recovery_borrow_pnl.time.time', return_value=now), \
+                    patch('recovery_borrow_pnl.subprocess.run') as run:
+                stage(candidate, Path(work))
+                self.assertIn('--previously-published', run.call_args.args[0])
+            self.assertEqual((Path(work)/'verified-borrow-pnl.zip').read_bytes(), old)
+
     def test_only_parent_and_immutable_activity_are_public(self):
         shard = ACTIVITY + '/' + 'a'*24 + '/arbitrum-3.json'
         for extra in (None, '.cache/borrow-position-pnl/a.json', '../outside'):

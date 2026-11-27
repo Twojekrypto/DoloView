@@ -1,0 +1,100 @@
+name: Verify public DOLO, veDOLO and oDOLO data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    name: Verify ${{ matrix.family }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.minutes }}
+    permissions:
+      contents: read
+      actions: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - family: dolo-holders
+            minutes: 112
+            checkpoint: dolo_holders_state.json
+          - family: dolo-flows
+            minutes: 178
+            checkpoint: dolo_flows_state.json
+          - family: vedolo-inventory
+            minutes: 140
+            checkpoint: |
+              locked_cache.json
+              vedolo_vote_power_history_state.json
+          - family: odolo-flow
+            minutes: 120
+            checkpoint: |
+              odolo_flows_state.json
+              odolo_flow_checkpoints
+              reward_claim_events_state.json
+          - family: odolo-activity
+            minutes: 75
+            checkpoint: exercisers_cache.json
+          - family: odolo-contract
+            minutes: 12
+          - family: early-exits
+            minutes: 80
+            checkpoint: early_exits_cache.json
+    concurrency:
+      group: verified-token-feeds-${{ matrix.family }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m unittest tests.test_recovery_token_feeds
+      - name: Restore private incremental scan state
+        id: state
+        if: ${{ matrix.checkpoint != '' }}
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ matrix.checkpoint }}
+          key: token-feed-v1-${{ matrix.family }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: token-feed-v1-${{ matrix.family }}-
+      - name: Collect and validate the public feed
+        env:
+          FAMILY: ${{ matrix.family }}
+          ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
+          ALCHEMY_ETHEREUM_RPC: ${{ secrets.ALCHEMY_ETHEREUM_RPC }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          BERASCAN_API_KEY: ${{ secrets.BERASCAN_API_KEY }}
+          PYTHONUNBUFFERED: '1'
+          REWARD_CLAIM_CHAINS: berachain
+          REWARD_CLAIM_CHUNK_SIZE_BERACHAIN: '10000'
+          REWARD_CLAIM_TIMESTAMP_BATCH_SIZE_BERACHAIN: '20'
+          VEDOLO_MAX_RUNTIME_SECONDS: '2200'
+          DOLO_FLOWS_LOG_CHUNK_DELAY_SECONDS: '0.5'
+        run: |
+          python3 scripts/recovery_token_feeds.py build "$FAMILY" "$RUNNER_TEMP/verified-token-feeds-$FAMILY.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-token-feeds-${{ matrix.family }}
+          path: ${{ runner.temp }}/verified-token-feeds-${{ matrix.family }}.zip
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Request publication of the verified feed
+        if: ${{ github.ref == 'refs/heads/master' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-recovery-data.yml --repo "$GITHUB_REPOSITORY" --ref master
+      - name: Save incremental scan progress
+        if: ${{ always() && steps.state.outcome == 'success' }}
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ matrix.checkpoint }}
+          key: ${{ steps.state.outputs.cache-primary-key }}

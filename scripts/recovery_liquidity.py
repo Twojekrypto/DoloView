@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from data_artifact_store import timestamp, validate_payload
+from data_artifact_store import StorageError, timestamp, validate_payload
 from recovery_market_feeds import previous_file
 from refresh_pages_snapshots import check_freshness
 
@@ -23,12 +23,36 @@ def verify_transition(before, after):
             raise ValueError(f'Liquidity coverage regressed for {row["key"]}')
 
 
+def stage(candidate, output):
+    published = previous_file(FILE)
+    baseline = published if published is not None else previous_file(FILE, PUBLISHED_SNAPSHOT)
+    if baseline is None:
+        raise ValueError('No validated liquidity baseline is available')
+    validate_payload(baseline, 'resume')
+    selected = published
+    if candidate.is_file():
+        try:
+            raw = candidate.read_bytes()
+            if raw != published:
+                verify_transition(baseline, raw)
+            selected = raw
+        except (ValueError, StorageError) as exc:
+            print(f'::warning::Retaining previous verified liquidity data: {exc}')
+    if selected is not None:
+        destination = output / FILE
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(selected)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['prepare', 'verify'])
+    parser.add_argument('mode', choices=['prepare', 'verify', 'stage'])
     parser.add_argument('baseline', type=Path)
+    parser.add_argument('--output', type=Path, default=Path('_data'))
     args = parser.parse_args()
-    if args.mode == 'prepare':
+    if args.mode == 'stage':
+        stage(args.baseline, args.output)
+    elif args.mode == 'prepare':
         body = previous_file(FILE)
         if body is None:
             body = previous_file(FILE, PUBLISHED_SNAPSHOT)
