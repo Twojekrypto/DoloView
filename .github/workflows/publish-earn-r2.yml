@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_berachain_history:
-        description: Replay existing Berachain wallet histories through the fresh snapshot
+        description: Replay existing wallet histories through the fresh snapshot
         type: boolean
         default: true
 
@@ -97,6 +97,24 @@ jobs:
       - name: Restore the last verified public netflows for a balances-only run
         if: github.event_name == 'workflow_dispatch' && !inputs.refresh_berachain_history
         run: python3 -m scripts.recovery_bera_flow restore
+
+      - name: Verify and replay existing Ethereum histories
+        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
+        continue-on-error: true
+        timeout-minutes: 22
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: |
+          python3 -m unittest tests.test_refresh_earn_other_chains
+          python3 -m scripts.refresh_earn_other_chains --chain ethereum
+
+      - name: Verify and replay existing Arbitrum histories
+        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
+        continue-on-error: true
+        timeout-minutes: 30
+        env:
+          PYTHONUNBUFFERED: '1'
+        run: python3 -m scripts.refresh_earn_other_chains --chain arbitrum
 
       - name: Refresh historical EARN prices
         run: |
