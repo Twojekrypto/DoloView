@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import build_earn_verified_ledger as verified_ledger
 from build_earn_verified_ledger import (
@@ -14,6 +15,32 @@ from build_earn_verified_ledger import (
 
 
 class BuildEarnVerifiedLedgerTest(unittest.TestCase):
+    def test_closed_supply_market_survives_after_wallet_leaves_the_snapshot(self):
+        wallet = '0x' + '11' * 20
+        token = '0x' + '22' * 20
+        start = 7_000_000
+        block = start + 10
+        def event(n, par, flow, kind):
+            return {'blockNumber': start + n, 'transactionIndex': 0, 'logIndex': 0,
+                    'accountKnown': True, 'flowType': kind, 'newPar': str(par), 'deltaWei': str(flow)}
+        clean = [event(1, 100, 100, 'd'), event(2, 70, -32, 'w'), event(3, 0, -73, 'w'),
+                 event(4, -100, -100, 'w'), event(5, 0, 105, 'd')]
+        history = {'chain': 'berachain', 'address': wallet, 'lastScannedBlock': block,
+                   'scanRange': {'fromBlock': start, 'toBlock': block},
+                   'accounts': {'0': {'accountKnown': True, 'markets': {
+                       '0': {'events': clean},
+                       '1': {'events': [event(1, -100, -100, 'w'), event(3, 0, 105, 'd')]},
+                       '2': {'events': [*clean, clean[-1]]},
+                   }}}}
+        older = {wallet: {'markets': {'0': {'token': token, 'symbol': 'TOKEN', 'decimals': 6,
+                                                        'par': '100', 'wei': '100'}}}}
+        with patch.object(verified_ledger, '_load_canonical_history', return_value=history):
+            result = verified_ledger._build_address_ledger(wallet, 'berachain', '2026-11-27',
+                                                          [('2026-11-24', older), ('2026-11-27', {})], {},
+                                                          snapshot_block=block)
+        self.assertEqual(set(result['markets']), {'0'})
+        self.assertEqual(result['markets']['0'].get('settledSupply'), ['5', '2026-11-27', block])
+
     def test_rejects_truncated_or_adjusted_resolved_replay(self):
         address = "0x1111111111111111111111111111111111111111"
         base = {

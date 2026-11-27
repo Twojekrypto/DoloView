@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+from scan_earn_netflow import CHAINS as EARN_CHAIN_CONFIG
+
 
 ROOT = Path(__file__).resolve().parent
 SNAPSHOT_DIR = ROOT / "data" / "earn-snapshots"
@@ -528,7 +530,79 @@ def _calculate_historical_yield_pnl(history, prices_by_date, *, decimals, symbol
     }
 
 
-def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices=None, *, snapshot_block=None):
+def _closed_supply_flows(history, chain, address, snapshot_block, active_markets):
+    """Reconcile settled supply using signed on-chain flows between zero balances."""
+    if not isinstance(history, dict) or history.get('chain') != chain or history.get('address') != address:
+        return {}
+    start = (EARN_CHAIN_CONFIG.get(chain) or {}).get('start_block', 0)
+    scan = history.get('scanRange') or {}
+    block = _parse_int(snapshot_block)
+    if (not start or not 0 < _parse_int(scan.get('fromBlock')) <= start
+            or not 0 < block <= min(_parse_int(scan.get('toBlock')), _parse_int(history.get('lastScannedBlock')))):
+        return {}
+
+    totals, ineligible = {}, set(active_markets)
+    for account in (history.get('accounts') or {}).values():
+        for mid, market in (account.get('markets') or {}).items():
+            if mid in ineligible:
+                continue
+            events = market.get('events') or []
+            if not events:
+                continue
+            par = net = 0
+            last_order = (0, -1, -1)
+            had_supply = False
+            for event in events:
+                order = tuple(_parse_int(event.get(key), -1) for key in ('blockNumber', 'transactionIndex', 'logIndex'))
+                if order[0] > block:
+                    continue
+                if (account.get('accountKnown') is not True or event.get('accountKnown') is not True
+                        or order <= last_order or min(order) < 0
+                        or not _is_integer_text(event.get('newPar')) or not _is_integer_text(event.get('deltaWei'))
+                        or event.get('flowType') not in {'d', 'w', 's', 'x'}):
+                    ineligible.add(mid)
+                    break
+                next_par, delta = int(event['newPar']), int(event['deltaWei'])
+                if (par * next_par < 0 or (next_par > par and delta <= 0)
+                        or (next_par < par and delta >= 0) or (par == next_par == 0 and delta)):
+                    ineligible.add(mid)
+                    break
+                if max(par, next_par) > 0:
+                    net += delta
+                par = next_par
+                had_supply |= par > 0
+                last_order = order
+            if par != 0:
+                ineligible.add(mid)
+            elif had_supply:
+                totals[mid] = totals.get(mid, 0) - net
+    return {mid: total for mid, total in totals.items() if mid not in ineligible and total >= 0}
+
+
+def _previous_closed_supply(chain, address, history, latest_date, snapshot_block, active_markets):
+    if not isinstance(history, dict) or not snapshot_block:
+        return {}
+    path = RESOLVED_INTEREST_DIR / chain / f'{address}.json'
+    if not path.is_file():
+        return {}
+    payload = _read_json(path)
+    if not isinstance(payload, dict):
+        return {}
+    day, block = payload.get('snapshotDate'), _parse_int(payload.get('comparisonBlock'))
+    if not isinstance(day, str) or not 0 < block <= snapshot_block or day > latest_date:
+        return {}
+    validated = _validate_resolved_interest_ledger(payload, chain=chain, address=address, latest_date=day,
+                                                  canonical_history=history, snapshot_comparison_block=block)
+    if not validated:
+        return {}
+    return {mid: [row['settledSupplyYield'], day, block]
+            for mid, row in validated['markets'].items()
+            if mid not in active_markets and row.get('hadSupply') is True
+            and all(int(row[key]) == 0 for key in ('currentSupplyPar', 'currentCollateralSupplyPar', 'currentBorrowPar'))}
+
+
+def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_addr, historical_prices=None, *,
+                          snapshot_block=None, market_catalog=None):
     address = address.lower()
     history_by_market = {}
     meta_by_market = {}
@@ -576,7 +650,12 @@ def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_add
         history_comparison_block,
     )
     canonical_market_breakdown = _derive_canonical_market_breakdown(history_payload, history_comparison_block)
-    market_ids = set(history_by_market.keys()) | {str(k) for k in addr_flows.keys()}
+    active_markets = {str(mid) for mid in (((snapshots[-1][1].get(address) or {}).get('markets') or {}) if snapshots else {})}
+    settled = _previous_closed_supply(chain, address, history_payload, latest_date, snapshot_block, active_markets)
+    settled.update({mid: [str(total), latest_date, snapshot_block] for mid, total in
+                    _closed_supply_flows(history_payload, chain, address, snapshot_block, active_markets).items()})
+    settled = {mid: proof for mid, proof in settled.items() if (meta_by_market.get(mid) or (market_catalog or {}).get(mid) or {}).get('token')}
+    market_ids = set(history_by_market) | {str(k) for k in addr_flows} | set(settled)
     if not market_ids:
         return None
 
@@ -599,7 +678,7 @@ def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_add
 
     for mid in sorted(market_ids, key=_market_sort_key):
         hist = history_by_market.get(mid, [])
-        meta = meta_by_market.get(mid, {})
+        meta = meta_by_market.get(mid) or (market_catalog or {}).get(mid) or {}
         decimals = _parse_int(meta.get("decimals", 18))
 
         snapshot_yield = None
@@ -789,6 +868,8 @@ def _build_address_ledger(address, chain, latest_date, snapshots, netflow_by_add
             decimals=decimals,
             symbol=meta.get("symbol", ""),
         ))
+        if mid in settled:
+            payload['settledSupply'] = settled[mid]
         if snapshot_yield is not None:
             payload["snapshotYield"] = str(snapshot_yield)
         if netflow_yield is not None:
@@ -958,8 +1039,16 @@ def main():
         historical_prices = _load_historical_prices(chain)
         existing_addresses = _discover_existing_addresses(output_dir, chain) if args.existing_addresses else set()
 
+        market_catalog = {}
         if args.all_addresses:
-            addresses = set(latest_chain_data.keys()) | set(netflow_by_addr.keys()) | requested_addresses | existing_addresses
+            addresses = set(netflow_by_addr) | requested_addresses | existing_addresses
+            addresses.update(file.stem for file in (HISTORY_DIR / chain).glob('0x*.json'))
+            for _, chain_data in reversed(snapshots):
+                addresses.update(chain_data)
+                for wallet in chain_data.values():
+                    for mid, market in (wallet.get('markets') or {}).items():
+                        if market.get('token'):
+                            market_catalog.setdefault(str(mid), market)
         else:
             addresses = set(requested_addresses) | existing_addresses
 
@@ -971,6 +1060,7 @@ def main():
                 continue
             ledger = _build_address_ledger(
                 address, chain, latest_date, snapshots, netflow_by_addr, historical_prices, snapshot_block=snapshot_block,
+                market_catalog=market_catalog,
             )
             out_path = output_dir / chain / f"{address}.json"
             had_existing_output = out_path.is_file()

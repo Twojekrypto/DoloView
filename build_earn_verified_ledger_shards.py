@@ -23,6 +23,7 @@ MARKET_KEYS = (
     "historicalYieldPricedIntervals", "historicalYieldEligibleIntervals",
     "historicalYieldSkippedFlowIntervals", "historicalYieldMissingPriceIntervals",
     "historicalYieldValuationStatus", "historicalYieldValuationMethod",
+    "settledSupply",
 )
 
 HISTORICAL_PNL_DEFAULTS = {
@@ -89,7 +90,8 @@ def _merge_published_ledger(existing, candidate: dict, source_payload: dict) -> 
 
 def _encode_compact_ledger(ledger: dict) -> list:
     markets = {
-        market_id: [market.get(key) for key in MARKET_KEYS]
+        market_id: ([market.get(key) for key in MARKET_KEYS[:-1]]
+                    + ([market['settledSupply']] if 'settledSupply' in market else []))
         for market_id, market in (ledger.get("markets") or {}).items()
     }
     encoded = [str(ledger.get("snapshotDate") or ""), markets]

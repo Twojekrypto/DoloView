@@ -9,6 +9,10 @@ on:
         description: Replay existing wallet histories through the fresh snapshot
         type: boolean
         default: true
+      rebuild_published_ledgers:
+        description: Rebuild public Earn ledgers from the existing verified inputs
+        type: boolean
+        default: false
 
 concurrency:
   group: earn-r2-writer
@@ -47,11 +51,13 @@ jobs:
           python3 -m scripts.earn_recovery_store hydrate "$RUNNER_TEMP/earn-state.json"
 
       - name: Generate fresh earn snapshots
+        if: ${{ !inputs.rebuild_published_ledgers }}
         run: python3 generate_earn_snapshots.py
         env:
           PYTHONUNBUFFERED: '1'
 
       - name: Validate latest snapshot date
+        if: ${{ !inputs.rebuild_published_ledgers }}
         run: |
           python3 - <<'PY'
           import json
@@ -84,7 +90,7 @@ jobs:
 
       - name: Replay Berachain history to the validated snapshot block
         id: bera-history
-        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
+        if: ${{ !inputs.rebuild_published_ledgers && (github.event_name == 'schedule' || inputs.refresh_berachain_history) }}
         env:
           ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}
           PYTHONUNBUFFERED: '1'
@@ -95,11 +101,11 @@ jobs:
           python3 -m scripts.recovery_bera_flow refresh --include-missing-wallets
 
       - name: Restore the last verified public netflows for a balances-only run
-        if: github.event_name == 'workflow_dispatch' && !inputs.refresh_berachain_history
+        if: ${{ !inputs.rebuild_published_ledgers && github.event_name == 'workflow_dispatch' && !inputs.refresh_berachain_history }}
         run: python3 -m scripts.recovery_bera_flow restore
 
       - name: Verify and replay existing Ethereum histories
-        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
+        if: ${{ !inputs.rebuild_published_ledgers && (github.event_name == 'schedule' || inputs.refresh_berachain_history) }}
         continue-on-error: true
         timeout-minutes: 22
         env:
@@ -109,7 +115,7 @@ jobs:
           python3 -m scripts.refresh_earn_other_chains --chain ethereum
 
       - name: Verify and replay existing Arbitrum histories
-        if: github.event_name == 'schedule' || inputs.refresh_berachain_history
+        if: ${{ !inputs.rebuild_published_ledgers && (github.event_name == 'schedule' || inputs.refresh_berachain_history) }}
         continue-on-error: true
         timeout-minutes: 30
         env:
@@ -117,6 +123,7 @@ jobs:
         run: python3 -m scripts.refresh_earn_other_chains --chain arbitrum
 
       - name: Refresh historical EARN prices
+        if: ${{ !inputs.rebuild_published_ledgers }}
         run: |
           python3 build_earn_historical_prices.py \
             --chain ethereum \
@@ -126,6 +133,7 @@ jobs:
           PYTHONUNBUFFERED: '1'
 
       - name: Refresh existing strict resolved interest ledgers
+        if: ${{ !inputs.rebuild_published_ledgers }}
         run: |
           python3 -m unittest tests.test_refresh_earn_proofs
           python3 scripts/refresh_earn_proofs.py
@@ -134,6 +142,7 @@ jobs:
 
       - name: Build active-chain verified ledger caches
         run: |
+          python3 -m unittest tests.test_build_earn_verified_ledger tests.test_earn_ledger_shards
           python3 build_earn_verified_ledger.py \
             --chain ethereum \
             --chain arbitrum \
@@ -162,6 +171,7 @@ jobs:
             data/earn-verified-ledger-shards
 
       - name: Rebuild quality and freshness reports
+        if: ${{ !inputs.rebuild_published_ledgers }}
         run: |
           python3 update_earn_freshness_status.py --output data/earn-freshness/status.json
           python3 build_earn_quality_status.py --output data/earn-quality/status.json
