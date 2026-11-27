@@ -344,7 +344,7 @@ class RewardClaimTimestampReuseTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "publish-reward-claims.yml").read_text()
         self.assertIn("REWARD_CLAIM_CHAINS: arbitrum,berachain", workflow)
         self.assertIn("ALCHEMY_ARBITRUM_RPC: ${{ secrets.ALCHEMY_ARBITRUM_RPC }}", workflow)
-        self.assertIn("ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 }}", workflow)
+        self.assertIn("ALCHEMY_BERACHAIN_RPC: ${{ secrets.ALCHEMY_BERACHAIN_RPC_CZ9 || secrets.ALCHEMY_BERACHAIN_RPC }}", workflow)
         self.assertLess(workflow.index("scripts/recovery_reward_claims.py build"), workflow.index("actions/upload-artifact"))
         self.assertNotIn("git push", workflow)
 
