@@ -225,30 +225,35 @@ def fetch_transfer_logs(chain_key, start_block, end_block=None):
     cfg = CHAINS[chain_key]
     rpcs = cfg["rpcs"]
     chunk_size = cfg["chunk_size"]
-    rpc_idx = 0
-
     if end_block is None:
-        end_block = get_current_block(rpcs[0])
+        for rpc in rpcs:
+            end_block = get_current_block(rpc)
+            if end_block:
+                break
+        if not end_block:
+            raise RuntimeError(f"{cfg['name']}: current block unavailable")
 
-    if start_block >= end_block:
-        print(f"  {cfg['name']}: already up to date (block {start_block})")
-        return [], start_block, []
+    if start_block > end_block:
+        print(f"  {cfg['name']}: already up to date (block {end_block})")
+        return [], end_block, []
 
-    total_chunks = (end_block - start_block + chunk_size - 1) // chunk_size
+    total_chunks = (end_block - start_block + chunk_size) // chunk_size
     print(f"  {cfg['name']}: scanning blocks {start_block:,} → {end_block:,} ({total_chunks} chunks)")
 
     all_transfers = []
     current = start_block
     chunks_done = 0
     chunks_failed = 0
+    consecutive_successes = 0
     skipped_ranges = []  # [start, end] of block ranges lost to persistent RPC failure
 
     while current <= end_block:
         chunk_end = min(current + chunk_size - 1, end_block)
 
         success = False
+        range_limited = False
         for attempt in range(len(rpcs) * 2):
-            rpc = rpcs[(rpc_idx + attempt) % len(rpcs)]
+            rpc = rpcs[attempt % len(rpcs)]
             try:
                 resp = requests.post(rpc, json={
                     "jsonrpc": "2.0", "method": "eth_getLogs",
@@ -263,43 +268,50 @@ def fetch_transfer_logs(chain_key, start_block, end_block=None):
                 r = resp.json()
                 if "error" in r:
                     err_msg = r["error"].get("message", "")
+                    details = str(r["error"].get("data", "")).lower()
+                    if ('block range' in err_msg.lower() or 'ranges over' in err_msg.lower()
+                            or 'returned more than' in err_msg.lower() or 'returned more than' in details
+                            or 'block range' in details):
+                        range_limited = True
+                        continue
                     if _is_capacity_rpc_error(r["error"]):
                         # Endpoint out of quota / rate-limited — rotate to the
                         # next RPC, do not shrink the chunk.
                         time.sleep(0.5)
                         continue
-                    if "range" in err_msg.lower() or "limit" in err_msg.lower():
-                        # Range too large — halve chunk
-                        chunk_size = max(chunk_size // 2, 1000)
-                        chunk_end = min(current + chunk_size - 1, end_block)
-                        continue
                     time.sleep(0.5)
                     continue
 
-                logs = r.get("result", [])
+                resp.raise_for_status()
+                logs = r.get("result")
+                if not isinstance(logs, list):
+                    raise ValueError('Missing Transfer logs result')
+                chunk = []
                 for log in logs:
-                    if len(log.get("topics", [])) < 3:
-                        continue
+                    if len(log.get("topics", [])) != 3 or log.get('removed'):
+                        raise ValueError('Invalid Transfer log topics or removal')
                     from_addr = "0x" + log["topics"][1][26:].lower()
                     to_addr = "0x" + log["topics"][2][26:].lower()
                     value_wei = int(log["data"], 16)
                     block_num = int(log["blockNumber"], 16)
-                    all_transfers.append((from_addr, to_addr, value_wei, block_num))
+                    if not current <= block_num <= chunk_end:
+                        raise ValueError('Transfer log outside the requested range')
+                    chunk.append((from_addr, to_addr, value_wei, block_num))
 
+                all_transfers.extend(chunk)
                 success = True
                 break
             except requests.exceptions.Timeout:
-                # Reduce chunk size on timeout
-                chunk_size = max(chunk_size // 2, 1000)
-                chunk_end = min(current + chunk_size - 1, end_block)
                 time.sleep(1)
-            except Exception:
+            except (requests.RequestException, ValueError, TypeError, KeyError, AttributeError):
                 time.sleep(0.5)
 
         if not success:
-            if chunk_size > 1000:
-                chunk_size = max(chunk_size // 2, 1000)
-                chunk_end = min(current + chunk_size - 1, end_block)
+            consecutive_successes = 0
+            minimum = 1 if range_limited else 1000
+            covered = chunk_end - current + 1
+            if covered > minimum:
+                chunk_size = max(covered // 2, minimum)
                 print(f"    ⚠️ Retrying block {current:,} with smaller chunk ({chunk_size:,} blocks)")
                 continue
             # Persistent failure even at the smallest chunk: record the gap so it is
@@ -313,18 +325,19 @@ def fetch_transfer_logs(chain_key, start_block, end_block=None):
 
         current = chunk_end + 1
         chunks_done += 1
+        consecutive_successes += 1
 
         if chunks_done % 20 == 0 or chunks_done == total_chunks:
             pct = chunks_done * 100 // max(total_chunks, 1)
             print(f"    {cfg['name']}: {pct}% ({chunks_done}/{total_chunks} chunks, {len(all_transfers):,} transfers)", flush=True)
 
         # Restore chunk size gradually
-        if chunk_size < cfg["chunk_size"]:
+        if chunk_size < cfg["chunk_size"] and consecutive_successes >= 8:
             chunk_size = min(chunk_size * 2, cfg["chunk_size"])
+            consecutive_successes = 0
 
         time.sleep(0.05)
 
-    rpc_idx = (rpc_idx + 1) % len(rpcs)
     if chunks_failed > 0:
         total_attempted = chunks_done + chunks_failed
         fail_pct = chunks_failed * 100 // max(total_attempted, 1)
@@ -970,7 +983,7 @@ def main():
                 g_start, g_end = int(gap[0]), int(gap[1])
             except (TypeError, ValueError, IndexError):
                 continue
-            if g_start >= g_end:
+            if g_start > g_end:
                 continue
             print(f"  ↻ {CHAINS[chain_key]['name']}: re-scanning skipped range {g_start:,}-{g_end:,}")
             g_txs, _, g_skipped = fetch_transfer_logs(chain_key, start_block=g_start, end_block=g_end)
@@ -987,8 +1000,10 @@ def main():
 
     # Fetch new Transfer events via eth_getLogs
     print("\n📡 Fetching Transfer events via RPC logs...")
-    eth_txs, eth_end, eth_new_skipped = fetch_transfer_logs("eth", start_block=eth_last_block)
-    bera_txs, bera_end, bera_new_skipped = fetch_transfer_logs("bera", start_block=bera_last_block)
+    eth_start = eth_last_block + int("eth_last_block" in state)
+    bera_start = bera_last_block + int("bera_last_block" in state)
+    eth_txs, eth_end, eth_new_skipped = fetch_transfer_logs("eth", start_block=eth_start)
+    bera_txs, bera_end, bera_new_skipped = fetch_transfer_logs("bera", start_block=bera_start)
     eth_txs = eth_gap_txs + eth_txs
     bera_txs = bera_gap_txs + bera_txs
     eth_skipped.extend(eth_new_skipped)
@@ -1000,14 +1015,16 @@ def main():
 
     # Apply new transfers
     print("\n📊 Applying transfers...")
+    eth_last_block = max(eth_last_block, eth_end)
+    bera_last_block = max(bera_last_block, bera_end)
     if eth_txs:
         eth_balances, eth_max = apply_transfers(eth_balances, eth_txs)
-        eth_last_block = max(eth_last_block, eth_max, eth_end)
+        eth_last_block = max(eth_last_block, eth_max)
         print(f"  ETH: {len(eth_txs):,} transfers applied, now at block {eth_last_block:,}")
 
     if bera_txs:
         bera_balances, bera_max = apply_transfers(bera_balances, bera_txs)
-        bera_last_block = max(bera_last_block, bera_max, bera_end)
+        bera_last_block = max(bera_last_block, bera_max)
         print(f"  BERA: {len(bera_txs):,} transfers applied, now at block {bera_last_block:,}")
 
     eth_clean = {a: round(b, 4) for a, b in eth_balances.items() if b >= MIN_BALANCE}
@@ -1079,15 +1096,15 @@ def main():
     with open(OUTPUT_JSON, "w") as f:
         json.dump(output, f, separators=(",", ":"))
 
-    # Save state for incremental sync. Persist any still-unscanned gaps (bounded) so
+    # Save state for incremental sync. Persist all still-unscanned gaps so
     # the next run retries them; clears automatically once a range scans cleanly.
     save_state({
         "eth_balances": {a: b for a, b in eth_balances.items() if abs(b) > 0.0001},
         "bera_balances": {a: b for a, b in bera_balances.items() if abs(b) > 0.0001},
         "eth_last_block": eth_last_block,
         "bera_last_block": bera_last_block,
-        "skipped_ranges_eth": eth_skipped[-200:],
-        "skipped_ranges_bera": bera_skipped[-200:],
+        "skipped_ranges_eth": eth_skipped,
+        "skipped_ranges_bera": bera_skipped,
     })
     if eth_skipped or bera_skipped:
         print(f"  ⚠️ Unscanned gaps carried to next run — eth: {len(eth_skipped)}, bera: {len(bera_skipped)}")

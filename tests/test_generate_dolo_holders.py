@@ -3,7 +3,7 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -21,6 +21,26 @@ def uint256_hex(value):
 
 
 class GenerateDoloHoldersRpcBatchTests(unittest.TestCase):
+    def test_transfer_scan_retries_a_malformed_response_without_counting_partial_rows(self):
+        row = {'topics': [holders.TRANSFER_TOPIC, '0x' + '0' * 24 + ALICE[2:],
+                          '0x' + '0' * 24 + BOB[2:]],
+               'blockNumber': hex(100), 'data': uint256_hex(100)}
+        bad = Mock()
+        bad.json.return_value = {'result': [row, {**row, 'blockNumber': hex(101)}]}
+        good = Mock()
+        good.json.return_value = {'result': [row]}
+        with patch.object(holders.requests, 'post', side_effect=[bad, good]), patch.object(holders.time, 'sleep'):
+            rows, cursor, gaps = holders.fetch_transfer_logs('eth', 100, 100)
+        self.assertEqual(rows, [(ALICE, BOB, 100, 100)])
+        self.assertEqual(cursor, 100)
+        self.assertEqual(gaps, [])
+
+    def test_transfer_scan_does_not_accept_an_error_envelope_as_empty(self):
+        response = Mock()
+        response.json.return_value = {'message': 'temporary upstream error'}
+        with patch.object(holders.requests, 'post', return_value=response), patch.object(holders.time, 'sleep'):
+            self.assertEqual(holders.fetch_transfer_logs('eth', 101, 101), ([], 101, [[101, 101]]))
+
     def test_verify_top_balances_uses_batch_results(self):
         rows = [
             {"address": ALICE, "balance": 1000, "balance_eth": 1000, "balance_bera": 0, "chains": ["eth"]},
