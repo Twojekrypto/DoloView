@@ -120,6 +120,46 @@ def average_discount_pct(durations):
     return sum(protocol_discount_pct(duration) for duration in durations) / len(durations) if durations else 0.0
 
 
+def lock_statistics(durations, total_exercises):
+    """Summarize exact lock durations regardless of transaction source."""
+    avg_seconds = sum(durations) / len(durations)
+    avg_days = avg_seconds / 86400
+    avg_months = avg_days / 30.44
+
+    # Distribution buckets
+    buckets = {"< 1 month": 0, "1-3 months": 0, "3-6 months": 0,
+               "6-12 months": 0, "1-2 years": 0, "2+ years": 0}
+    for d in durations:
+        days = d / 86400
+        if days < 30:
+            buckets["< 1 month"] += 1
+        elif days < 90:
+            buckets["1-3 months"] += 1
+        elif days < 180:
+            buckets["3-6 months"] += 1
+        elif days < 365:
+            buckets["6-12 months"] += 1
+        elif days < 730:
+            buckets["1-2 years"] += 1
+        else:
+            buckets["2+ years"] += 1
+
+    # Average each transaction's deployed-protocol discount. The calculator is
+    # linear during week one, then rounds the remaining duration up by week.
+    avg_discount = average_discount_pct(durations)
+
+    return {
+        "avg_lock_days": round(avg_days, 1),
+        "avg_lock_months": round(avg_months, 1),
+        "avg_discount_pct": round(avg_discount, 3),
+        "total_exercises": total_exercises,
+        "valid_durations": len(durations),
+        "distribution": buckets,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+
+
+
 def main():
     print("=" * 55)
     print("oDOLO Average Lock Duration Calculator")
@@ -144,32 +184,12 @@ def main():
             return
         raise SystemExit(1)
 
-    avg_seconds = sum(durations) / len(durations)
-    avg_days = avg_seconds / 86400
-    avg_months = avg_days / 30.44
-    avg_years = avg_days / 365.25
-
-    # Distribution buckets
-    buckets = {"< 1 month": 0, "1-3 months": 0, "3-6 months": 0,
-               "6-12 months": 0, "1-2 years": 0, "2+ years": 0}
-    for d in durations:
-        days = d / 86400
-        if days < 30:
-            buckets["< 1 month"] += 1
-        elif days < 90:
-            buckets["1-3 months"] += 1
-        elif days < 180:
-            buckets["3-6 months"] += 1
-        elif days < 365:
-            buckets["6-12 months"] += 1
-        elif days < 730:
-            buckets["1-2 years"] += 1
-        else:
-            buckets["2+ years"] += 1
-
-    # Average each transaction's deployed-protocol discount. The calculator is
-    # linear during week one, then rounds the remaining duration up by week.
-    avg_discount = average_discount_pct(durations)
+    result = lock_statistics(durations, len(txs))
+    avg_days = result["avg_lock_days"]
+    avg_months = result["avg_lock_months"]
+    avg_years = sum(durations) / len(durations) / 86400 / 365.25
+    avg_discount = result["avg_discount_pct"]
+    buckets = result["distribution"]
 
     # Load exercised USD for avg price
     usd_file = os.path.join(SCRIPT_DIR, "exercised_usd.json")
@@ -197,15 +217,6 @@ def main():
         print(f"    {bucket:>15}: {count:>5} ({pct:>5.1f}%) {bar}")
 
     # Save results
-    result = {
-        "avg_lock_days": round(avg_days, 1),
-        "avg_lock_months": round(avg_months, 1),
-        "avg_discount_pct": round(avg_discount, 3),
-        "total_exercises": len(txs),
-        "valid_durations": len(durations),
-        "distribution": buckets,
-        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    }
 
     with open(OUTPUT_FILE, "w") as f:
         json.dump(result, f, indent=2)

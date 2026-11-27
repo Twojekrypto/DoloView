@@ -1,6 +1,7 @@
 """Collect and stage verified public DOLO, veDOLO and oDOLO feeds."""
 
 import argparse
+from decimal import Decimal
 import io
 import json
 import os
@@ -17,7 +18,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / 'scripts')]
 from check_dashboard_freshness import _path_value, assess, load_config, parse_timestamp
 from recovery_market_feeds import previous_file
 from recovery_vedolo_flows import validate as validate_vedolo_flows
-from rpc_client import RpcClient
+from rpc_client import RpcClient, RpcError, get_endpoints
 from validate_data import RULES, ValidationResult, validate_file
 
 
@@ -53,7 +54,7 @@ PROGRESS_FIELDS = {
                         'claim_source_reconciliation.coverage_to_block'),
     'odolo_contract_data.json': ('blockNumber',),
     'early_exits.json': ('coverage.toBlock', 'coverage.eventCount'),
-    'exercised_usd.json': ('last_block', 'total_txs', 'total_usdc'),
+    'exercised_usd.json': ('last_block', 'total_txs', 'total_usdc', 'activityCoverage.toBlock'),
     'avg_lock_data.json': ('total_exercises', 'valid_durations'),
     'exercisers_by_address.json': ('total_exercises', 'total_odolo_exercised_exercises'),
 }
@@ -128,6 +129,177 @@ def validate_activity(documents):
         raise ValueError('oDOLO activity reports do not reconcile')
 
 
+def vester_logs_at(client, start, end):
+    from generate_vedolo_flows import ODOLO_VESTER, TRANSFER_TOPIC
+
+    params = {'address': ODOLO_VESTER, 'topics': [TRANSFER_TOPIC],
+              'fromBlock': hex(start), 'toBlock': hex(end)}
+    logs = client.call('eth_getLogs', [params])
+    if not isinstance(logs, list) or any(
+        not start <= int(log['blockNumber'], 16) <= end
+        or log['address'].lower() != ODOLO_VESTER
+        or log['topics'][0].lower() != TRANSFER_TOPIC
+        or len(log['topics']) != 4 or log['data'] != '0x'
+        or log.get('removed') is True or len(log['transactionHash']) != 66
+        for log in logs
+    ):
+        raise ValueError('Invalid Vester transfer log result')
+    return [dict(log, data='0x0') for log in logs]
+
+
+def verified_vester_logs(clients, start, end):
+    from generate_dolo_flows import rpc_provider_family, select_transfer_log_quorum, TransferLogQuorumError
+
+    responses = []
+    for endpoint, client in clients.items():
+        try:
+            # The public dRPC Berachain endpoint limits every getLogs call to
+            # 100 blocks. It still provides an independent vote for the full range.
+            width = 100 if rpc_provider_family(endpoint) == 'drpc.org' else end - start + 1
+            logs = []
+            for block in range(start, end + 1, width):
+                logs.extend(vester_logs_at(client, block, min(block + width - 1, end)))
+            responses.append((endpoint, logs))
+            return select_transfer_log_quorum(responses)
+        except (IndexError, KeyError, TypeError, ValueError, RpcError, TransferLogQuorumError):
+            continue
+    raise TransferLogQuorumError(f'Vester transfer history has no RPC quorum for {start:,}-{end:,}')
+
+
+def collect_activity_rows(start, target, client, anchor_block, anchor_hash):
+    from generate_dolo_flows import rpc_provider_family
+    from generate_vedolo_flows import FINALITY_REORG_DEPTH
+
+    if not 0 < start <= target or target - start > 1_000_000:
+        raise ValueError('oDOLO activity checkpoint is outside a bounded recovery range')
+    header = client.call('eth_getBlockByNumber', [hex(target), False])
+    # A healthy current head is necessary but insufficient. Some RPC log
+    # providers report successful empty archival results on known events.
+    clients = {}
+    for endpoint in get_endpoints('berachain'):
+        peer = RpcClient(endpoints=[endpoint], timeout=9, retries_per_endpoint=2, quiet=True)
+        try:
+            peer_header = peer.call('eth_getBlockByNumber', [hex(target), False])
+            anchor_logs = vester_logs_at(peer, anchor_block, anchor_block)
+        except (KeyError, TypeError, ValueError, RpcError):
+            continue
+        if (peer_header and peer_header['hash'] == header['hash']
+                and any(log['transactionHash'].lower() == anchor_hash for log in anchor_logs)):
+            clients[endpoint] = peer
+    if len({rpc_provider_family(endpoint) for endpoint in clients}) < 2:
+        raise ValueError('Two independent Berachain providers are required for activity')
+
+    txs = {}
+    families = set()
+    for block in range(start, target + 1, 10_000):
+        logs, proof = verified_vester_logs(clients, block, min(block + 9_999, target))
+        for log in logs:
+            tx_hash = log['transactionHash'].lower()
+            block_number = int(log['blockNumber'], 16)
+            if tx_hash in txs and txs[tx_hash] != (block_number, log['blockHash']):
+                raise ValueError('Vester logs disagree on transaction block')
+            txs[tx_hash] = (block_number, log['blockHash'])
+        families.update(proof['providerFamilies'])
+    return txs, {'fromBlock': start, 'toBlock': target, 'sourceTimestamp': int(header['timestamp'], 16),
+                 'providerFamilies': sorted(families), 'confirmationBlocks': FINALITY_REORG_DEPTH}
+
+
+def read_new_exercise(client, tx_hash, block, block_hash):
+    from generate_exercisers import RECEIPT_CACHE_VERSION, parse_exercise_receipt, round_amount
+    from generate_vedolo_flows import ODOLO_VESTER
+    from odolo_exercises import EXERCISE_METHOD_DOLO, EXERCISE_METHOD_IDS, extract_lock_duration_days, extract_lock_duration_seconds
+
+    raw = client.call('eth_getTransactionByHash', [tx_hash])
+    if (not raw or raw['hash'].lower() != tx_hash or raw['blockHash'] != block_hash
+            or int(raw['blockNumber'], 16) != block):
+        raise ValueError('Vester transaction could not be verified')
+    method = raw['input'][:10].lower()
+    if (raw['to'] or '').lower() != ODOLO_VESTER or method not in EXERCISE_METHOD_IDS:
+        return None
+    receipt = client.call('eth_getTransactionReceipt', [tx_hash])
+    header = client.call('eth_getBlockByNumber', [hex(block), False])
+    if (not receipt or receipt['status'] != '0x1' or receipt['blockHash'] != block_hash
+            or receipt['transactionHash'].lower() != tx_hash or not header or header['hash'] != block_hash):
+        raise ValueError('Vester receipt could not be verified')
+    tx = {'hash': tx_hash, 'input': raw['input'], 'from': raw['from'],
+          'timeStamp': int(header['timestamp'], 16), 'methodId': method}
+    usdc, odolo, dolo = parse_exercise_receipt(receipt)
+    seconds = extract_lock_duration_seconds(tx)
+    paired = method == EXERCISE_METHOD_DOLO
+    if not seconds or not odolo or (dolo is None if paired else usdc is None):
+        raise ValueError('Vester exercise has unsupported payment or lock data')
+    details = {'usdc': round_amount(usdc), 'odolo': round_amount(odolo),
+               'dolo_paid': round_amount(dolo), 'paid_token': 'DOLO' if paired else 'USDC.e',
+               'lock_seconds': seconds, 'lock_days': extract_lock_duration_days(tx),
+               'receipt_version': RECEIPT_CACHE_VERSION}
+    return tx, details, Decimal(str(usdc)) if not paired else Decimal(0)
+
+
+def refresh_odolo_activity():
+    from calculate_avg_lock import lock_statistics
+    from generate_exercisers import (build_exerciser_snapshot, load_vedolo_holder_lookup,
+                                     load_vedolo_lock_token_lookup, seed_cache_from_existing_output)
+    from generate_vedolo_flows import FINALITY_REORG_DEPTH
+
+    usd_path = ROOT / 'exercised_usd.json'
+    exercise_path = ROOT / 'exercisers_by_address.json'
+    usd = json.loads(usd_path.read_bytes())
+    previous = json.loads(exercise_path.read_bytes())
+    # The already-public, validated history supplies exact lock durations and
+    # historical receipt amounts. Only new transactions need live receipts.
+    cache = seed_cache_from_existing_output()
+    transactions = []
+    old_token_ids = {}
+    for wallet in previous['exercisers']:
+        for row in wallet['txs']:
+            transactions.append({'hash': row['hash'], 'from': wallet['address'], 'timeStamp': row['timestamp']})
+            if row.get('token_ids'):
+                old_token_ids[row['hash']] = row['token_ids']
+    if (len(cache) != len(transactions) or len(cache) != previous['total_exercises']
+            or any(not entry['lock_seconds'] for entry in cache.values())):
+        raise ValueError('Published exercise history is incomplete')
+
+    client = RpcClient(chain='berachain', timeout=12, quiet=True)
+    latest = max(transactions, key=lambda tx: tx['timeStamp'])
+    anchor_hash = latest['hash'].lower()
+    evidence = client.call('eth_getTransactionByHash', [anchor_hash])
+    if not evidence or evidence['hash'].lower() != anchor_hash:
+        raise ValueError('Latest published exercise could not be anchored')
+    anchor_block = int(evidence['blockNumber'], 16)
+    checkpoint = usd.get('activityCoverage')
+    if checkpoint and checkpoint == previous.get('activityCoverage'):
+        baseline = checkpoint['toBlock']
+    else:
+        baseline = min(usd['last_block'], anchor_block)
+    target = int(client.call('eth_blockNumber', []), 16) - FINALITY_REORG_DEPTH
+    if target < baseline:
+        raise ValueError('Finalized Vester scan target regresses the prior checkpoint')
+    candidates, coverage = collect_activity_rows(baseline, target, client, anchor_block, anchor_hash)
+    new_usdc = Decimal(0)
+    for tx_hash, (block, block_hash) in candidates.items():
+        if tx_hash in cache:
+            continue
+        exercise = read_new_exercise(client, tx_hash, block, block_hash)
+        if exercise is None:
+            continue
+        tx, cache[tx_hash], amount = exercise
+        new_usdc += amount
+        if cache[tx_hash]['paid_token'] == 'USDC.e':
+            usd['total_txs'] += 1
+        transactions.append(tx)
+    transactions.sort(key=lambda tx: (tx['timeStamp'], tx['hash']))
+    holders, holder_timestamp = load_vedolo_holder_lookup()
+    token_lookup = {**old_token_ids, **load_vedolo_lock_token_lookup()}
+    exercises = build_exerciser_snapshot(transactions, cache, holders, holder_timestamp, token_lookup)
+    average = lock_statistics([entry['lock_seconds'] for entry in cache.values()], len(transactions))
+    usd.update(total_usdc=float(round(Decimal(str(usd['total_usdc'])) + new_usdc, 2)),
+               last_block=target, last_updated=exercises['updated'])
+    for name, payload in zip(FAMILIES['odolo-activity'], (usd, average, exercises)):
+        payload['activityCoverage'] = coverage
+        (ROOT / name).write_text(json.dumps(payload, indent=2) + '\n')
+    print(f'Verified Vester activity through block {target:,}: {len(transactions):,} exercise transactions')
+
+
 def validate(family, root, previous, now):
     result = ValidationResult()
     current = {}
@@ -146,6 +318,13 @@ def validate(family, root, previous, now):
         raise ValueError(f'{family} data validation failed')
     if family == 'odolo-activity':
         validate_activity(current)
+        coverage = current['exercised_usd.json']['activityCoverage']
+        if (any(doc['activityCoverage'] != coverage for doc in current.values())
+                or coverage['toBlock'] != current['exercised_usd.json']['last_block']
+                or not 0 < coverage['fromBlock'] <= coverage['toBlock']
+                or len(set(coverage['providerFamilies'])) < 2
+                or not 0 <= now - coverage['sourceTimestamp'] < MAX_AGE_MINUTES * 60):
+            raise ValueError('oDOLO activity has incomplete or stale RPC coverage')
     elif family == 'vedolo-inventory':
         stats = current['vedolo_stats.json']['stats']
         holders = current['vedolo_holders.json']
@@ -249,9 +428,7 @@ def collect(family):
     elif family == 'odolo-activity':
         for name in ('vedolo_holders.json', FLOW_INPUT):
             refresh_input(name)
-        run('update_exercised_usd.py', timeout=1200)
-        run('calculate_avg_lock.py', timeout=900)
-        run('generate_exercisers.py', timeout=1800)
+        run('scripts/recovery_token_feeds.py', 'activity', family, timeout=2800)
     elif family == 'odolo-contract':
         run('fetch_odolo_contract.py', timeout=240)
     elif family == 'early-exits':
@@ -310,13 +487,15 @@ def stage(family, bundle, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('build', 'stage', 'inventory', 'dolo-backfill'))
+    parser.add_argument('mode', choices=('build', 'stage', 'inventory', 'dolo-backfill', 'activity'))
     parser.add_argument('family', choices=FAMILIES)
     parser.add_argument('bundle', type=Path, nargs='?')
     parser.add_argument('--output', type=Path, default=Path('_data'))
     args = parser.parse_args()
     if args.mode == 'inventory':
         refresh_vedolo_inventory()
+    elif args.mode == 'activity':
+        refresh_odolo_activity()
     elif args.mode == 'dolo-backfill':
         refresh_dolo_flows()
     elif args.bundle is None:

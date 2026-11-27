@@ -54,6 +54,30 @@ class TokenFeedPublicationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'reconcile'):
             feeds.validate_activity(documents)
 
+    def test_rpc_activity_refuses_provider_disagreement(self):
+        from generate_dolo_flows import TransferLogQuorumError
+        from generate_vedolo_flows import ODOLO_VESTER, TRANSFER_TOPIC
+
+        def client(logs):
+            from unittest.mock import Mock
+            fake = Mock()
+            fake.call.return_value = logs
+            return fake
+
+        log = {'address': ODOLO_VESTER, 'blockNumber': '0x64',
+               'transactionHash': '0x' + '11' * 32, 'logIndex': '0x5',
+               'topics': [TRANSFER_TOPIC, '0x' + '00' * 32, '0x' + '22' * 32,
+                          '0x' + '00' * 31 + '01'],
+               'data': '0x'}
+        family_a = 'https://berachain-rpc.publicnode.com'
+        family_b = 'https://berachain.drpc.org'
+        with self.assertRaises(TransferLogQuorumError):
+            feeds.verified_vester_logs({family_a: client([log]), family_b: client([])}, 100, 100)
+        rows, proof = feeds.verified_vester_logs({family_a: client([log]), family_b: client([log])},
+                                                 100, 100)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(proof['matchingProviderFamilies'], 2)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -426,44 +426,7 @@ def get_tx_details_from_receipt(tx_hash, retries=MAX_RETRIES):
                     continue
                 return None, None, None
 
-            usdc_amount = None
-            odolo_amount = None
-            dolo_amount = None  # for 0xf3621c90 variant
-
-            for log in data["result"].get("logs", []):
-                if len(log["topics"]) < 3 or log["topics"][0] != TRANSFER_TOPIC:
-                    continue
-
-                token_addr = log["address"].lower()
-                from_addr = "0x" + log["topics"][1][26:].lower()
-                to_addr = "0x" + log["topics"][2][26:].lower()
-
-                # USDC.e payment: from user TO vester (original exercise)
-                if token_addr == USDC_E_CONTRACT and to_addr == VESTER_CONTRACT.lower():
-                    usdc_amount = int(log["data"], 16) / (10 ** USDC_DECIMALS)
-
-                # DOLO payment: from user TO vester (newer exercise variant)
-                if token_addr == DOLO_CONTRACT and to_addr == VESTER_CONTRACT.lower():
-                    raw = log.get("data", "0x")
-                    if len(raw) > 2:
-                        dolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
-
-                # oDOLO burn: from vester TO 0x0 (burn address) during exercise
-                # The burned oDOLO amount = veDOLO received (1:1)
-                if token_addr == ODOLO_CONTRACT:
-                    to_addr_check = "0x" + log["topics"][2][26:].lower()
-                    if from_addr == VESTER_CONTRACT.lower() and to_addr_check == "0x0000000000000000000000000000000000000000":
-                        raw = log.get("data", "0x")
-                        if len(raw) > 2:
-                            odolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
-
-                # oDOLO transfer: from user TO vester (newer variant where oDOLO is sent, not burned)
-                if token_addr == ODOLO_CONTRACT and to_addr == VESTER_CONTRACT.lower() and from_addr != VESTER_CONTRACT.lower():
-                    raw = log.get("data", "0x")
-                    if len(raw) > 2 and odolo_amount is None:
-                        odolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
-
-            return usdc_amount, odolo_amount, dolo_amount
+            return parse_exercise_receipt(data["result"])
 
         except (requests.exceptions.RequestException, ValueError, KeyError) as e:
             if attempt < retries - 1:
@@ -474,6 +437,169 @@ def get_tx_details_from_receipt(tx_hash, retries=MAX_RETRIES):
                 return None, None, None
 
     return None, None, None
+
+
+def parse_exercise_receipt(receipt):
+    """Decode payments and the oDOLO amount from the on-chain transfer logs."""
+    usdc_amount = None
+    odolo_amount = None
+    dolo_amount = None  # for 0xf3621c90 variant
+
+    for log in receipt.get("logs", []):
+        if len(log["topics"]) < 3 or log["topics"][0] != TRANSFER_TOPIC:
+            continue
+
+        token_addr = log["address"].lower()
+        from_addr = "0x" + log["topics"][1][26:].lower()
+        to_addr = "0x" + log["topics"][2][26:].lower()
+
+        # USDC.e payment: from user TO vester (original exercise)
+        if token_addr == USDC_E_CONTRACT and to_addr == VESTER_CONTRACT.lower():
+            usdc_amount = int(log["data"], 16) / (10 ** USDC_DECIMALS)
+
+        # DOLO payment: from user TO vester (newer exercise variant)
+        if token_addr == DOLO_CONTRACT and to_addr == VESTER_CONTRACT.lower():
+            raw = log.get("data", "0x")
+            if len(raw) > 2:
+                dolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
+
+        # oDOLO burn: from vester TO 0x0 (burn address) during exercise
+        # The burned oDOLO amount = veDOLO received (1:1)
+        if token_addr == ODOLO_CONTRACT:
+            to_addr_check = "0x" + log["topics"][2][26:].lower()
+            if from_addr == VESTER_CONTRACT.lower() and to_addr_check == "0x0000000000000000000000000000000000000000":
+                raw = log.get("data", "0x")
+                if len(raw) > 2:
+                    odolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
+
+        # oDOLO transfer: from user TO vester (newer variant where oDOLO is sent, not burned)
+        if token_addr == ODOLO_CONTRACT and to_addr == VESTER_CONTRACT.lower() and from_addr != VESTER_CONTRACT.lower():
+            raw = log.get("data", "0x")
+            if len(raw) > 2 and odolo_amount is None:
+                odolo_amount = int(raw, 16) / (10 ** ODOLO_DECIMALS)
+
+    return usdc_amount, odolo_amount, dolo_amount
+
+
+def build_exerciser_snapshot(exercise_txs, cache, holder_lookup, holder_snapshot_ts, lock_token_lookup):
+    """Aggregate verified transactions and any matching current holder positions."""
+    # Build final output from ALL exercise txs (cached + newly fetched)
+    address_data = defaultdict(lambda: {
+        "total_usdc": 0, "exercises": 0, "lock_days_sum": 0,
+        "lock_count": 0, "first": None, "last": None, "txs": []
+    })
+
+    for tx in exercise_txs:
+        tx_hash = tx["hash"]
+        if tx_hash not in cache:
+            continue  # skip any that still failed
+
+        cached = cache[tx_hash]
+        addr = tx["from"].lower()
+        timestamp = int(tx["timeStamp"])
+        date_str = time.strftime("%Y-%m-%d", time.gmtime(timestamp))
+        usdc_amount = cached.get("usdc") or 0
+        odolo_amount = cached.get("odolo")
+        lock_days = cached.get("lock_days")
+        lock_seconds = cached.get("lock_seconds")
+        dolo_paid = cached.get("dolo_paid")
+        paid_token = cached.get("paid_token", "USDC.e")
+
+        # For DOLO-based exercises: usdc=None, dolo_paid has the DOLO amount
+        is_dolo_exercise = paid_token == "DOLO"
+
+        d = address_data[addr]
+        if not is_dolo_exercise:
+            d["total_usdc"] += usdc_amount
+        d["total_dolo_paid"] = d.get("total_dolo_paid", 0) + (dolo_paid or 0)
+        d["exercises"] += 1
+        if lock_days is not None:
+            d["lock_days_sum"] += lock_days
+            d["lock_count"] += 1
+        if d["first"] is None or date_str < d["first"]:
+            d["first"] = date_str
+        if d["last"] is None or date_str > d["last"]:
+            d["last"] = date_str
+
+        vedolo_amount = odolo_amount if odolo_amount else None
+        price_per_vedolo = None
+        if not is_dolo_exercise and usdc_amount and vedolo_amount and vedolo_amount > 0:
+            price_per_vedolo = round(usdc_amount / vedolo_amount, 6)
+
+        tx_entry = {
+            "hash": tx_hash,
+            "date": date_str,
+            "timestamp": timestamp,
+            "usdc": round_amount(usdc_amount) if not is_dolo_exercise else None,
+            "vedolo": round_amount(vedolo_amount) if vedolo_amount else None,
+            "price": price_per_vedolo,
+            "lock_days": lock_days,
+            "lock_seconds": lock_seconds,
+            "paid_token": paid_token,
+            "receipt_version": int(cached.get("receipt_version") or 0),
+        }
+        if is_dolo_exercise:
+            tx_entry["dolo_paid"] = round_amount(dolo_paid) if dolo_paid else None
+        token_ids = lock_token_lookup.get(tx_hash.lower()) or []
+        if token_ids:
+            tx_entry["token_ids"] = token_ids
+            if len(token_ids) == 1:
+                tx_entry["token_id"] = token_ids[0]
+
+        d["txs"].append(tx_entry)
+
+    # Build sorted list — filter out empty txs (vedolo=None = no real exercise data)
+    exercisers = []
+    for addr, d in address_data.items():
+        # Remove txs with no veDOLO data (failed/empty exercises)
+        valid_txs = [tx for tx in d["txs"] if tx.get("vedolo") is not None and tx["vedolo"] > 0]
+        if not valid_txs:
+            continue  # skip addresses with no valid exercises
+
+        avg_lock = round(d["lock_days_sum"] / d["lock_count"], 1) if d["lock_count"] > 0 else None
+        address_totals = summarize_exercise_totals([{"txs": valid_txs}])
+        holder_fields = holder_reconciliation_fields(address_totals, holder_lookup.get(addr, {}), valid_txs)
+        exercisers.append({
+            "address": addr,
+            "total_usdc": round(d["total_usdc"], 2),
+            "total_vedolo": address_totals["total_vedolo"],
+            "total_odolo_exercised": address_totals["total_odolo_exercised"],
+            "total_odolo_exercise_usdc_paid": address_totals["total_odolo_exercise_usdc_paid"],
+            "total_odolo_exercised_exercises": address_totals["total_odolo_exercised_exercises"],
+            "total_dolo_pair_vedolo": address_totals["total_dolo_pair_vedolo"],
+            "total_dolo_pair_exercises": address_totals["total_dolo_pair_exercises"],
+            "total_dolo_paired": address_totals["total_dolo_paired"],
+            **holder_fields,
+            "exercises": len(valid_txs),
+            "avg_lock_days": avg_lock,
+            "first": d["first"],
+            "last": d["last"],
+            "txs": valid_txs
+        })
+
+    exercisers.sort(key=lambda x: x["total_usdc"], reverse=True)
+
+    totals = summarize_exercise_totals(exercisers)
+
+    result = {
+        "updated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "total_addresses": len(exercisers),
+        "total_usdc": round(sum(e["total_usdc"] for e in exercisers), 2),
+        "total_vedolo": totals["total_vedolo"],
+        "total_odolo_exercised": totals["total_odolo_exercised"],
+        "total_odolo_exercise_usdc_paid": totals["total_odolo_exercise_usdc_paid"],
+        "total_odolo_exercised_exercises": totals["total_odolo_exercised_exercises"],
+        "total_dolo_pair_vedolo": totals["total_dolo_pair_vedolo"],
+        "total_dolo_pair_exercises": totals["total_dolo_pair_exercises"],
+        "total_dolo_paired": totals["total_dolo_paired"],
+        "vedolo_holder_reconciliation_updated": holder_snapshot_ts,
+        "holderReconciliationMethodology": "Per-address current_vedolo_locked is imported from vedolo_holders.json and kept separate from historical USDC-paid oDOLO exercise and DOLO-pair activity.",
+        "exerciseMetricMethodology": "total_odolo_exercised counts USDC-paid exercises only; DOLO pairing method is tracked separately",
+        "total_exercises": sum(e["exercises"] for e in exercisers),
+        "exercisers": exercisers
+    }
+
+    return result
 
 
 def main():
@@ -640,124 +766,11 @@ def main():
     save_cache(cache)
     print(f"  💾 Saved {len(cache)} cached receipts to {CACHE_FILE}")
 
-    # Build final output from ALL exercise txs (cached + newly fetched)
-    print("\n  Building final output...")
-    address_data = defaultdict(lambda: {
-        "total_usdc": 0, "exercises": 0, "lock_days_sum": 0,
-        "lock_count": 0, "first": None, "last": None, "txs": []
-    })
+    result = build_exerciser_snapshot(
+        exercise_txs, cache, holder_lookup, holder_snapshot_ts, lock_token_lookup
+    )
 
-    for tx in exercise_txs:
-        tx_hash = tx["hash"]
-        if tx_hash not in cache:
-            continue  # skip any that still failed
-
-        cached = cache[tx_hash]
-        addr = tx["from"].lower()
-        timestamp = int(tx["timeStamp"])
-        date_str = time.strftime("%Y-%m-%d", time.gmtime(timestamp))
-        usdc_amount = cached.get("usdc") or 0
-        odolo_amount = cached.get("odolo")
-        lock_days = cached.get("lock_days")
-        lock_seconds = cached.get("lock_seconds")
-        dolo_paid = cached.get("dolo_paid")
-        paid_token = cached.get("paid_token", "USDC.e")
-
-        # For DOLO-based exercises: usdc=None, dolo_paid has the DOLO amount
-        is_dolo_exercise = paid_token == "DOLO"
-
-        d = address_data[addr]
-        if not is_dolo_exercise:
-            d["total_usdc"] += usdc_amount
-        d["total_dolo_paid"] = d.get("total_dolo_paid", 0) + (dolo_paid or 0)
-        d["exercises"] += 1
-        if lock_days is not None:
-            d["lock_days_sum"] += lock_days
-            d["lock_count"] += 1
-        if d["first"] is None or date_str < d["first"]:
-            d["first"] = date_str
-        if d["last"] is None or date_str > d["last"]:
-            d["last"] = date_str
-
-        vedolo_amount = odolo_amount if odolo_amount else None
-        price_per_vedolo = None
-        if not is_dolo_exercise and usdc_amount and vedolo_amount and vedolo_amount > 0:
-            price_per_vedolo = round(usdc_amount / vedolo_amount, 6)
-
-        tx_entry = {
-            "hash": tx_hash,
-            "date": date_str,
-            "timestamp": timestamp,
-            "usdc": round_amount(usdc_amount) if not is_dolo_exercise else None,
-            "vedolo": round_amount(vedolo_amount) if vedolo_amount else None,
-            "price": price_per_vedolo,
-            "lock_days": lock_days,
-            "lock_seconds": lock_seconds,
-            "paid_token": paid_token,
-            "receipt_version": int(cached.get("receipt_version") or 0),
-        }
-        if is_dolo_exercise:
-            tx_entry["dolo_paid"] = round_amount(dolo_paid) if dolo_paid else None
-        token_ids = lock_token_lookup.get(tx_hash.lower()) or []
-        if token_ids:
-            tx_entry["token_ids"] = token_ids
-            if len(token_ids) == 1:
-                tx_entry["token_id"] = token_ids[0]
-
-        d["txs"].append(tx_entry)
-
-    # Build sorted list — filter out empty txs (vedolo=None = no real exercise data)
-    exercisers = []
-    for addr, d in address_data.items():
-        # Remove txs with no veDOLO data (failed/empty exercises)
-        valid_txs = [tx for tx in d["txs"] if tx.get("vedolo") is not None and tx["vedolo"] > 0]
-        if not valid_txs:
-            continue  # skip addresses with no valid exercises
-
-        avg_lock = round(d["lock_days_sum"] / d["lock_count"], 1) if d["lock_count"] > 0 else None
-        address_totals = summarize_exercise_totals([{"txs": valid_txs}])
-        holder_fields = holder_reconciliation_fields(address_totals, holder_lookup.get(addr, {}), valid_txs)
-        exercisers.append({
-            "address": addr,
-            "total_usdc": round(d["total_usdc"], 2),
-            "total_vedolo": address_totals["total_vedolo"],
-            "total_odolo_exercised": address_totals["total_odolo_exercised"],
-            "total_odolo_exercise_usdc_paid": address_totals["total_odolo_exercise_usdc_paid"],
-            "total_odolo_exercised_exercises": address_totals["total_odolo_exercised_exercises"],
-            "total_dolo_pair_vedolo": address_totals["total_dolo_pair_vedolo"],
-            "total_dolo_pair_exercises": address_totals["total_dolo_pair_exercises"],
-            "total_dolo_paired": address_totals["total_dolo_paired"],
-            **holder_fields,
-            "exercises": len(valid_txs),
-            "avg_lock_days": avg_lock,
-            "first": d["first"],
-            "last": d["last"],
-            "txs": valid_txs
-        })
-
-    exercisers.sort(key=lambda x: x["total_usdc"], reverse=True)
-
-    totals = summarize_exercise_totals(exercisers)
-
-    result = {
-        "updated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "total_addresses": len(exercisers),
-        "total_usdc": round(sum(e["total_usdc"] for e in exercisers), 2),
-        "total_vedolo": totals["total_vedolo"],
-        "total_odolo_exercised": totals["total_odolo_exercised"],
-        "total_odolo_exercise_usdc_paid": totals["total_odolo_exercise_usdc_paid"],
-        "total_odolo_exercised_exercises": totals["total_odolo_exercised_exercises"],
-        "total_dolo_pair_vedolo": totals["total_dolo_pair_vedolo"],
-        "total_dolo_pair_exercises": totals["total_dolo_pair_exercises"],
-        "total_dolo_paired": totals["total_dolo_paired"],
-        "vedolo_holder_reconciliation_updated": holder_snapshot_ts,
-        "holderReconciliationMethodology": "Per-address current_vedolo_locked is imported from vedolo_holders.json and kept separate from historical USDC-paid oDOLO exercise and DOLO-pair activity.",
-        "exerciseMetricMethodology": "total_odolo_exercised counts USDC-paid exercises only; DOLO pairing method is tracked separately",
-        "total_exercises": sum(e["exercises"] for e in exercisers),
-        "exercisers": exercisers
-    }
-
-    if not exercisers:
+    if not result["exercisers"]:
         if preserve_existing_output("generated exerciser set was empty"):
             return
         raise SystemExit(1)
